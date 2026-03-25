@@ -1,0 +1,29 @@
+@import "tailwindcss";
+
+@import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Quicksand:wght@300..700&display=swap');
+
+:root {
+  font-family: 'Quicksand', sans-serif;
+  background-color: #fffafb;
+}
+
+h1, .romantic-font {
+  font-family: 'Dancing Script', cursive;
+}
+
+@theme {
+  --color-primary: #f472b6;
+  --color-secondary: #fb923c;
+  --color-accent: #ef4444;
+  --color-background: #fffafb;
+}
+
+@layer components {
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-6 py-2 rounded-full font-semibold hover:bg-primary/90 transition-all;
+  }
+}
