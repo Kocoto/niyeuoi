@@ -4,7 +4,7 @@ import { Heart, Stars } from 'lucide-react';
 
 const Home: React.FC = () => {
   const [days, setDays] = useState(0);
-  const startDate = new Date('2024-01-01'); // Hãy thay đổi ngày bắt đầu tại đây
+  const startDate = new Date('2026-02-28'); // Ngày kỷ niệm của hai bạn
 
   useEffect(() => {
     const calculateDays = () => {
@@ -15,34 +15,34 @@ const Home: React.FC = () => {
   }, []);
 
   return (
-    <div className="max-w-4xl mx-auto py-12 px-4 text-center">
+    <div className="max-w-4xl mx-auto py-8 md:py-12 px-4 text-center">
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.8 }}
       >
-        <div className="flex justify-center mb-6">
+        <div className="flex justify-center mb-4 md:mb-6">
           <motion.div
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
           >
-            <Heart size={60} className="text-primary fill-primary" />
+            <Heart size={48} md:size={60} className="text-primary fill-primary" />
           </motion.div>
         </div>
         
-        <h1 className="text-5xl font-bold mb-4 text-gray-800">Chúng ta đã bên nhau</h1>
+        <h1 className="text-3xl md:text-5xl font-bold mb-2 md:mb-4 text-gray-800">Chúng ta đã bên nhau</h1>
         
-        <div className="relative inline-block my-8">
-          <Stars className="absolute -top-6 -left-6 text-yellow-400" />
-          <span className="text-8xl font-black text-primary romantic-font leading-tight">
+        <div className="relative inline-block my-4 md:my-8">
+          <Stars className="absolute -top-4 -left-4 md:-top-6 md:-left-6 text-yellow-400 size-5 md:size-8" />
+          <span className="text-6xl md:text-8xl font-black text-primary romantic-font leading-tight">
             {days}
           </span>
-          <Stars className="absolute -bottom-6 -right-6 text-yellow-400" />
+          <Stars className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 text-yellow-400 size-5 md:size-8" />
         </div>
         
-        <p className="text-2xl font-semibold text-gray-600">Ngày hạnh phúc</p>
+        <p className="text-xl md:text-2xl font-semibold text-gray-600">Ngày hạnh phúc</p>
         
-        <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="mt-12 md:mt-16 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
           <FeatureCard 
             title="Ghi dấu kỷ niệm" 
             desc="Lưu lại những khoảnh khắc đáng nhớ nhất của chúng mình."

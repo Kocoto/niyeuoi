@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { motion } from 'framer-motion';
-import { Gift, ExternalLink, CheckCircle2, Circle, Loader2, Plus } from 'lucide-react';
+import { Gift, ExternalLink, CheckCircle2, Circle, Loader2, Plus, Trash2 } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 
 interface IWish {
   _id: string;
@@ -16,6 +17,7 @@ interface IWish {
 const Wishlist: React.FC = () => {
   const [wishes, setWishes] = useState<IWish[]>([]);
   const [loading, setLoading] = useState(true);
+  const { role } = useAuth();
 
   useEffect(() => {
     fetchWishes();
@@ -24,11 +26,28 @@ const Wishlist: React.FC = () => {
   const fetchWishes = async () => {
     try {
       const res = await api.get('/wishlist');
-      setWishes(res.data.data);
+      let data = res.data.data;
+      
+      // Nếu là bạn gái, ẩn các món "Lén chuẩn bị"
+      if (role === 'girlfriend') {
+        data = data.filter((w: IWish) => !w.isSecretlyPrepared);
+      }
+      
+      setWishes(data);
     } catch (err) {
       console.error('Lỗi khi tải wishlist');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const deleteWish = async (id: string) => {
+    if (!window.confirm('Xóa mục này khỏi tâm trí luôn hả bạn? 🥺')) return;
+    try {
+      await api.delete(`/wishlist/${id}`);
+      fetchWishes();
+    } catch (err) {
+      alert('Không xóa được rồi!');
     }
   };
 
@@ -39,9 +58,11 @@ const Wishlist: React.FC = () => {
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Danh sách Mong muốn</h1>
           <p className="text-gray-600 font-medium">Những điều nhỏ bé chúng mình cùng ước ao... 🎁</p>
         </div>
-        <button className="bg-primary text-white p-4 rounded-2xl shadow-lg hover:rotate-6 transition-transform">
-          <Plus />
-        </button>
+        {role === 'boyfriend' && (
+          <button className="bg-primary text-white p-4 rounded-2xl shadow-lg hover:rotate-6 transition-transform">
+            <Plus />
+          </button>
+        )}
       </div>
 
       {loading ? (
@@ -61,11 +82,18 @@ const Wishlist: React.FC = () => {
                   <div className={`p-3 rounded-2xl ${wish.status === 'Đã mua' ? 'bg-green-100 text-green-600' : 'bg-pink-100 text-primary'}`}>
                     <Gift size={24} />
                   </div>
-                  {wish.isSecretlyPrepared && (
-                    <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
-                      Lén chuẩn bị 🤫
-                    </span>
-                  )}
+                  <div className="flex flex-col items-end gap-2">
+                    {wish.isSecretlyPrepared && (
+                      <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
+                        Lén chuẩn bị 🤫
+                      </span>
+                    )}
+                    {role === 'boyfriend' && (
+                      <button onClick={() => deleteWish(wish._id)} className="text-gray-300 hover:text-red-400 transition-colors">
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{wish.itemName}</h3>
