@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import wishlistService from '../services/wishlistService.js';
+import wishlistService from '../services/wishlistService';
 
 export const getWishlist = async (req: Request, res: Response) => {
     try {

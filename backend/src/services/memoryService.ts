@@ -1,5 +1,5 @@
-import Memory, { IMemory } from '../models/Memory.js';
-import notificationService from './notificationService.js';
+import Memory, { IMemory } from '../models/Memory';
+import notificationService from './notificationService';
 
 class MemoryService {
     async getAllMemories() {

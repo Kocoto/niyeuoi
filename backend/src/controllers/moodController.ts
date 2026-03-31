@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import moodService from '../services/moodService.js';
+import moodService from '../services/moodService';
 
 export const getMoods = async (req: Request, res: Response) => {
     try {

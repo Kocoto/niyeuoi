@@ -1,5 +1,5 @@
-import Wishlist, { IWishlist } from '../models/Wishlist.js';
-import notificationService from './notificationService.js';
+import Wishlist, { IWishlist } from '../models/Wishlist';
+import notificationService from './notificationService';
 
 class WishlistService {
     async getAllWishes() {

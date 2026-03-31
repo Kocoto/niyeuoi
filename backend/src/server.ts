@@ -13,15 +13,15 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
-import placeRoutes from './routes/placeRoutes.js';
-import memoryRoutes from './routes/memoryRoutes.js';
-import wishlistRoutes from './routes/wishlistRoutes.js';
-import eventRoutes from './routes/eventRoutes.js';
-import couponRoutes from './routes/couponRoutes.js';
-import moodRoutes from './routes/moodRoutes.js';
-import uploadRoutes from './routes/uploadRoutes.js';
-import authRoutes from './routes/authRoutes.js';
-import challengeRoutes from './routes/challengeRoutes.js';
+import placeRoutes from './routes/placeRoutes';
+import memoryRoutes from './routes/memoryRoutes';
+import wishlistRoutes from './routes/wishlistRoutes';
+import eventRoutes from './routes/eventRoutes';
+import couponRoutes from './routes/couponRoutes';
+import moodRoutes from './routes/moodRoutes';
+import uploadRoutes from './routes/uploadRoutes';
+import authRoutes from './routes/authRoutes';
+import challengeRoutes from './routes/challengeRoutes';
 
 app.use('/api/places', placeRoutes);
 app.use('/api/memories', memoryRoutes);

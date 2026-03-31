@@ -1,5 +1,5 @@
-import Event, { IEvent } from '../models/Event.js';
-import notificationService from './notificationService.js';
+import Event, { IEvent } from '../models/Event';
+import notificationService from './notificationService';
 
 class EventService {
     async getAllEvents() {

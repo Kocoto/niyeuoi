@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import memoryService from '../services/memoryService.js';
+import memoryService from '../services/memoryService';
 
 export const getMemories = async (req: Request, res: Response) => {
     try {

@@ -1,5 +1,5 @@
-import Coupon, { ICoupon } from '../models/Coupon.js';
-import notificationService from './notificationService.js';
+import Coupon, { ICoupon } from '../models/Coupon';
+import notificationService from './notificationService';
 
 class CouponService {
     async getAllCoupons() {

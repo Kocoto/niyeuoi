@@ -5,7 +5,7 @@ import {
     createMood,
     updateMood,
     deleteMood
-} from '../controllers/moodController.js';
+} from '../controllers/moodController';
 
 const router = express.Router();
 

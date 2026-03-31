@@ -1,5 +1,5 @@
-import Challenge, { IChallenge } from '../models/Challenge.js';
-import notificationService from './notificationService.js';
+import Challenge, { IChallenge } from '../models/Challenge';
+import notificationService from './notificationService';
 
 class ChallengeService {
     async getAllChallenges() {

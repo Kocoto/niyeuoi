@@ -9,7 +9,9 @@
       "Bash(python -c \"import cairosvg; print\\(''cairosvg ok''\\)\")",
       "Bash(npm uninstall:*)",
       "Bash(npm run:*)",
-      "Bash(find d:/Code/niyeuoi/niyeuoi/frontend -type f \\\\\\(-name *.css -o -name *.config.js -o -name *.config.ts -o -name index.css \\\\\\))"
+      "Bash(find d:/Code/niyeuoi/niyeuoi/frontend -type f \\\\\\(-name *.css -o -name *.config.js -o -name *.config.ts -o -name index.css \\\\\\))",
+      "Bash(grep -r \"from ''.*\\\\.js''\" \"d:/Code/niyeuoi/niyeuoi/backend/src\" --include=\"*.ts\" -l)",
+      "Bash(xargs sed:*)"
     ]
   }
 }

@@ -1,5 +1,5 @@
-import Place, { IPlace } from '../models/Place.js';
-import notificationService from './notificationService.js';
+import Place, { IPlace } from '../models/Place';
+import notificationService from './notificationService';
 
 class PlaceService {
     async getAllPlaces() {

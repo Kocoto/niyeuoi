@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import couponService from '../services/couponService.js';
+import couponService from '../services/couponService';
 
 export const getCoupons = async (req: Request, res: Response) => {
     try {

@@ -1,5 +1,5 @@
 import express from 'express';
-import { verifyPin } from '../controllers/authController.js';
+import { verifyPin } from '../controllers/authController';
 
 const router = express.Router();
 

@@ -1,5 +1,5 @@
-import Mood, { IMood } from '../models/Mood.js';
-import notificationService from './notificationService.js';
+import Mood, { IMood } from '../models/Mood';
+import notificationService from './notificationService';
 
 class MoodService {
     async getAllMoods() {

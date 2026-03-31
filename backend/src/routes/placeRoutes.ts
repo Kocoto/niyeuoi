@@ -7,7 +7,7 @@ import {
     updatePlace,
     deletePlace,
     getRandomPlace
-} from '../controllers/placeController.js';
+} from '../controllers/placeController';
 
 router
     .route('/')

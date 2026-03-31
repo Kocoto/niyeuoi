@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import challengeService from '../services/challengeService.js';
+import challengeService from '../services/challengeService';
 
 export const getChallenges = async (req: Request, res: Response) => {
     try {

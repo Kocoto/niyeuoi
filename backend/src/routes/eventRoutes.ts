@@ -5,7 +5,7 @@ import {
     createEvent,
     updateEvent,
     deleteEvent
-} from '../controllers/eventController.js';
+} from '../controllers/eventController';
 
 const router = express.Router();
 

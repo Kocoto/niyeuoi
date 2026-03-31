@@ -6,7 +6,7 @@ import {
     createMemory,
     updateMemory,
     deleteMemory
-} from '../controllers/memoryController.js';
+} from '../controllers/memoryController';
 
 router
     .route('/')

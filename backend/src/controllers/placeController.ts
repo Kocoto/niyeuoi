@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import placeService from '../services/placeService.js';
+import placeService from '../services/placeService';
 
 export const getPlaces = async (req: Request, res: Response) => {
     try {
