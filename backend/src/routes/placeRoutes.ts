@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateObjectId } from '../middleware/validateObjectId';
 const router = express.Router();
 import {
     getPlaces,
@@ -18,6 +19,7 @@ router.get('/random', getRandomPlace);
 
 router
     .route('/:id')
+    .all(validateObjectId)
     .get(getPlace)
     .put(updatePlace)
     .delete(deletePlace);

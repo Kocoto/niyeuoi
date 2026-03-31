@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateObjectId } from '../middleware/validateObjectId';
 import {
     getEvents,
     getEvent,
@@ -14,6 +15,7 @@ router.route('/')
     .post(createEvent);
 
 router.route('/:id')
+    .all(validateObjectId)
     .get(getEvent)
     .put(updateEvent)
     .delete(deleteEvent);

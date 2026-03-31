@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateObjectId } from '../middleware/validateObjectId';
 import {
     getMoods,
     getMood,
@@ -14,6 +15,7 @@ router.route('/')
     .post(createMood);
 
 router.route('/:id')
+    .all(validateObjectId)
     .get(getMood)
     .put(updateMood)
     .delete(deleteMood);

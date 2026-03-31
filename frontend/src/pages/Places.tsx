@@ -8,7 +8,7 @@ interface IPlace {
   _id: string;
   name: string;
   address: string;
-  rating: number;
+  rating?: number;
   category: string;
   note: string;
   image?: string;
@@ -32,11 +32,14 @@ const Places: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
-  
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [pendingVisitId, setPendingVisitId] = useState<string | null>(null);
+  const [tempRating, setTempRating] = useState(5);
+
   const initialForm = {
     name: '',
     address: '',
-    rating: 5,
+    rating: 0,
     category: 'Cafe',
     note: '',
     image: '',
@@ -68,7 +71,7 @@ const Places: React.FC = () => {
     setFormData({
       name: place.name,
       address: place.address,
-      rating: place.rating,
+      rating: place.rating ?? 0,
       category: place.category,
       note: place.note || '',
       image: place.image || '',
@@ -145,10 +148,12 @@ const Places: React.FC = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
+      const payload = { ...formData };
+      if (!payload.isVisited) delete (payload as any).rating;
       if (isEditing && editingId) {
-        await api.put(`/places/${editingId}`, formData);
+        await api.put(`/places/${editingId}`, payload);
       } else {
-        await api.post('/places', formData);
+        await api.post('/places', payload);
       }
       setShowModal(false);
       setIsEditing(false);
@@ -161,10 +166,19 @@ const Places: React.FC = () => {
     }
   };
 
-  const markAsVisited = async (id: string) => {
+  const markAsVisited = (id: string) => {
+    setPendingVisitId(id);
+    setTempRating(5);
+    setShowRatingModal(true);
+  };
+
+  const confirmVisited = async () => {
+    if (!pendingVisitId) return;
     try {
-      await api.put(`/places/${id}`, { isVisited: true });
-      fetchPlaces();
+      await api.put(`/places/${pendingVisitId}`, { isVisited: true, rating: tempRating });
+      setShowRatingModal(false);
+      setPendingVisitId(null);
+      await fetchPlaces();
     } catch (err) {
       alert('Lỗi cập nhật trạng thái!');
     }
@@ -241,7 +255,11 @@ const Places: React.FC = () => {
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
                   <span className="bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">{place.category}</span>
-                  <div className="flex items-center gap-1 text-yellow-400 font-bold text-sm"><Star fill="currentColor" size={14} /> {place.rating}</div>
+                  {place.isVisited && place.rating ? (
+                    <div className="flex items-center gap-1 text-yellow-400 font-bold text-sm"><Star fill="currentColor" size={14} /> {place.rating}</div>
+                  ) : (
+                    <span className="text-[10px] text-gray-300 font-bold">Chưa có rating</span>
+                  )}
                 </div>
                 <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-primary transition-colors line-clamp-1">{place.name}</h3>
                 <p className="text-gray-500 text-xs mb-4 line-clamp-2 flex-1"><MapPin size={12} className="inline mr-1" /> {place.address}</p>
@@ -262,6 +280,32 @@ const Places: React.FC = () => {
           )}
         </div>
       )}
+
+      {/* Modal Chấm Điểm Khi Đánh Dấu Đã Đi */}
+      <AnimatePresence>
+        {showRatingModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRatingModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative bg-white w-full max-w-sm rounded-[2.5rem] p-8 shadow-2xl text-center">
+              <div className="text-4xl mb-3">🍽️</div>
+              <h2 className="text-xl font-bold text-gray-800 mb-1">Quán ăn thế nào?</h2>
+              <p className="text-sm text-gray-400 mb-6">Chấm điểm để ghi nhớ nhé!</p>
+              <div className="flex justify-center gap-3 mb-6">
+                {[1, 2, 3, 4, 5].map(star => (
+                  <button key={star} type="button" onClick={() => setTempRating(star)} className="transition-transform hover:scale-125 active:scale-95">
+                    <Star size={36} className={star <= tempRating ? 'text-yellow-400' : 'text-gray-200'} fill={star <= tempRating ? 'currentColor' : 'none'} />
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm font-bold text-gray-500 mb-6">{['', 'Tệ quá 😞', 'Tạm được thôi 😐', 'Ổn ổn 😊', 'Ngon lắm! 😋', 'Tuyệt vời! 🤩'][tempRating]}</p>
+              <div className="flex gap-3">
+                <button onClick={() => setShowRatingModal(false)} className="flex-1 py-3 rounded-2xl bg-gray-100 text-gray-500 font-bold text-sm">Hủy</button>
+                <button onClick={confirmVisited} className="flex-1 py-3 rounded-2xl bg-primary text-white font-bold text-sm shadow-lg shadow-pink-100">Xác nhận ❤️</button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Thêm/Sửa Quán */}
       <AnimatePresence>
@@ -299,7 +343,11 @@ const Places: React.FC = () => {
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <select className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}><option value="Cafe">Cafe</option><option value="Nhà hàng">Nhà hàng</option><option value="Ăn vặt">Ăn vặt</option><option value="Khác">Khác</option></select>
-                    <input type="number" min="1" max="5" className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" value={formData.rating} onChange={e => setFormData({...formData, rating: parseInt(e.target.value)})} />
+                    {formData.isVisited ? (
+                      <input type="number" min="1" max="5" className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" placeholder="Sao (1-5)..." value={formData.rating || ''} onChange={e => setFormData({...formData, rating: parseInt(e.target.value) || 0})} />
+                    ) : (
+                      <div className="w-full bg-gray-50 p-4 rounded-2xl text-xs text-gray-300 font-bold flex items-center">Rating sau khi đi ✨</div>
+                    )}
                   </div>
                   <textarea rows={2} className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" placeholder="Ghi chú về quán..." value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
                   <button type="submit" disabled={uploading || locating} className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg mt-2 disabled:opacity-50">

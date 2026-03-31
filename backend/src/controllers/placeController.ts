@@ -60,8 +60,9 @@ export const deletePlace = async (req: Request, res: Response) => {
 
 export const getRandomPlace = async (req: Request, res: Response) => {
     try {
-        const { category } = req.query;
-        const place = await placeService.getRandomPlace(category as string);
+        const { category, isVisited } = req.query;
+        const isVisitedBool = isVisited === 'true' ? true : isVisited === 'false' ? false : undefined;
+        const place = await placeService.getRandomPlace(category as string, isVisitedBool);
         res.status(200).json({ success: true, data: place });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND_LIST') {

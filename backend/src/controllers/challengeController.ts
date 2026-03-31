@@ -14,7 +14,10 @@ export const createChallenge = async (req: Request, res: Response) => {
     try {
         const challenge = await challengeService.createChallenge(req.body);
         res.status(201).json({ success: true, data: challenge });
-    } catch (err) {
+    } catch (err: any) {
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
         res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
     }
 };

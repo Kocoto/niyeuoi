@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateObjectId } from '../middleware/validateObjectId';
 import {
     getCoupons,
     getCoupon,
@@ -14,6 +15,7 @@ router.route('/')
     .post(createCoupon);
 
 router.route('/:id')
+    .all(validateObjectId)
     .get(getCoupon)
     .put(updateCoupon)
     .delete(deleteCoupon);

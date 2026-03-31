@@ -1,4 +1,5 @@
 import express from 'express';
+import { validateObjectId } from '../middleware/validateObjectId';
 import {
     getWishlist,
     getWishlistItem,
@@ -14,6 +15,7 @@ router.route('/')
     .post(createWishlistItem);
 
 router.route('/:id')
+    .all(validateObjectId)
     .get(getWishlistItem)
     .put(updateWishlistItem)
     .delete(deleteWishlistItem);
