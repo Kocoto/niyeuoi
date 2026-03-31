@@ -44,7 +44,7 @@ const Challenges: React.FC = () => {
   const toggleComplete = async (challenge: IChallenge) => {
     try {
       await api.put(`/challenges/${challenge._id}`, { isCompleted: !challenge.isCompleted });
-      fetchChallenges();
+      await fetchChallenges();
     } catch (err) {
       alert('Lỗi cập nhật trạng thái!');
     }
@@ -56,7 +56,7 @@ const Challenges: React.FC = () => {
       await api.post('/challenges', formData);
       setShowModal(false);
       setFormData({ title: '', description: '', points: 10, difficulty: 'Dễ' });
-      fetchChallenges();
+      await fetchChallenges();
     } catch (err) {
       alert('Lỗi khi thêm thử thách!');
     }
@@ -66,7 +66,7 @@ const Challenges: React.FC = () => {
     if (!window.confirm('Xóa thử thách này nhé?')) return;
     try {
       await api.delete(`/challenges/${id}`);
-      fetchChallenges();
+      await fetchChallenges();
     } catch (err) {
       alert('Không xóa được!');
     }

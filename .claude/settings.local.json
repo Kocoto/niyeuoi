@@ -11,7 +11,11 @@
       "Bash(npm run:*)",
       "Bash(find d:/Code/niyeuoi/niyeuoi/frontend -type f \\\\\\(-name *.css -o -name *.config.js -o -name *.config.ts -o -name index.css \\\\\\))",
       "Bash(grep -r \"from ''.*\\\\.js''\" \"d:/Code/niyeuoi/niyeuoi/backend/src\" --include=\"*.ts\" -l)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(for file:*)",
+      "Bash(do)",
+      "Bash(sed -i -e 's/      fetchEvents\\(\\);/      await fetchEvents\\(\\);/g' -e 's/      fetchCoupons\\(\\);/      await fetchCoupons\\(\\);/g' -e 's/      fetchWishes\\(\\);/      await fetchWishes\\(\\);/g' -e 's/      fetchChallenges\\(\\);/      await fetchChallenges\\(\\);/g' -e 's/      fetchMemories\\(\\);/      await fetchMemories\\(\\);/g' \"$file\")",
+      "Bash(done)"
     ]
   }
 }

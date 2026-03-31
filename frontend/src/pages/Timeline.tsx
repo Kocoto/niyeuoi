@@ -92,7 +92,7 @@ const Timeline: React.FC = () => {
       setIsEditing(false);
       setEditingId(null);
       setFormData(initialForm);
-      fetchMemories();
+      await fetchMemories();
     } catch (err) {
       alert('Lỗi khi lưu kỷ niệm!');
     }
@@ -102,7 +102,7 @@ const Timeline: React.FC = () => {
     if (!window.confirm('Xóa kỷ niệm này? 🥺')) return;
     try {
       await api.delete(`/memories/${id}`);
-      fetchMemories();
+      await fetchMemories();
     } catch (err) {
       alert('Không xóa được rồi!');
     }

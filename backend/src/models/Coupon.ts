@@ -2,12 +2,8 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface ICoupon extends Document {
     title: string;
-    code: string;
-    value: string;
-    condition: string;
     description: string;
-    status: 'Sẵn sàng' | 'Đã dùng' | 'Hết hạn';
-    expiryDate: Date;
+    isUsed: boolean;
 }
 
 const couponSchema: Schema = new Schema({
@@ -16,30 +12,14 @@ const couponSchema: Schema = new Schema({
         required: [true, 'Tiêu đề voucher là bắt buộc'],
         trim: true
     },
-    code: {
-        type: String,
-        unique: true,
-        trim: true
-    },
-    value: {
-        type: String,
-        required: [true, 'Giá trị voucher là bắt buộc']
-    },
-    condition: {
-        type: String,
-        trim: true
-    },
     description: {
         type: String,
-        trim: true
+        trim: true,
+        default: ''
     },
-    status: {
-        type: String,
-        enum: ['Sẵn sàng', 'Đã dùng', 'Hết hạn'],
-        default: 'Sẵn sàng'
-    },
-    expiryDate: {
-        type: Date
+    isUsed: {
+        type: Boolean,
+        default: false
     }
 }, {
     timestamps: true

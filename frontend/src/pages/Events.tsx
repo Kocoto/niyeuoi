@@ -66,7 +66,7 @@ const Events: React.FC = () => {
       setIsEditing(false);
       setEditingId(null);
       setFormData(initialForm);
-      fetchEvents();
+      await fetchEvents();
     } catch (err) {
       alert('Lỗi khi lưu sự kiện!');
     }
@@ -76,7 +76,7 @@ const Events: React.FC = () => {
     if (!window.confirm('Xóa sự kiện này nhé?')) return;
     try {
       await api.delete(`/events/${id}`);
-      fetchEvents();
+      await fetchEvents();
     } catch (err) {
       alert('Không xóa được!');
     }

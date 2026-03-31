@@ -22,7 +22,7 @@ interface IPlace {
 const Places: React.FC = () => {
   const [places, setPlaces] = useState<IPlace[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'visited' | 'wishlist'>('visited');
+  const [activeTab, setActiveTab] = useState<'visited' | 'wishlist'>('wishlist');
   const [randomPlace, setRandomPlace] = useState<IPlace | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const { role } = useAuth();
@@ -153,8 +153,9 @@ const Places: React.FC = () => {
       setShowModal(false);
       setIsEditing(false);
       setEditingId(null);
+      setActiveTab(formData.isVisited ? 'visited' : 'wishlist');
       setFormData(initialForm);
-      fetchPlaces();
+      await fetchPlaces();
     } catch (err) {
       alert('Lỗi khi lưu quán!');
     }

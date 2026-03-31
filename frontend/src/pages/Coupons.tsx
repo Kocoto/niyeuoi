@@ -43,7 +43,7 @@ const Coupons: React.FC = () => {
       await api.post('/coupons', formData);
       setShowModal(false);
       setFormData({ title: '', description: '' });
-      fetchCoupons();
+      await fetchCoupons();
     } catch (err) {
       alert('Lỗi khi tặng voucher!');
     }
@@ -53,7 +53,7 @@ const Coupons: React.FC = () => {
     if (!window.confirm('Bạn có chắc muốn sử dụng tấm vé này không? 💕')) return;
     try {
       await api.put(`/coupons/${id}`, { isUsed: true });
-      fetchCoupons();
+      await fetchCoupons();
     } catch (err) {
       alert('Không thể sử dụng voucher lúc này!');
     }
@@ -63,7 +63,7 @@ const Coupons: React.FC = () => {
     if (!window.confirm('Thu hồi tấm vé này nhé?')) return;
     try {
       await api.delete(`/coupons/${id}`);
-      fetchCoupons();
+      await fetchCoupons();
     } catch (err) {
       alert('Không xóa được!');
     }

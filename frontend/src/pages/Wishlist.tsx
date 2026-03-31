@@ -77,7 +77,7 @@ const Wishlist: React.FC = () => {
       setIsEditing(false);
       setEditingId(null);
       setFormData(initialForm);
-      fetchWishes();
+      await fetchWishes();
     } catch (err) {
       alert('Lỗi khi lưu mong muốn!');
     }
@@ -87,7 +87,7 @@ const Wishlist: React.FC = () => {
     if (!window.confirm('Xóa mục này nhé? 🥺')) return;
     try {
       await api.delete(`/wishlist/${id}`);
-      fetchWishes();
+      await fetchWishes();
     } catch (err) {
       alert('Không xóa được rồi!');
     }
@@ -97,7 +97,7 @@ const Wishlist: React.FC = () => {
     try {
       const newStatus = wish.status === 'Đang đợi' ? 'Đã mua' : 'Đang đợi';
       await api.put(`/wishlist/${wish._id}`, { status: newStatus });
-      fetchWishes();
+      await fetchWishes();
     } catch (err) {
       console.error('Lỗi cập nhật trạng thái');
     }
