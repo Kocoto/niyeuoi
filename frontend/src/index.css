@@ -26,4 +26,45 @@ h1, .romantic-font {
   .btn-primary {
     @apply bg-primary text-white px-6 py-2 rounded-full font-semibold hover:bg-primary/90 transition-all;
   }
+
+  /* Page layout */
+  .page-container {
+    @apply max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8;
+  }
+
+  /* Page header block */
+  .page-header {
+    @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8;
+  }
+
+  /* Page title */
+  .page-title {
+    @apply text-3xl md:text-4xl font-bold text-gray-800;
+    font-family: 'Dancing Script', cursive;
+  }
+
+  /* Page subtitle */
+  .page-subtitle {
+    @apply text-sm text-gray-500 italic mt-1;
+  }
+
+  /* Section label (small uppercase label above a list) */
+  .section-label {
+    @apply text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2;
+  }
+
+  /* Empty state */
+  .empty-state {
+    @apply text-center py-16 bg-white/60 rounded-[2rem] border-2 border-dashed border-pink-100;
+  }
+
+  /* Add button (floating round) */
+  .btn-add {
+    @apply bg-primary text-white p-3 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all shrink-0;
+  }
+
+  /* Card base */
+  .card {
+    @apply bg-white rounded-[2rem] shadow-sm border border-pink-50;
+  }
 }

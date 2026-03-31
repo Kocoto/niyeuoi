@@ -110,13 +110,14 @@ const Timeline: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-2 md:px-4 py-6 md:py-8 pb-24 md:pb-8">
-      <div className="text-center mb-10 relative">
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-2 font-romantic">Dòng thời gian Kỷ niệm</h1>
-        <p className="text-gray-600 italic text-sm md:text-base px-4">Nơi lưu giữ những thước phim hạnh phúc của hai ta... 🎞️</p>
-        
-        <button 
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Dòng thời gian Kỷ niệm</h1>
+          <p className="page-subtitle">Nơi lưu giữ những thước phim hạnh phúc của hai ta... 🎞️</p>
+        </div>
+        <button
           onClick={() => { setIsEditing(false); setFormData(initialForm); setShowModal(true); }}
-          className="absolute top-0 right-0 bg-primary text-white p-3 rounded-2xl shadow-lg hover:scale-110 transition-all"
+          className="btn-add"
         >
           <Plus size={20} />
         </button>

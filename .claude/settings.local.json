@@ -8,7 +8,8 @@
       "Bash(python -c \"from PIL import Image; print\\(''pillow ok''\\)\")",
       "Bash(python -c \"import cairosvg; print\\(''cairosvg ok''\\)\")",
       "Bash(npm uninstall:*)",
-      "Bash(npm run:*)"
+      "Bash(npm run:*)",
+      "Bash(find d:/Code/niyeuoi/niyeuoi/frontend -type f \\\\\\(-name *.css -o -name *.config.js -o -name *.config.ts -o -name index.css \\\\\\))"
     ]
   }
 }

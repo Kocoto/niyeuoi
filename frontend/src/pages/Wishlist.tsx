@@ -105,22 +105,28 @@ const Wishlist: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
+      <div className="page-header">
         <div>
-          <h1 className="text-4xl font-bold text-gray-800 mb-2">Danh sách Mong muốn</h1>
-          <p className="text-gray-600 font-medium">Những điều nhỏ bé chúng mình cùng ước ao... 🎁</p>
+          <h1 className="page-title">Danh sách Mong muốn</h1>
+          <p className="page-subtitle">Những điều nhỏ bé chúng mình cùng ước ao... 🎁</p>
         </div>
-        <button 
+        <button
           onClick={() => { setIsEditing(false); setFormData(initialForm); setShowModal(true); }}
-          className="bg-primary text-white p-4 rounded-2xl shadow-lg hover:rotate-6 transition-transform"
+          className="btn-add"
         >
-          <Plus />
+          <Plus size={20} />
         </button>
       </div>
 
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-primary" size={40} />
+        </div>
+      ) : wishes.length === 0 ? (
+        <div className="empty-state">
+          <Gift className="text-pink-200 mx-auto mb-3" size={36} />
+          <p className="text-gray-400 font-medium">Danh sách trống.</p>
+          <p className="text-gray-300 text-sm mt-1">Hãy thêm điều ước đầu tiên của bạn! 🎁</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">

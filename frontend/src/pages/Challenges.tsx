@@ -76,10 +76,10 @@ const Challenges: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1 font-romantic text-center md:text-left">Thử thách Tình yêu</h1>
-          <p className="text-gray-500 text-sm text-center md:text-left italic">Cùng nhau hoàn thành để hâm nóng tình cảm nhé... 🔥</p>
+          <h1 className="page-title">Thử thách Tình yêu</h1>
+          <p className="page-subtitle">Cùng nhau hoàn thành để hâm nóng tình cảm nhé... 🔥</p>
         </div>
         
         <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-pink-100 flex items-center gap-3">
@@ -97,12 +97,12 @@ const Challenges: React.FC = () => {
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          <div className="flex justify-between items-center px-2 mb-2">
-            <h2 className="font-bold text-gray-400 text-xs uppercase tracking-widest flex items-center gap-2">
+          <div className="flex justify-between items-center px-2 mb-3">
+            <span className="section-label">
               <Zap size={14} className="text-secondary" /> Nhiệm vụ hiện tại
-            </h2>
-            <button onClick={() => setShowModal(true)} className="text-primary hover:scale-110 transition-transform">
-              <Plus size={20} />
+            </span>
+            <button onClick={() => setShowModal(true)} className="btn-add !p-2">
+              <Plus size={18} />
             </button>
           </div>
 
@@ -143,8 +143,10 @@ const Challenges: React.FC = () => {
           ))}
 
           {challenges.length === 0 && (
-            <div className="text-center py-20 bg-gray-50 rounded-[3rem] border-2 border-dashed border-gray-200">
-              <p className="text-gray-400">Chưa có thử thách nào. Hãy tạo thử thách đầu tiên cho nhau nhé! 💖</p>
+            <div className="empty-state">
+              <Trophy className="text-pink-200 mx-auto mb-3" size={36} />
+              <p className="text-gray-400 font-medium">Chưa có thử thách nào.</p>
+              <p className="text-gray-300 text-sm mt-1">Hãy tạo thử thách đầu tiên cho nhau nhé! 💖</p>
             </div>
           )}
         </div>

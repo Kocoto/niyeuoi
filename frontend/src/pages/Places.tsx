@@ -186,10 +186,10 @@ const Places: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-2 md:px-4 py-6 md:py-8 pb-24 md:pb-8">
-      <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-6">
-        <div className="text-center md:text-left">
-          <h1 className="text-3xl md:text-4xl font-bold text-gray-800 mb-1 font-romantic">Sổ tay Ẩm thực</h1>
-          <p className="text-gray-600 text-sm italic">Nơi lưu giữ hương vị tình yêu của đôi ta... 🍜</p>
+      <div className="page-header">
+        <div>
+          <h1 className="page-title">Sổ tay Ẩm thực</h1>
+          <p className="page-subtitle">Nơi lưu giữ hương vị tình yêu của đôi ta... 🍜</p>
         </div>
         
         <div className="flex gap-2 w-full md:w-auto">

@@ -71,12 +71,12 @@ const Coupons: React.FC = () => {
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="flex justify-between items-center mb-10">
+      <div className="page-header">
         <div>
-          <h1 className="text-3xl font-bold text-gray-800 mb-1 font-romantic">Ví Voucher Tình yêu</h1>
-          <p className="text-gray-500 text-sm italic">Những đặc quyền dành riêng cho bạn... 🎟️</p>
+          <h1 className="page-title">Ví Voucher Tình yêu</h1>
+          <p className="page-subtitle">Những đặc quyền dành riêng cho bạn... 🎟️</p>
         </div>
-        <button onClick={() => setShowModal(true)} className="bg-primary text-white p-3 rounded-full shadow-lg">
+        <button onClick={() => setShowModal(true)} className="btn-add">
           <Plus size={20} />
         </button>
       </div>
@@ -84,6 +84,12 @@ const Coupons: React.FC = () => {
       {loading ? (
         <div className="flex justify-center py-20">
           <Loader2 className="animate-spin text-primary" size={40} />
+        </div>
+      ) : coupons.length === 0 ? (
+        <div className="empty-state">
+          <Ticket className="text-pink-200 mx-auto mb-3" size={36} />
+          <p className="text-gray-400 font-medium">Chưa có voucher nào.</p>
+          <p className="text-gray-300 text-sm mt-1">Tặng nhau một đặc quyền đặc biệt nào! 🎁</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

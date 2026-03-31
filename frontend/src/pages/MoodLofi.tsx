@@ -29,14 +29,14 @@ const MoodLofi: React.FC = () => {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         
         {/* Left: Mood Tracker */}
         <div className="lg:col-span-1 space-y-8">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2 font-romantic">Góc Cảm xúc</h1>
-            <p className="text-gray-500 text-sm italic">Hôm nay bạn thấy thế nào? ✨</p>
+            <h1 className="page-title">Góc Cảm xúc</h1>
+            <p className="page-subtitle">Hôm nay bạn thấy thế nào? ✨</p>
           </div>
 
           <div className="grid grid-cols-1 gap-4">

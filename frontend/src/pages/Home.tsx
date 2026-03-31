@@ -66,8 +66,8 @@ const Home: React.FC = () => {
 };
 
 const FeatureCard: React.FC<{ title: string, desc: string, color: string }> = ({ title, desc, color }) => (
-  <div className={`${color} p-6 rounded-3xl text-left border-2 border-transparent hover:border-white shadow-sm card-hover transition-all`}>
-    <h3 className="text-xl font-bold mb-2 text-gray-800">{title}</h3>
+  <div className={`${color} p-6 rounded-[2rem] text-left border-2 border-transparent hover:border-white shadow-sm card-hover transition-all`}>
+    <h3 className="text-lg font-bold mb-2 text-gray-800">{title}</h3>
     <p className="text-gray-600 text-sm leading-relaxed">{desc}</p>
   </div>
 );
