@@ -7,6 +7,7 @@ export interface IPlace extends Document {
     rating: number;
     note: string;
     category: 'Cafe' | 'Nhà hàng' | 'Ăn vặt' | 'Khác';
+    isVisited: boolean;
     location: {
         type: string;
         coordinates: number[];

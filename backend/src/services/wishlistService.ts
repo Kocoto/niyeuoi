@@ -41,7 +41,11 @@ class WishlistService {
         if (!wish) throw new Error('NOT_FOUND');
 
         if (!oldWish?.isSecretlyPrepared && wish.isSecretlyPrepared) {
-            await notificationService.sendTelegram(`🤫 <b>Kế hoạch bí mật bắt đầu!</b>\n\nMón quà <i>${wish.itemName}</i> đã được chuyển sang trạng thái chuẩn bị bí mật.`);
+            await notificationService.sendDiscord(
+                '🤫 Kế hoạch bí mật bắt đầu!',
+                `Món quà **${wish.itemName}** đã được chuyển sang trạng thái chuẩn bị bí mật.`,
+                3447003
+            );
         }
 
         return wish;

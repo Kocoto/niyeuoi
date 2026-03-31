@@ -1,7 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMood extends Document {
-    mood: 'Vui' | 'Buồn' | 'Giận' | 'Hạnh phúc' | 'Mệt mỏi' | 'Bình thường';
+    mood: 'Hạnh phúc' | 'Đang yêu' | 'Bình yên' | 'Hơi buồn' | 'Mệt mỏi' | 'Vui' | 'Buồn' | 'Giận' | 'Bình thường';
     note: string;
     date: Date;
 }
@@ -9,7 +9,7 @@ export interface IMood extends Document {
 const moodSchema: Schema = new Schema({
     mood: {
         type: String,
-        enum: ['Vui', 'Buồn', 'Giận', 'Hạnh phúc', 'Mệt mỏi', 'Bình thường'],
+        enum: ['Hạnh phúc', 'Đang yêu', 'Bình yên', 'Hơi buồn', 'Mệt mỏi', 'Vui', 'Buồn', 'Giận', 'Bình thường'],
         required: [true, 'Tâm trạng là bắt buộc']
     },
     note: {

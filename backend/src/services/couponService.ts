@@ -33,7 +33,7 @@ class CouponService {
         if (!coupon) throw new Error('NOT_FOUND');
 
         // Thông báo nếu voucher vừa được sử dụng
-        if (!oldCoupon?.isUsed && coupon.isUsed) {
+        if (oldCoupon?.status !== 'Đã dùng' && coupon.status === 'Đã dùng') {
             await notificationService.sendDiscord(
                 '🎉 Bé yêu vừa sử dụng Voucher!',
                 `Voucher: **${coupon.title}**\nChuẩn bị thực hiện lời hứa nhé bạn trai! ❤️`,

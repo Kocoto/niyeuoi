@@ -17,7 +17,7 @@ class EventService {
             const event = await Event.create(data);
             await notificationService.sendDiscord(
                 '📅 Cột mốc quan trọng sắp tới!',
-                `Sự kiện: **${event.title}**\nNgày diễn ra: ${new Date(event.date).toLocaleDateString('vi-VN')}\n<i>"${event.description || 'Chuẩn bị tinh thần thôi!'}"</i>`,
+                `Sự kiện: **${event.name}**\nNgày diễn ra: ${new Date(event.date).toLocaleDateString('vi-VN')}\n<i>"${event.description || 'Chuẩn bị tinh thần thôi!'}"</i>`,
                 1752220 // Xanh đậm
             );
             return event;
