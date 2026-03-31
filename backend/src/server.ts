@@ -20,6 +20,8 @@ import eventRoutes from './routes/eventRoutes.js';
 import couponRoutes from './routes/couponRoutes.js';
 import moodRoutes from './routes/moodRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import challengeRoutes from './routes/challengeRoutes.js';
 
 app.use('/api/places', placeRoutes);
 app.use('/api/memories', memoryRoutes);
@@ -28,6 +30,8 @@ app.use('/api/events', eventRoutes);
 app.use('/api/coupons', couponRoutes);
 app.use('/api/moods', moodRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/challenges', challengeRoutes);
 
 // Basic Route
 app.get('/', (req: Request, res: Response) => {

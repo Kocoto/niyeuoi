@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
-import { motion } from 'framer-motion';
-import { Gift, ExternalLink, CheckCircle2, Circle, Loader2, Plus, Trash2 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { Gift, ExternalLink, CheckCircle2, Circle, Loader2, Plus, Trash2, X, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface IWish {
@@ -18,21 +18,32 @@ const Wishlist: React.FC = () => {
   const [wishes, setWishes] = useState<IWish[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  
+  const [showModal, setShowModal] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const initialForm = {
+    itemName: '',
+    link: '',
+    price: 0,
+    isSecretlyPrepared: false,
+    note: ''
+  };
+
+  const [formData, setFormData] = useState(initialForm);
 
   useEffect(() => {
     fetchWishes();
-  }, []);
+  }, [role]);
 
   const fetchWishes = async () => {
     try {
       const res = await api.get('/wishlist');
       let data = res.data.data;
-      
-      // Nếu là bạn gái, ẩn các món "Lén chuẩn bị"
       if (role === 'girlfriend') {
         data = data.filter((w: IWish) => !w.isSecretlyPrepared);
       }
-      
       setWishes(data);
     } catch (err) {
       console.error('Lỗi khi tải wishlist');
@@ -41,8 +52,39 @@ const Wishlist: React.FC = () => {
     }
   };
 
+  const handleEdit = (wish: IWish) => {
+    setFormData({
+      itemName: wish.itemName,
+      link: wish.link || '',
+      price: wish.price || 0,
+      isSecretlyPrepared: wish.isSecretlyPrepared,
+      note: wish.note || ''
+    });
+    setEditingId(wish._id);
+    setIsEditing(true);
+    setShowModal(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      if (isEditing && editingId) {
+        await api.put(`/wishlist/${editingId}`, formData);
+      } else {
+        await api.post('/wishlist', formData);
+      }
+      setShowModal(false);
+      setIsEditing(false);
+      setEditingId(null);
+      setFormData(initialForm);
+      fetchWishes();
+    } catch (err) {
+      alert('Lỗi khi lưu mong muốn!');
+    }
+  };
+
   const deleteWish = async (id: string) => {
-    if (!window.confirm('Xóa mục này khỏi tâm trí luôn hả bạn? 🥺')) return;
+    if (!window.confirm('Xóa mục này nhé? 🥺')) return;
     try {
       await api.delete(`/wishlist/${id}`);
       fetchWishes();
@@ -51,18 +93,29 @@ const Wishlist: React.FC = () => {
     }
   };
 
+  const toggleStatus = async (wish: IWish) => {
+    try {
+      const newStatus = wish.status === 'Đang đợi' ? 'Đã mua' : 'Đang đợi';
+      await api.put(`/wishlist/${wish._id}`, { status: newStatus });
+      fetchWishes();
+    } catch (err) {
+      console.error('Lỗi cập nhật trạng thái');
+    }
+  };
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="flex justify-between items-end mb-12">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Danh sách Mong muốn</h1>
           <p className="text-gray-600 font-medium">Những điều nhỏ bé chúng mình cùng ước ao... 🎁</p>
         </div>
-        {role === 'boyfriend' && (
-          <button className="bg-primary text-white p-4 rounded-2xl shadow-lg hover:rotate-6 transition-transform">
-            <Plus />
-          </button>
-        )}
+        <button 
+          onClick={() => { setIsEditing(false); setFormData(initialForm); setShowModal(true); }}
+          className="bg-primary text-white p-4 rounded-2xl shadow-lg hover:rotate-6 transition-transform"
+        >
+          <Plus />
+        </button>
       </div>
 
       {loading ? (
@@ -75,25 +128,29 @@ const Wishlist: React.FC = () => {
             <motion.div 
               key={wish._id}
               whileHover={{ y: -5 }}
-              className={`bg-white rounded-[2rem] overflow-hidden border-2 shadow-sm transition-all ${wish.status === 'Đã mua' ? 'border-green-100 opacity-75' : 'border-pink-50'}`}
+              className={`bg-white rounded-[2.5rem] overflow-hidden border-2 shadow-sm transition-all relative group ${wish.status === 'Đã mua' ? 'border-green-100 opacity-75' : 'border-pink-50 hover:border-primary'}`}
             >
+              {/* Edit/Delete Overlay */}
+              {role === 'boyfriend' && (
+                <div className="absolute top-6 right-6 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => handleEdit(wish)} className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:text-primary transition-all"><Pencil size={14} /></button>
+                  <button onClick={() => deleteWish(wish._id)} className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
+                </div>
+              )}
+
               <div className="p-8">
                 <div className="flex justify-between items-start mb-6">
-                  <div className={`p-3 rounded-2xl ${wish.status === 'Đã mua' ? 'bg-green-100 text-green-600' : 'bg-pink-100 text-primary'}`}>
-                    <Gift size={24} />
+                  <div 
+                    onClick={() => toggleStatus(wish)}
+                    className={`p-4 rounded-[1.5rem] cursor-pointer shadow-sm transition-all ${wish.status === 'Đã mua' ? 'bg-green-100 text-green-600' : 'bg-pink-100 text-primary hover:scale-110 active:scale-95'}`}
+                  >
+                    <Gift size={28} />
                   </div>
-                  <div className="flex flex-col items-end gap-2">
-                    {wish.isSecretlyPrepared && (
-                      <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-2 py-1 rounded-full uppercase">
-                        Lén chuẩn bị 🤫
-                      </span>
-                    )}
-                    {role === 'boyfriend' && (
-                      <button onClick={() => deleteWish(wish._id)} className="text-gray-300 hover:text-red-400 transition-colors">
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
+                  {wish.isSecretlyPrepared && (
+                    <span className="bg-purple-100 text-purple-600 text-[10px] font-bold px-3 py-1.5 rounded-full uppercase tracking-wider">
+                      Lén chuẩn bị 🤫
+                    </span>
+                  )}
                 </div>
 
                 <h3 className="text-xl font-bold text-gray-800 mb-2">{wish.itemName}</h3>
@@ -120,14 +177,55 @@ const Wishlist: React.FC = () => {
               </div>
             </motion.div>
           ))}
-
-          {wishes.length === 0 && (
-            <div className="col-span-full text-center py-32 bg-white/40 rounded-[3rem] border-4 border-dashed border-pink-100">
-              <p className="text-xl font-medium text-gray-400">Danh sách đang trống. Đừng ngần ngại ước nhé! ✨</p>
-            </div>
-          )}
         </div>
       )}
+
+      {/* Modal Thêm/Sửa Mong Muốn */}
+      <AnimatePresence>
+        {showModal && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
+            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">{isEditing ? 'Cập nhật điều ước ✨' : 'Ước một điều mới ✨'}</h2>
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X /></button>
+              </div>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Tên món đồ / Địa điểm</label>
+                  <input required className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:bg-white border-2 border-transparent focus:border-primary transition-all text-sm" placeholder="Bạn đang mong chờ điều gì..." value={formData.itemName} onChange={e => setFormData({...formData, itemName: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Link tham khảo (nếu có)</label>
+                  <input className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:bg-white border-2 border-transparent focus:border-primary transition-all text-sm" placeholder="Dán link sản phẩm vào đây..." value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Giá dự kiến</label>
+                    <input type="number" className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" placeholder="Giá..." value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value) || 0})} />
+                  </div>
+                  {role === 'boyfriend' && (
+                    <div>
+                      <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Bí mật</label>
+                      <div className="flex items-center h-full gap-2 px-2 text-xs font-bold text-gray-500">
+                        <input type="checkbox" id="secret" className="w-4 h-4 rounded text-primary" checked={formData.isSecretlyPrepared} onChange={e => setFormData({...formData, isSecretlyPrepared: e.target.checked})} />
+                        <label htmlFor="secret">Lén chuẩn bị 🤫</label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Ghi chú</label>
+                  <textarea className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" rows={2} placeholder="Nhắn nhủ gì thêm không nè..." value={formData.note} onChange={e => setFormData({...formData, note: e.target.value})} />
+                </div>
+                <button type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all mt-2">
+                  {isEditing ? 'Cập nhật mong muốn ❤️' : 'Gửi điều ước ❤️'}
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

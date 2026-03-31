@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile } from 'lucide-react';
+import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 const Navbar: React.FC = () => {
@@ -21,15 +21,16 @@ const Navbar: React.FC = () => {
         </div>
         
         {/* Desktop Menu */}
-        <div className="hidden md:flex items-center gap-6">
-          <DesktopNavLink to="/" icon={<Home size={18} />} label="Trang chủ" active={isActive('/')} />
-          <DesktopNavLink to="/places" icon={<MapPin size={18} />} label="Ẩm thực" active={isActive('/places')} />
-          <DesktopNavLink to="/timeline" icon={<Calendar size={18} />} label="Kỷ niệm" active={isActive('/timeline')} />
-          <DesktopNavLink to="/events" icon={<Bell size={18} />} label="Sự kiện" active={isActive('/events')} />
-          <DesktopNavLink to="/wishlist" icon={<Gift size={18} />} label="Wishlist" active={isActive('/wishlist')} />
-          <DesktopNavLink to="/map" icon={<Map size={18} />} label="Bản đồ" active={isActive('/map')} />
-          <DesktopNavLink to="/coupons" icon={<Ticket size={18} />} label="Voucher" active={isActive('/coupons')} />
-          <DesktopNavLink to="/mood" icon={<Smile size={18} />} label="Góc nhỏ" active={isActive('/mood')} />
+        <div className="hidden md:flex items-center gap-5">
+          <DesktopNavLink to="/" icon={<Home size={16} />} label="Nhà" active={isActive('/')} />
+          <DesktopNavLink to="/places" icon={<MapPin size={16} />} label="Ẩm thực" active={isActive('/places')} />
+          <DesktopNavLink to="/timeline" icon={<Calendar size={16} />} label="Kỷ niệm" active={isActive('/timeline')} />
+          <DesktopNavLink to="/challenges" icon={<Trophy size={16} />} label="Thử thách" active={isActive('/challenges')} />
+          <DesktopNavLink to="/events" icon={<Bell size={16} />} label="Sự kiện" active={isActive('/events')} />
+          <DesktopNavLink to="/wishlist" icon={<Gift size={16} />} label="Wishlist" active={isActive('/wishlist')} />
+          <DesktopNavLink to="/map" icon={<Map size={16} />} label="Bản đồ" active={isActive('/map')} />
+          <DesktopNavLink to="/coupons" icon={<Ticket size={16} />} label="Voucher" active={isActive('/coupons')} />
+          <DesktopNavLink to="/mood" icon={<Smile size={16} />} label="Góc nhỏ" active={isActive('/mood')} />
         </div>
       </header>
 
@@ -38,6 +39,7 @@ const Navbar: React.FC = () => {
         <MobileNavLink to="/" icon={<Home size={18} />} label="Nhà" active={isActive('/')} />
         <MobileNavLink to="/places" icon={<MapPin size={18} />} label="Quán" active={isActive('/places')} />
         <MobileNavLink to="/timeline" icon={<Calendar size={18} />} label="Lịch" active={isActive('/timeline')} />
+        <MobileNavLink to="/challenges" icon={<Trophy size={18} />} label="Đua" active={isActive('/challenges')} />
         <MobileNavLink to="/events" icon={<Bell size={18} />} label="Sự kiện" active={isActive('/events')} />
         <MobileNavLink to="/wishlist" icon={<Gift size={18} />} label="Ước" active={isActive('/wishlist')} />
         <MobileNavLink to="/mood" icon={<Smile size={18} />} label="Mood" active={isActive('/mood')} />
@@ -52,22 +54,22 @@ const Navbar: React.FC = () => {
 const DesktopNavLink: React.FC<{ to: string, icon: React.ReactNode, label: string, active: boolean }> = ({ to, icon, label, active }) => (
   <Link 
     to={to} 
-    className={`flex items-center gap-2 transition-colors font-medium ${active ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}
+    className={`flex items-center gap-1.5 transition-colors font-medium ${active ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}
   >
     {icon}
-    <span className="text-sm">{label}</span>
+    <span className="text-[13px]">{label}</span>
   </Link>
 );
 
 const MobileNavLink: React.FC<{ to: string, icon: React.ReactNode, label: string, active: boolean }> = ({ to, icon, label, active }) => (
   <Link 
     to={to} 
-    className={`flex flex-col items-center gap-1 px-3 py-1 rounded-xl transition-all flex-shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`}
+    className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-xl transition-all flex-shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`}
   >
     <div className={`${active ? 'scale-110' : 'scale-100'} transition-transform`}>
       {icon}
     </div>
-    <span className="text-[10px] font-bold uppercase tracking-tighter">{label}</span>
+    <span className="text-[9px] font-bold uppercase tracking-tighter">{label}</span>
   </Link>
 );
 

@@ -43,6 +43,10 @@ const placeSchema: Schema = new Schema({
         enum: ['Cafe', 'Nhà hàng', 'Ăn vặt', 'Khác'],
         default: 'Khác'
     },
+    isVisited: {
+        type: Boolean,
+        default: false
+    },
     location: {
         type: {
             type: String,

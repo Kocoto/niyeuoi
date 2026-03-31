@@ -1,4 +1,5 @@
 import Place, { IPlace } from '../models/Place.js';
+import notificationService from './notificationService.js';
 
 class PlaceService {
     async getAllPlaces() {
@@ -13,7 +14,18 @@ class PlaceService {
 
     async createPlace(data: Partial<IPlace>) {
         try {
-            return await Place.create(data);
+            const place = await Place.create(data);
+            
+            const action = place.isVisited ? 'vừa măm măm tại' : 'vừa tìm thấy một quán cực xịn:';
+            const color = place.isVisited ? 15844367 : 3066993; // Vàng nếu đã đi, Xanh lá nếu muốn đi
+
+            await notificationService.sendDiscord(
+                `🍴 Địa điểm ăn uống mới!`,
+                `Người ấy ${action} **${place.name}**\n📍 Địa chỉ: ${place.address}\n<i>"${place.note || 'Hãy cùng nhau đi nhé!'}"</i>`,
+                color
+            );
+
+            return place;
         } catch (error: any) {
             if (error.name === 'ValidationError') {
                 const messages = Object.values(error.errors).map((val: any) => val.message);

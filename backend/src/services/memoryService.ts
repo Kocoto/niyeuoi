@@ -1,4 +1,5 @@
 import Memory, { IMemory } from '../models/Memory.js';
+import notificationService from './notificationService.js';
 
 class MemoryService {
     async getAllMemories() {
@@ -13,7 +14,13 @@ class MemoryService {
 
     async createMemory(data: Partial<IMemory>) {
         try {
-            return await Memory.create(data);
+            const memory = await Memory.create(data);
+            await notificationService.sendDiscord(
+                '📸 Kỷ niệm mới vừa được ghi dấu!',
+                `Tiêu đề: **${memory.title}**\nCảm xúc: **${memory.mood}**\nHãy vào xem ngay nhé! ❤️`,
+                15277667 // Màu hồng
+            );
+            return memory;
         } catch (error: any) {
             if (error.name === 'ValidationError') {
                 const messages = Object.values(error.errors).map((val: any) => val.message);

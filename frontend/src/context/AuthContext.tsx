@@ -1,10 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
+import api from '../api/api';
+
 type Role = 'boyfriend' | 'girlfriend';
 
 interface AuthContextType {
   role: Role;
-  toggleRole: () => void;
+  toggleRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -14,14 +16,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return (localStorage.getItem('user-role') as Role) || 'girlfriend';
   });
 
-  const toggleRole = () => {
+  const toggleRole = async () => {
     if (role === 'girlfriend') {
       const pin = window.prompt('Nhập mã PIN để vào chế độ Quản lý:');
-      if (pin === '1234') { // Bạn có thể đổi mã PIN tại đây
-        setRole('boyfriend');
-        localStorage.setItem('user-role', 'boyfriend');
-      } else {
-        alert('Mã PIN không chính xác! Chế độ bí mật được bảo vệ. 😉');
+      try {
+        const res = await api.post('/auth/verify', { pin });
+        if (res.data.success) {
+          setRole('boyfriend');
+          localStorage.setItem('user-role', 'boyfriend');
+          // Trong tương lai có thể lưu token: localStorage.setItem('token', res.data.token);
+        }
+      } catch (err: any) {
+        alert(err.response?.data?.message || 'Mã PIN không chính xác!');
       }
     } else {
       setRole('girlfriend');

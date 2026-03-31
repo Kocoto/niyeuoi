@@ -26,18 +26,19 @@ const Home: React.FC = () => {
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ repeat: Infinity, duration: 2 }}
           >
-            <Heart size={48} md:size={60} className="text-primary fill-primary" />
+            {/* Sử dụng className của Tailwind để xử lý responsive thay vì dùng prop trực tiếp */}
+            <Heart className="text-primary fill-primary w-12 h-12 md:w-16 md:h-16" />
           </motion.div>
         </div>
         
         <h1 className="text-3xl md:text-5xl font-bold mb-2 md:mb-4 text-gray-800">Chúng ta đã bên nhau</h1>
         
         <div className="relative inline-block my-4 md:my-8">
-          <Stars className="absolute -top-4 -left-4 md:-top-6 md:-left-6 text-yellow-400 size-5 md:size-8" />
+          <Stars className="absolute -top-4 -left-4 md:-top-6 md:-left-6 text-yellow-400 w-5 h-5 md:w-8 md:h-8" />
           <span className="text-6xl md:text-8xl font-black text-primary romantic-font leading-tight">
             {days}
           </span>
-          <Stars className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 text-yellow-400 size-5 md:size-8" />
+          <Stars className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 text-yellow-400 w-5 h-5 md:w-8 md:h-8" />
         </div>
         
         <p className="text-xl md:text-2xl font-semibold text-gray-600">Ngày hạnh phúc</p>

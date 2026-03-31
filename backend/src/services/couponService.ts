@@ -1,4 +1,5 @@
 import Coupon, { ICoupon } from '../models/Coupon.js';
+import notificationService from './notificationService.js';
 
 class CouponService {
     async getAllCoupons() {
@@ -24,11 +25,22 @@ class CouponService {
     }
 
     async updateCoupon(id: string, data: Partial<ICoupon>) {
+        const oldCoupon = await Coupon.findById(id);
         const coupon = await Coupon.findByIdAndUpdate(id, data, {
             new: true,
             runValidators: true
         });
         if (!coupon) throw new Error('NOT_FOUND');
+
+        // Thông báo nếu voucher vừa được sử dụng
+        if (!oldCoupon?.isUsed && coupon.isUsed) {
+            await notificationService.sendDiscord(
+                '🎉 Bé yêu vừa sử dụng Voucher!',
+                `Voucher: **${coupon.title}**\nChuẩn bị thực hiện lời hứa nhé bạn trai! ❤️`,
+                15844367 // Màu vàng/cam
+            );
+        }
+
         return coupon;
     }
 
