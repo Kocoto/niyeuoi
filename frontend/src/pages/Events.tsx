@@ -113,7 +113,7 @@ const Events: React.FC = () => {
           {events.map((event) => {
             const daysLeft = calculateDaysLeft(event.date);
             return (
-              <motion.div key={event._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-6 rounded-3xl shadow-sm border border-pink-50 flex items-center gap-6 relative group">
+              <motion.div key={event._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-pink-50 flex items-center gap-3 md:gap-6 relative group">
                 <div className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center text-white font-bold ${daysLeft < 0 ? 'bg-gray-300' : 'bg-primary shadow-lg shadow-pink-100'}`}>
                   {daysLeft === 0 ? <PartyPopper size={32} /> : (
                     <>
@@ -128,9 +128,9 @@ const Events: React.FC = () => {
                   <p className="text-gray-400 text-xs mt-2 line-clamp-1">{event.description}</p>
                 </div>
                 {role === 'boyfriend' && (
-                  <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all ml-4">
-                    <button onClick={() => handleEdit(event)} className="p-2 text-gray-400 hover:text-primary transition-all"><Pencil size={18} /></button>
-                    <button onClick={() => deleteEvent(event._id)} className="p-2 text-gray-400 hover:text-red-400 transition-all"><Trash2 size={18} /></button>
+                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all ml-auto shrink-0">
+                    <button onClick={() => handleEdit(event)} className="p-2.5 text-gray-400 hover:text-primary transition-all rounded-xl"><Pencil size={18} /></button>
+                    <button onClick={() => deleteEvent(event._id)} className="p-2.5 text-gray-400 hover:text-red-400 transition-all rounded-xl"><Trash2 size={18} /></button>
                   </div>
                 )}
               </motion.div>

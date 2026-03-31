@@ -226,9 +226,9 @@ const Places: React.FC = () => {
             <motion.div layout key={place._id} className="bg-white rounded-[2rem] shadow-sm border border-pink-50 hover:border-primary card-hover group overflow-hidden flex flex-col relative">
               {/* Edit/Delete Overlay */}
               {role === 'boyfriend' && (
-                <div className="absolute top-4 right-4 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(e) => { e.stopPropagation(); handleEdit(place); }} className="p-2 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-primary shadow-md"><Pencil size={14} /></button>
-                  <button onClick={(e) => { e.stopPropagation(); deletePlace(place._id); }} className="p-2 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-red-500 shadow-md"><Trash2 size={14} /></button>
+                <div className="absolute top-3 right-3 z-10 flex gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => { e.stopPropagation(); handleEdit(place); }} className="p-2.5 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-primary shadow-md"><Pencil size={14} /></button>
+                  <button onClick={(e) => { e.stopPropagation(); deletePlace(place._id); }} className="p-2.5 bg-white/90 backdrop-blur-sm rounded-full text-gray-600 hover:text-red-500 shadow-md"><Trash2 size={14} /></button>
                 </div>
               )}
 

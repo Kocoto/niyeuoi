@@ -132,9 +132,9 @@ const Timeline: React.FC = () => {
 
               <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-pink-50 hover:shadow-md transition-shadow relative group">
                 {role === 'boyfriend' && (
-                  <div className="absolute top-4 right-4 flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
-                    <button onClick={() => handleEdit(memory)} className="text-gray-400 hover:text-primary"><Pencil size={16} /></button>
-                    <button onClick={() => deleteMemory(memory._id)} className="text-gray-400 hover:text-red-400"><Trash2 size={16} /></button>
+                  <div className="absolute top-3 right-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                    <button onClick={() => handleEdit(memory)} className="p-2 text-gray-400 hover:text-primary rounded-lg"><Pencil size={16} /></button>
+                    <button onClick={() => deleteMemory(memory._id)} className="p-2 text-gray-400 hover:text-red-400 rounded-lg"><Trash2 size={16} /></button>
                   </div>
                 )}
                 <div className={`flex flex-wrap items-center gap-2 text-primary font-bold mb-2 ${index % 2 === 0 ? 'md:justify-end' : 'justify-start'}`}>

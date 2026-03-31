@@ -62,14 +62,14 @@ const DesktopNavLink: React.FC<{ to: string, icon: React.ReactNode, label: strin
 );
 
 const MobileNavLink: React.FC<{ to: string, icon: React.ReactNode, label: string, active: boolean }> = ({ to, icon, label, active }) => (
-  <Link 
-    to={to} 
-    className={`flex flex-col items-center gap-1 px-2.5 py-1 rounded-xl transition-all flex-shrink-0 ${active ? 'text-primary' : 'text-gray-400'}`}
+  <Link
+    to={to}
+    className={`flex flex-col items-center gap-0.5 px-3 py-2 rounded-xl transition-all flex-shrink-0 min-h-[52px] justify-center ${active ? 'text-primary' : 'text-gray-400'}`}
   >
     <div className={`${active ? 'scale-110' : 'scale-100'} transition-transform`}>
       {icon}
     </div>
-    <span className="text-[9px] font-bold uppercase tracking-tighter">{label}</span>
+    <span className="text-[11px] font-semibold">{label}</span>
   </Link>
 );
 

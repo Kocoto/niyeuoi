@@ -105,7 +105,7 @@ const Wishlist: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="flex justify-between items-end mb-12">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 mb-8">
         <div>
           <h1 className="text-4xl font-bold text-gray-800 mb-2">Danh sách Mong muốn</h1>
           <p className="text-gray-600 font-medium">Những điều nhỏ bé chúng mình cùng ước ao... 🎁</p>
@@ -123,7 +123,7 @@ const Wishlist: React.FC = () => {
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-8">
           {wishes.map((wish) => (
             <motion.div 
               key={wish._id}
@@ -132,13 +132,13 @@ const Wishlist: React.FC = () => {
             >
               {/* Edit/Delete Overlay */}
               {role === 'boyfriend' && (
-                <div className="absolute top-6 right-6 z-10 flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(wish)} className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:text-primary transition-all"><Pencil size={14} /></button>
-                  <button onClick={() => deleteWish(wish._id)} className="p-2 bg-gray-50 rounded-xl text-gray-600 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
+                <div className="absolute top-4 right-4 z-10 flex gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => handleEdit(wish)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-primary transition-all"><Pencil size={14} /></button>
+                  <button onClick={() => deleteWish(wish._id)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
                 </div>
               )}
 
-              <div className="p-8">
+              <div className="p-5 md:p-8">
                 <div className="flex justify-between items-start mb-6">
                   <div 
                     onClick={() => toggleStatus(wish)}

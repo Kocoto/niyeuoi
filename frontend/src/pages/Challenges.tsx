@@ -135,7 +135,7 @@ const Challenges: React.FC = () => {
               </div>
 
               {role === 'boyfriend' && (
-                <button onClick={() => deleteChallenge(challenge._id)} className="p-2 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all">
+                <button onClick={() => deleteChallenge(challenge._id)} className="p-2.5 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-all rounded-xl shrink-0">
                   <Trash2 size={16} />
                 </button>
               )}

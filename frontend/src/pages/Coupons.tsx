@@ -70,7 +70,7 @@ const Coupons: React.FC = () => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
+    <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="flex justify-between items-center mb-10">
         <div>
           <h1 className="text-3xl font-bold text-gray-800 mb-1 font-romantic">Ví Voucher Tình yêu</h1>
@@ -94,14 +94,14 @@ const Coupons: React.FC = () => {
               </div>
               <div className="flex-1 p-5 relative">
                 {role === 'boyfriend' && (
-                  <button onClick={() => deleteCoupon(coupon._id)} className="absolute top-2 right-2 text-gray-300 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-all"><Trash2 size={14} /></button>
+                  <button onClick={() => deleteCoupon(coupon._id)} className="absolute top-3 right-3 p-2 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-all"><Trash2 size={16} /></button>
                 )}
                 <h3 className="text-lg font-bold text-gray-800 mb-1">{coupon.title}</h3>
                 <p className="text-gray-500 text-xs mb-4 line-clamp-2">{coupon.description}</p>
                 <div className="flex justify-between items-end">
                   <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">LOVE-{coupon._id.slice(-4)}</span>
                   {!coupon.isUsed ? (
-                    <button onClick={() => useCoupon(coupon._id)} className="bg-primary text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all">Sử dụng ngay</button>
+                    <button onClick={() => useCoupon(coupon._id)} className="bg-primary text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all">Sử dụng ngay</button>
                   ) : (
                     <div className="flex items-center gap-1 text-green-500 text-xs font-bold"><CheckCircle size={14} /> Đã dùng</div>
                   )}
