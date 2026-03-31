@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
-import { Calendar, Clock, Plus, Loader2, PartyPopper, X, Trash2, Pencil } from 'lucide-react';
+import { Calendar, Plus, Loader2, PartyPopper, X, Trash2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 

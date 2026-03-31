@@ -14,6 +14,7 @@ interface IPlace {
   image?: string;
   isVisited: boolean;
   location: {
+    type: string;
     coordinates: number[];
   };
 }
@@ -135,7 +136,7 @@ const Places: React.FC = () => {
       } finally {
         setLocating(false);
       }
-    }, (error) => {
+    }, (_error) => {
       alert('Không thể lấy vị trí!');
       setLocating(false);
     }, { enableHighAccuracy: true });

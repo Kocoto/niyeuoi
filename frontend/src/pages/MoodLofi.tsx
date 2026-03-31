@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Music, Music2, Volume2, Heart, Smile, Frown, Coffee, CloudRain, Loader2 } from 'lucide-react';
+import { Music2, Volume2, Heart, Smile, Frown, Coffee, CloudRain, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/api';
 

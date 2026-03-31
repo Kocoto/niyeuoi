@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Calendar, Heart, Loader2, Plus, X, Trash2, Camera, Pencil } from 'lucide-react';
+import { Calendar, Loader2, Plus, X, Trash2, Camera, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 interface IMemory {

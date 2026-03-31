@@ -1,0 +1,5 @@
+<svg xmlns='http://www.w3.org/2000/svg' width='512' height='512' viewBox='0 0 512 512'>
+  <rect width='512' height='512' rx='102' fill='#1e1b4b'/>
+  <path d='M256 375 C160 307, 107 253, 107 192 C107 147, 147 112, 187 112 C213 112, 237 125, 256 147 C275 125, 299 112, 325 112 C365 112, 405 147, 405 192 C405 253, 352 307, 256 375 Z' fill='#f472b6' opacity='0.9'/>
+  <text x='256' y='280' font-family='serif' font-size='108' font-weight='bold' fill='white' text-anchor='middle' dominant-baseline='middle'>N</text>
+</svg>
