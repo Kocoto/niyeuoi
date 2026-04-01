@@ -31,8 +31,6 @@ const placeSchema: Schema = new Schema({
     },
     rating: {
         type: Number,
-        min: 1,
-        max: 5,
         default: null
     },
     note: {
