@@ -72,6 +72,18 @@ app.get('/api/health', (_req: Request, res: Response) => {
 
 // Database Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/niyeuoi';
+// Kiểm tra Cloudinary config
+const cloudinaryOk = !!(process.env['CLOUDINARY_CLOUD_NAME'] && process.env['CLOUDINARY_API_KEY'] && process.env['CLOUDINARY_API_SECRET']);
+if (cloudinaryOk) {
+    logger.success('Cloudinary', `Config hợp lệ (cloud: ${process.env['CLOUDINARY_CLOUD_NAME']})`);
+} else {
+    logger.warn('Cloudinary', 'Thiếu env vars — upload ảnh sẽ không hoạt động', {
+        CLOUDINARY_CLOUD_NAME: !!process.env['CLOUDINARY_CLOUD_NAME'],
+        CLOUDINARY_API_KEY: !!process.env['CLOUDINARY_API_KEY'],
+        CLOUDINARY_API_SECRET: !!process.env['CLOUDINARY_API_SECRET'],
+    });
+}
+
 logger.info('Server', 'Đang kết nối MongoDB...', { uri: MONGODB_URI.replace(/:\/\/.*@/, '://***@') });
 mongoose.connect(MONGODB_URI)
     .then(() => {
