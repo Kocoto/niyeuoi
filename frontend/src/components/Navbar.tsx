@@ -9,7 +9,7 @@ const TAP_RESET_MS = 1500;
 const Navbar: React.FC = () => {
   const location = useLocation();
   const { role, toggleRole } = useAuth();
-  const [tapCount, setTapCount] = useState(0);
+  const [_tapCount, setTapCount] = useState(0);
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isActive = (path: string) => location.pathname === path;

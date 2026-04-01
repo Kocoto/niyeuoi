@@ -3,7 +3,7 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import api from '../api/api';
-import { Heart, Loader2 } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 
 // Sửa lỗi hiển thị icon của Leaflet trong React
 delete (L.Icon.Default.prototype as any)._getIconUrl;

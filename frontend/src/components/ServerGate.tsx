@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Heart, Loader2 } from 'lucide-react';
+import { Heart } from 'lucide-react';
 
 type Status = 'checking' | 'starting' | 'ready';
 
