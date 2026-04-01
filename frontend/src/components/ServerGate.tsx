@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Heart } from 'lucide-react';
+import api from '../api/api';
 
 type Status = 'checking' | 'starting' | 'ready';
 
-const BASE_URL = import.meta.env.VITE_API_URL?.replace('/api', '') || 'http://localhost:5000';
 const POLL_INTERVAL = 2000;
 
 const messages = [
@@ -27,16 +27,17 @@ const ServerGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
     const check = async () => {
       try {
-        const res = await fetch(`${BASE_URL}/api/health`, { signal: AbortSignal.timeout(5000) });
-        if (res.ok) {
-          const data = await res.json();
-          if (data.status === 'ok') {
-            setStatus('ready');
-            return;
-          }
+        // Bất kỳ HTTP response nào (kể cả lỗi 4xx) đều nghĩa là server đang chạy
+        await api.get('/health', { timeout: 5000 });
+        setStatus('ready');
+        return;
+      } catch (err: any) {
+        if (err.response) {
+          // Có response → server đang chạy, chỉ là endpoint chưa có
+          setStatus('ready');
+          return;
         }
-        setStatus('starting');
-      } catch {
+        // Network error / timeout → server chưa sẵn sàng
         setStatus('starting');
       }
       timer = setTimeout(check, POLL_INTERVAL);
