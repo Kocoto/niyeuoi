@@ -26,18 +26,30 @@ const ServerGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     let elapsedTimer: ReturnType<typeof setInterval>;
 
     const check = async () => {
+      console.group(`[ServerGate] Ping #${elapsed + 1}`);
+      console.log('URL:', api.defaults.baseURL + '/places');
       try {
-        // Bất kỳ HTTP response nào (kể cả lỗi 4xx) đều nghĩa là server đang chạy
-        await api.get('/places', { timeout: 5000 });
+        const res = await api.get('/places', { timeout: 5000 });
+        console.log('✅ Server sẵn sàng:', res.status, res.statusText);
+        console.groupEnd();
         setStatus('ready');
         return;
       } catch (err: any) {
         if (err.response) {
-          // Có response → server đang chạy, chỉ là endpoint chưa có
+          console.log('✅ Server đang chạy (có HTTP response):', err.response.status);
+          console.groupEnd();
           setStatus('ready');
           return;
         }
-        // Network error / timeout → server chưa sẵn sàng
+        if (err.code === 'ECONNABORTED' || err.message?.includes('timeout')) {
+          console.warn('⏱ Timeout — server đang khởi động chậm');
+        } else if (err.message?.includes('Network Error')) {
+          console.warn('🌐 Network Error — server chưa phản hồi (CORS hoặc server down)');
+        } else {
+          console.warn('❌ Lỗi không xác định:', err.code, err.message);
+        }
+        console.log('axios config:', { baseURL: err.config?.baseURL, url: err.config?.url });
+        console.groupEnd();
         setStatus('starting');
       }
       timer = setTimeout(check, POLL_INTERVAL);
