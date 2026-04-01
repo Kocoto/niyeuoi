@@ -6,7 +6,7 @@ export interface IPlace extends Document {
     image: string;
     rating: number;
     note: string;
-    category: 'Cafe' | 'Nhà hàng' | 'Ăn vặt' | 'Khác';
+    category: 'Cafe' | 'Trà sữa' | 'Nhà hàng' | 'Ăn vặt' | 'Lẩu & Nướng' | 'Hải sản' | 'Phở & Bún' | 'Bánh & Kem' | 'Quán nhậu' | 'Khác';
     isVisited: boolean;
     location: {
         type: string;
@@ -39,7 +39,7 @@ const placeSchema: Schema = new Schema({
     },
     category: {
         type: String,
-        enum: ['Cafe', 'Nhà hàng', 'Ăn vặt', 'Khác'],
+        enum: ['Cafe', 'Trà sữa', 'Nhà hàng', 'Ăn vặt', 'Lẩu & Nướng', 'Hải sản', 'Phở & Bún', 'Bánh & Kem', 'Quán nhậu', 'Khác'],
         default: 'Khác'
     },
     isVisited: {

@@ -11,9 +11,13 @@ import MoodLofi from './pages/MoodLofi';
 import Challenges from './pages/Challenges';
 
 import { AuthProvider } from './context/AuthContext';
+import { UIProvider } from './context/UIContext';
+import ServerGate from './components/ServerGate';
 
 function App() {
   return (
+    <UIProvider>
+    <ServerGate>
     <AuthProvider>
       <Router>
         <div className="min-h-screen bg-background text-gray-800">
@@ -35,6 +39,8 @@ function App() {
         </div>
       </Router>
     </AuthProvider>
+    </ServerGate>
+    </UIProvider>
   );
 }
 

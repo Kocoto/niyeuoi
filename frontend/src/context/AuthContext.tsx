@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
-
 import api from '../api/api';
+import { useUI } from './UIContext';
 
 type Role = 'boyfriend' | 'girlfriend';
 
@@ -15,23 +15,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [role, setRole] = useState<Role>(() => {
     return (localStorage.getItem('user-role') as Role) || 'girlfriend';
   });
+  const { toast, prompt } = useUI();
 
   const toggleRole = async () => {
     if (role === 'girlfriend') {
-      const pin = window.prompt('Nhập mã PIN để vào chế độ Quản lý:');
+      const pin = await prompt('Nhập mã PIN để vào chế độ Quản lý:', '••••••', 'password');
+      if (!pin) return;
       try {
         const res = await api.post('/auth/verify', { pin });
         if (res.data.success) {
           setRole('boyfriend');
           localStorage.setItem('user-role', 'boyfriend');
-          // Trong tương lai có thể lưu token: localStorage.setItem('token', res.data.token);
+          toast('Đã vào chế độ Quản lý 🔑', 'success');
         }
       } catch (err: any) {
-        alert(err.response?.data?.message || 'Mã PIN không chính xác!');
+        toast(err.response?.data?.message || 'Mã PIN không chính xác!', 'error');
       }
     } else {
       setRole('girlfriend');
       localStorage.setItem('user-role', 'girlfriend');
+      toast('Đã thoát chế độ Quản lý', 'info');
     }
   };
 

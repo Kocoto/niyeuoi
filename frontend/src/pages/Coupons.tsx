@@ -3,6 +3,7 @@ import api from '../api/api';
 import { Ticket, CheckCircle, Loader2, Plus, X, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 interface ICoupon {
   _id: string;
@@ -15,6 +16,7 @@ const Coupons: React.FC = () => {
   const [coupons, setCoupons] = useState<ICoupon[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -45,27 +47,27 @@ const Coupons: React.FC = () => {
       setFormData({ title: '', description: '' });
       await fetchCoupons();
     } catch (err) {
-      alert('Lỗi khi tặng voucher!');
+      toast('Lỗi khi tặng voucher!', 'error');
     }
   };
 
   const useCoupon = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn sử dụng tấm vé này không? 💕')) return;
+    if (!await confirm('Bạn có chắc muốn sử dụng tấm vé này không? 💕')) return;
     try {
       await api.put(`/coupons/${id}`, { isUsed: true });
       await fetchCoupons();
     } catch (err) {
-      alert('Không thể sử dụng voucher lúc này!');
+      toast('Không thể sử dụng voucher lúc này!', 'error');
     }
   };
 
   const deleteCoupon = async (id: string) => {
-    if (!window.confirm('Thu hồi tấm vé này nhé?')) return;
+    if (!await confirm('Thu hồi tấm vé này nhé?')) return;
     try {
       await api.delete(`/coupons/${id}`);
       await fetchCoupons();
     } catch (err) {
-      alert('Không xóa được!');
+      toast('Không xóa được!', 'error');
     }
   };
 

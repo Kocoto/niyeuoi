@@ -3,6 +3,7 @@ import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Gift, ExternalLink, CheckCircle2, Circle, Loader2, Plus, Trash2, X, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 interface IWish {
   _id: string;
@@ -18,6 +19,7 @@ const Wishlist: React.FC = () => {
   const [wishes, setWishes] = useState<IWish[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -79,17 +81,17 @@ const Wishlist: React.FC = () => {
       setFormData(initialForm);
       await fetchWishes();
     } catch (err) {
-      alert('Lỗi khi lưu mong muốn!');
+      toast('Lỗi khi lưu mong muốn!', 'error');
     }
   };
 
   const deleteWish = async (id: string) => {
-    if (!window.confirm('Xóa mục này nhé? 🥺')) return;
+    if (!await confirm('Xóa mục này nhé? 🥺')) return;
     try {
       await api.delete(`/wishlist/${id}`);
       await fetchWishes();
     } catch (err) {
-      alert('Không xóa được rồi!');
+      toast('Không xóa được rồi!', 'error');
     }
   };
 

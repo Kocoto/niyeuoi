@@ -3,6 +3,7 @@ import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trophy, CheckCircle2, Circle, Loader2, Plus, X, Trash2, Zap } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 interface IChallenge {
   _id: string;
@@ -17,6 +18,7 @@ const Challenges: React.FC = () => {
   const [challenges, setChallenges] = useState<IChallenge[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [formData, setFormData] = useState({
@@ -46,7 +48,7 @@ const Challenges: React.FC = () => {
       await api.put(`/challenges/${challenge._id}`, { isCompleted: !challenge.isCompleted });
       await fetchChallenges();
     } catch (err) {
-      alert('Lỗi cập nhật trạng thái!');
+      toast('Lỗi cập nhật trạng thái!', 'error');
     }
   };
 
@@ -58,17 +60,17 @@ const Challenges: React.FC = () => {
       setFormData({ title: '', description: '', points: 10, difficulty: 'Dễ' });
       await fetchChallenges();
     } catch (err) {
-      alert('Lỗi khi thêm thử thách!');
+      toast('Lỗi khi thêm thử thách!', 'error');
     }
   };
 
   const deleteChallenge = async (id: string) => {
-    if (!window.confirm('Xóa thử thách này nhé?')) return;
+    if (!await confirm('Xóa thử thách này nhé?')) return;
     try {
       await api.delete(`/challenges/${id}`);
       await fetchChallenges();
     } catch (err) {
-      alert('Không xóa được!');
+      toast('Không xóa được!', 'error');
     }
   };
 

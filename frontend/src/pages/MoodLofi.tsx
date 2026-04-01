@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Music2, Volume2, Heart, Smile, Frown, Coffee, CloudRain, Loader2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/api';
+import { useUI } from '../context/UIContext';
 
 const moods = [
   { icon: <Smile className="text-yellow-500" />, label: 'Hạnh phúc', color: 'bg-yellow-50' },
@@ -14,13 +15,14 @@ const moods = [
 const MoodLofi: React.FC = () => {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const { toast } = useUI();
 
   const handleMoodSelect = async (label: string) => {
     setSelectedMood(label);
     setLoading(true);
     try {
       await api.post('/moods', { mood: label, note: 'Cập nhật từ Lofi Room' });
-      alert(`Đã ghi lại tâm trạng "${label}" của bạn. Mong bạn luôn vui vẻ! ❤️`);
+      toast(`Đã ghi lại tâm trạng "${label}" 💕 Mong bạn luôn vui vẻ!`, 'success');
     } catch (err) {
       console.error('Lỗi khi lưu tâm trạng');
     } finally {

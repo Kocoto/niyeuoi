@@ -1,19 +1,42 @@
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
+const TAPS_REQUIRED = 5;
+const TAP_RESET_MS = 1500;
+
 const Navbar: React.FC = () => {
   const location = useLocation();
   const { role, toggleRole } = useAuth();
+  const [tapCount, setTapCount] = useState(0);
+  const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
+
+  const handleLogoTap = () => {
+    if (role === 'boyfriend') {
+      toggleRole();
+      return;
+    }
+    if (tapTimer.current) clearTimeout(tapTimer.current);
+    setTapCount(prev => {
+      const next = prev + 1;
+      if (next >= TAPS_REQUIRED) {
+        setTapCount(0);
+        toggleRole();
+        return 0;
+      }
+      tapTimer.current = setTimeout(() => setTapCount(0), TAP_RESET_MS);
+      return next;
+    });
+  };
 
   return (
     <>
       {/* Top Header */}
       <header className="bg-white/80 backdrop-blur-md sticky top-0 z-50 shadow-sm px-6 py-3 flex items-center justify-between border-b border-pink-50">
-        <div className="flex items-center gap-2 group mx-auto md:mx-0 cursor-pointer" onClick={toggleRole}>
+        <div className="flex items-center gap-2 group mx-auto md:mx-0 cursor-pointer select-none" onClick={handleLogoTap}>
           <Heart className={`${role === 'boyfriend' ? 'text-blue-400 fill-blue-400' : 'text-primary fill-primary'} transition-all`} size={20} />
           <span className="romantic-font text-xl font-bold text-gray-800">
             {role === 'boyfriend' ? 'Quản lý Niyeuoi' : 'Niyeuoi'}

@@ -48,6 +48,16 @@ app.get('/', (req: Request, res: Response) => {
     res.send('Niyeuoi Backend (TypeScript) is running!');
 });
 
+// Health check
+app.get('/api/health', (_req: Request, res: Response) => {
+    const dbState = mongoose.connection.readyState; // 0=disconnected, 1=connected, 2=connecting
+    if (dbState === 1) {
+        res.status(200).json({ status: 'ok', db: 'connected' });
+    } else {
+        res.status(503).json({ status: 'starting', db: 'connecting' });
+    }
+});
+
 // Database Connection
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://localhost:27017/niyeuoi';
 logger.info('Server', 'Đang kết nối MongoDB...', { uri: MONGODB_URI.replace(/:\/\/.*@/, '://***@') });

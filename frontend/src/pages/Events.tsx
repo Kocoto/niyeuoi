@@ -3,6 +3,7 @@ import api from '../api/api';
 import { Calendar, Plus, Loader2, PartyPopper, X, Trash2, Pencil } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 interface IEvent {
   _id: string;
@@ -15,6 +16,7 @@ const Events: React.FC = () => {
   const [events, setEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -68,17 +70,17 @@ const Events: React.FC = () => {
       setFormData(initialForm);
       await fetchEvents();
     } catch (err) {
-      alert('Lỗi khi lưu sự kiện!');
+      toast('Lỗi khi lưu sự kiện!', 'error');
     }
   };
 
   const deleteEvent = async (id: string) => {
-    if (!window.confirm('Xóa sự kiện này nhé?')) return;
+    if (!await confirm('Xóa sự kiện này nhé?')) return;
     try {
       await api.delete(`/events/${id}`);
       await fetchEvents();
     } catch (err) {
-      alert('Không xóa được!');
+      toast('Không xóa được!', 'error');
     }
   };
 

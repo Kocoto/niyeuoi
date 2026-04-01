@@ -3,6 +3,7 @@ import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Loader2, Plus, X, Trash2, Camera, Pencil } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
 
 interface IMemory {
   _id: string;
@@ -17,6 +18,7 @@ const Timeline: React.FC = () => {
   const [memories, setMemories] = useState<IMemory[]>([]);
   const [loading, setLoading] = useState(true);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -73,7 +75,7 @@ const Timeline: React.FC = () => {
       });
       setFormData({ ...formData, media: res.data.data.url });
     } catch (err) {
-      alert('Lỗi tải ảnh!');
+      toast('Lỗi tải ảnh!', 'error');
     } finally {
       setUploading(false);
     }
@@ -94,17 +96,17 @@ const Timeline: React.FC = () => {
       setFormData(initialForm);
       await fetchMemories();
     } catch (err) {
-      alert('Lỗi khi lưu kỷ niệm!');
+      toast('Lỗi khi lưu kỷ niệm!', 'error');
     }
   };
 
   const deleteMemory = async (id: string) => {
-    if (!window.confirm('Xóa kỷ niệm này? 🥺')) return;
+    if (!await confirm('Xóa kỷ niệm này? 🥺')) return;
     try {
       await api.delete(`/memories/${id}`);
       await fetchMemories();
     } catch (err) {
-      alert('Không xóa được rồi!');
+      toast('Không xóa được rồi!', 'error');
     }
   };
 

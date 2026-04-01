@@ -13,10 +13,20 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
+const CATEGORY_EMOJI: Record<string, string> = {
+  'Cafe': '☕', 'Trà sữa': '🧋', 'Nhà hàng': '🍽️', 'Ăn vặt': '🍢',
+  'Lẩu & Nướng': '🔥', 'Hải sản': '🦞', 'Phở & Bún': '🍜',
+  'Bánh & Kem': '🍰', 'Quán nhậu': '🍺', 'Khác': '📍',
+};
+
 interface IPlace {
   _id: string;
   name: string;
   address: string;
+  category: string;
+  rating?: number;
+  isVisited: boolean;
+  note?: string;
   location: {
     coordinates: number[];
   };
@@ -63,15 +73,26 @@ const LoveMap: React.FC = () => {
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
             {places.map((place) => (
-              <Marker 
-                key={place._id} 
+              <Marker
+                key={place._id}
                 position={[place.location.coordinates[1], place.location.coordinates[0]] as any}
               >
-                <Popup>
-                  <div className="text-center p-2">
-                    <Heart size={16} className="text-primary fill-primary mx-auto mb-1" />
-                    <strong className="text-gray-800 block">{place.name}</strong>
-                    <span className="text-xs text-gray-500">{place.address}</span>
+                <Popup minWidth={200}>
+                  <div className="p-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-lg">{CATEGORY_EMOJI[place.category] || '📍'}</span>
+                      <strong className="text-gray-800 text-sm">{place.name}</strong>
+                    </div>
+                    <p className="text-xs text-gray-500 mb-2 leading-relaxed">{place.address}</p>
+                    <div className="flex items-center justify-between">
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${place.isVisited ? 'bg-pink-100 text-pink-600' : 'bg-violet-100 text-violet-600'}`}>
+                        {place.isVisited ? '✅ Đã đi' : '✨ Muốn đi'}
+                      </span>
+                      {place.isVisited && place.rating && (
+                        <span className="text-[11px] font-bold text-yellow-500">{'⭐'.repeat(place.rating)}</span>
+                      )}
+                    </div>
+                    {place.note && <p className="text-[10px] text-gray-400 italic mt-1.5">"{place.note}"</p>}
                   </div>
                 </Popup>
               </Marker>

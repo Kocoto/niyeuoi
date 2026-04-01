@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/api';
-import { MapPin, Star, Plus, RefreshCw, Loader2, X, Camera, CheckCircle2, Crosshair, Pencil, Trash2 } from 'lucide-react';
+import { MapPin, Star, Plus, RefreshCw, Loader2, X, Camera, CheckCircle2, Crosshair, Pencil, Trash2, Navigation } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
+import { useUI } from '../context/UIContext';
+
+const CATEGORIES = [
+  { value: 'Cafe',        emoji: '☕' },
+  { value: 'Trà sữa',    emoji: '🧋' },
+  { value: 'Nhà hàng',   emoji: '🍽️' },
+  { value: 'Ăn vặt',     emoji: '🍢' },
+  { value: 'Lẩu & Nướng',emoji: '🔥' },
+  { value: 'Hải sản',    emoji: '🦞' },
+  { value: 'Phở & Bún',  emoji: '🍜' },
+  { value: 'Bánh & Kem', emoji: '🍰' },
+  { value: 'Quán nhậu',  emoji: '🍺' },
+  { value: 'Khác',       emoji: '📍' },
+];
 
 interface IPlace {
   _id: string;
@@ -26,6 +40,7 @@ const Places: React.FC = () => {
   const [randomPlace, setRandomPlace] = useState<IPlace | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const { role } = useAuth();
+  const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
@@ -35,6 +50,7 @@ const Places: React.FC = () => {
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingVisitId, setPendingVisitId] = useState<string | null>(null);
   const [tempRating, setTempRating] = useState(5);
+  const [locatingId, setLocatingId] = useState<string | null>(null);
 
   const initialForm = {
     name: '',
@@ -84,12 +100,12 @@ const Places: React.FC = () => {
   };
 
   const deletePlace = async (id: string) => {
-    if (!window.confirm('Xóa quán này nhé? 🥺')) return;
+    if (!await confirm('Xóa quán này nhé? 🥺')) return;
     try {
       await api.delete(`/places/${id}`);
       fetchPlaces();
     } catch (err) {
-      alert('Không xóa được!');
+      toast('Không xóa được!', 'error');
     }
   };
 
@@ -105,7 +121,7 @@ const Places: React.FC = () => {
       });
       setFormData({ ...formData, image: res.data.data.url });
     } catch (err) {
-      alert('Lỗi tải ảnh!');
+      toast('Lỗi tải ảnh!', 'error');
     } finally {
       setUploading(false);
     }
@@ -113,7 +129,7 @@ const Places: React.FC = () => {
 
   const getCurrentLocation = () => {
     if (!navigator.geolocation) {
-      alert('Trình duyệt của bạn không hỗ trợ định vị!');
+      toast('Trình duyệt của bạn không hỗ trợ định vị!', 'warning');
       return;
     }
 
@@ -140,7 +156,7 @@ const Places: React.FC = () => {
         setLocating(false);
       }
     }, (_error) => {
-      alert('Không thể lấy vị trí!');
+      toast('Không thể lấy vị trí!', 'warning');
       setLocating(false);
     }, { enableHighAccuracy: true });
   };
@@ -162,7 +178,7 @@ const Places: React.FC = () => {
       setFormData(initialForm);
       await fetchPlaces();
     } catch (err) {
-      alert('Lỗi khi lưu quán!');
+      toast('Lỗi khi lưu quán!', 'error');
     }
   };
 
@@ -180,8 +196,43 @@ const Places: React.FC = () => {
       setPendingVisitId(null);
       await fetchPlaces();
     } catch (err) {
-      alert('Lỗi cập nhật trạng thái!');
+      toast('Lỗi cập nhật trạng thái!', 'error');
     }
+  };
+
+  const updatePlaceLocation = (id: string) => {
+    if (!navigator.geolocation) {
+      toast('Trình duyệt không hỗ trợ định vị!', 'warning');
+      return;
+    }
+    setLocatingId(id);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      const { latitude, longitude } = position.coords;
+      try {
+        let address = '';
+        try {
+          const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&addressdetails=1`);
+          const data = await res.json();
+          address = data.display_name || '';
+        } catch { /* giữ address cũ nếu lỗi */ }
+
+        const updateData: Record<string, any> = {
+          location: { type: 'Point', coordinates: [longitude, latitude] }
+        };
+        if (address) updateData.address = address;
+
+        await api.put(`/places/${id}`, updateData);
+        toast('Đã cập nhật vị trí! 📍', 'success');
+        await fetchPlaces();
+      } catch {
+        toast('Lỗi cập nhật vị trí!', 'error');
+      } finally {
+        setLocatingId(null);
+      }
+    }, () => {
+      toast('Không thể lấy vị trí!', 'warning');
+      setLocatingId(null);
+    }, { enableHighAccuracy: true });
   };
 
   const handleRandom = async () => {
@@ -191,7 +242,7 @@ const Places: React.FC = () => {
       const res = await api.get(`/places/random${activeTab === 'wishlist' ? '?isVisited=false' : ''}`);
       setRandomPlace(res.data.data);
     } catch (err) {
-      alert('Hết quán để random rồi!');
+      toast('Hết quán để random rồi! Thêm nhiều hơn nhé 🍜', 'warning');
     } finally {
       setIsRolling(false);
     }
@@ -254,7 +305,9 @@ const Places: React.FC = () => {
               )}
               <div className="p-6 flex-1 flex flex-col">
                 <div className="flex justify-between items-start mb-4">
-                  <span className="bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-full font-bold uppercase tracking-wider">{place.category}</span>
+                  <span className="bg-orange-50 text-orange-600 text-[10px] px-3 py-1 rounded-full font-bold">
+                    {CATEGORIES.find(c => c.value === place.category)?.emoji} {place.category}
+                  </span>
                   {place.isVisited && place.rating ? (
                     <div className="flex items-center gap-1 text-yellow-400 font-bold text-sm"><Star fill="currentColor" size={14} /> {place.rating}</div>
                   ) : (
@@ -264,12 +317,26 @@ const Places: React.FC = () => {
                 <h3 className="text-xl font-bold text-gray-800 mb-2 group-hover:text-primary transition-colors line-clamp-1">{place.name}</h3>
                 <p className="text-gray-500 text-xs mb-4 line-clamp-2 flex-1"><MapPin size={12} className="inline mr-1" /> {place.address}</p>
                 <div className="bg-gray-50 p-3 rounded-2xl text-gray-600 text-xs italic mb-4">"{place.note || 'Để dành đi cùng nhau nhé!'}"</div>
-                
-                {activeTab === 'wishlist' && (
-                  <button onClick={() => markAsVisited(place._id)} className="w-full mt-auto flex items-center justify-center gap-2 py-3 bg-pink-50 text-primary rounded-xl font-bold text-xs hover:bg-primary hover:text-white transition-all">
-                    <CheckCircle2 size={14} /> Đã đi rồi nè!
-                  </button>
-                )}
+
+                <div className="flex flex-col gap-2 mt-auto">
+                  {place.location.coordinates[0] === 0 && (
+                    <button
+                      onClick={() => updatePlaceLocation(place._id)}
+                      disabled={locatingId === place._id}
+                      className="w-full flex items-center justify-center gap-2 py-2.5 bg-violet-50 text-violet-500 rounded-xl font-bold text-xs hover:bg-violet-500 hover:text-white transition-all disabled:opacity-60"
+                    >
+                      {locatingId === place._id
+                        ? <><Loader2 size={13} className="animate-spin" /> Đang định vị...</>
+                        : <><Navigation size={13} /> Cập nhật vị trí</>
+                      }
+                    </button>
+                  )}
+                  {activeTab === 'wishlist' && (
+                    <button onClick={() => markAsVisited(place._id)} className="w-full flex items-center justify-center gap-2 py-3 bg-pink-50 text-primary rounded-xl font-bold text-xs hover:bg-primary hover:text-white transition-all">
+                      <CheckCircle2 size={14} /> Đã đi rồi nè!
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           ))}
@@ -342,9 +409,19 @@ const Places: React.FC = () => {
                     <button type="button" onClick={() => setFormData({...formData, isVisited: true})} className={`flex-1 py-3 rounded-xl font-bold text-xs transition-all ${formData.isVisited ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}>Đã đi 🍕</button>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
-                    <select className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}><option value="Cafe">Cafe</option><option value="Nhà hàng">Nhà hàng</option><option value="Ăn vặt">Ăn vặt</option><option value="Khác">Khác</option></select>
+                    <select className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" value={formData.category} onChange={e => setFormData({...formData, category: e.target.value})}>
+                      {CATEGORIES.map(c => (
+                        <option key={c.value} value={c.value}>{c.emoji} {c.value}</option>
+                      ))}
+                    </select>
                     {formData.isVisited ? (
-                      <input type="number" min="1" max="5" className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm border-2 border-transparent focus:border-primary transition-all" placeholder="Sao (1-5)..." value={formData.rating || ''} onChange={e => setFormData({...formData, rating: parseInt(e.target.value) || 0})} />
+                      <div className="w-full bg-gray-50 rounded-2xl flex items-center justify-center gap-1 py-3">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <button key={star} type="button" onClick={() => setFormData({...formData, rating: star})} className="transition-transform hover:scale-125 active:scale-95">
+                            <Star size={26} className={star <= (formData.rating || 0) ? 'text-yellow-400' : 'text-gray-200'} fill={star <= (formData.rating || 0) ? 'currentColor' : 'none'} />
+                          </button>
+                        ))}
+                      </div>
                     ) : (
                       <div className="w-full bg-gray-50 p-4 rounded-2xl text-xs text-gray-300 font-bold flex items-center">Rating sau khi đi ✨</div>
                     )}
