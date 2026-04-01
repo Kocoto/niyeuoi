@@ -28,7 +28,7 @@ const ServerGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const check = async () => {
       try {
         // Bất kỳ HTTP response nào (kể cả lỗi 4xx) đều nghĩa là server đang chạy
-        await api.get('/health', { timeout: 5000 });
+        await api.get('/places', { timeout: 5000 });
         setStatus('ready');
         return;
       } catch (err: any) {
