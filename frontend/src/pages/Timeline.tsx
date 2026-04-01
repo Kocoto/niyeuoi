@@ -24,6 +24,8 @@ const Timeline: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
 
   const initialForm = {
     title: '',
@@ -63,28 +65,28 @@ const Timeline: React.FC = () => {
     setShowModal(true);
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const uploadData = new FormData();
-    uploadData.append('image', file);
-    try {
-      const res = await api.post('/upload', uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setFormData({ ...formData, media: res.data.data.url });
-    } catch (err) {
-      toast('Lỗi tải ảnh!', 'error');
-    } finally {
-      setUploading(false);
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     try {
-      const data = { ...formData, media: formData.media ? [formData.media] : [] };
+      let mediaUrl = formData.media;
+      if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append('image', selectedFile);
+        const res = await api.post('/upload', uploadData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        mediaUrl = res.data.data.url;
+      }
+      const data = { ...formData, media: mediaUrl ? [mediaUrl] : [] };
       if (isEditing && editingId) {
         await api.put(`/memories/${editingId}`, data);
       } else {
@@ -94,9 +96,14 @@ const Timeline: React.FC = () => {
       setIsEditing(false);
       setEditingId(null);
       setFormData(initialForm);
+      setSelectedFile(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
       await fetchMemories();
     } catch (err) {
       toast('Lỗi khi lưu kỷ niệm!', 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -166,18 +173,18 @@ const Timeline: React.FC = () => {
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } }} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 font-romantic">{isEditing ? 'Sửa lại kỷ niệm 📝' : 'Ghi lại kỷ niệm 📝'}</h2>
-                <button onClick={() => setShowModal(false)}><X /></button>
+                <button type="button" onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } }}><X /></button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="relative aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden group cursor-pointer">
-                  {formData.media ? <img src={formData.media} alt="Preview" className="w-full h-full object-cover" /> : (
-                    <div className="text-center">{uploading ? <Loader2 className="animate-spin text-primary mx-auto" /> : <><Camera className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn ảnh kỷ niệm</span></>}</div>
+                  {(previewUrl || formData.media) ? <img src={previewUrl || formData.media} alt="Preview" className="w-full h-full object-cover" /> : (
+                    <div className="text-center"><Camera className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn ảnh kỷ niệm</span></div>
                   )}
-                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={uploading} />
+                  <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileSelect} />
                 </div>
                 <input required className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:bg-white border-2 border-transparent focus:border-primary transition-all text-sm" placeholder="Tiêu đề kỷ niệm..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                 <input type="date" required className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />

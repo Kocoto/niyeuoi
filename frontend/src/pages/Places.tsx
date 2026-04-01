@@ -47,6 +47,8 @@ const Places: React.FC = () => {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
   const [locating, setLocating] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string>('');
   const [showRatingModal, setShowRatingModal] = useState(false);
   const [pendingVisitId, setPendingVisitId] = useState<string | null>(null);
   const [tempRating, setTempRating] = useState(5);
@@ -109,22 +111,12 @@ const Places: React.FC = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    setUploading(true);
-    const uploadData = new FormData();
-    uploadData.append('image', file);
-    try {
-      const res = await api.post('/upload', uploadData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
-      });
-      setFormData({ ...formData, image: res.data.data.url });
-    } catch (err) {
-      toast('Lỗi tải ảnh!', 'error');
-    } finally {
-      setUploading(false);
-    }
+    if (previewUrl) URL.revokeObjectURL(previewUrl);
+    setSelectedFile(file);
+    setPreviewUrl(URL.createObjectURL(file));
   };
 
   const getCurrentLocation = () => {
@@ -163,8 +155,18 @@ const Places: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setUploading(true);
     try {
-      const payload = { ...formData };
+      let imageUrl = formData.image;
+      if (selectedFile) {
+        const uploadData = new FormData();
+        uploadData.append('image', selectedFile);
+        const res = await api.post('/upload', uploadData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
+        });
+        imageUrl = res.data.data.url;
+      }
+      const payload = { ...formData, image: imageUrl };
       if (!payload.isVisited) delete (payload as any).rating;
       if (isEditing && editingId) {
         await api.put(`/places/${editingId}`, payload);
@@ -176,9 +178,14 @@ const Places: React.FC = () => {
       setEditingId(null);
       setActiveTab(formData.isVisited ? 'visited' : 'wishlist');
       setFormData(initialForm);
+      setSelectedFile(null);
+      if (previewUrl) URL.revokeObjectURL(previewUrl);
+      setPreviewUrl('');
       await fetchPlaces();
     } catch (err) {
       toast('Lỗi khi lưu quán!', 'error');
+    } finally {
+      setUploading(false);
     }
   };
 
@@ -378,19 +385,19 @@ const Places: React.FC = () => {
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } }} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden max-h-[95vh] overflow-y-auto">
               <div className="p-8">
                 <div className="flex justify-between items-center mb-6">
                   <h2 className="text-2xl font-bold text-gray-800 font-romantic">{isEditing ? 'Cập nhật quán ăn 📝' : 'Lưu quán ăn mới 🍜'}</h2>
-                  <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600"><X /></button>
+                  <button onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } }} className="text-gray-400 hover:text-gray-600"><X /></button>
                 </div>
                 <form onSubmit={handleSubmit} className="space-y-4">
                   <div className="relative h-40 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden group cursor-pointer">
-                    {formData.image ? <img src={formData.image} alt="Preview" className="w-full h-full object-cover" /> : (
-                      <div className="text-center">{uploading ? <Loader2 className="animate-spin text-primary mx-auto" /> : <><Camera className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn ảnh quán</span></>}</div>
+                    {(previewUrl || formData.image) ? <img src={previewUrl || formData.image} alt="Preview" className="w-full h-full object-cover" /> : (
+                      <div className="text-center"><Camera className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn ảnh quán</span></div>
                     )}
-                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileUpload} disabled={uploading} />
+                    <input type="file" accept="image/*" className="absolute inset-0 opacity-0 cursor-pointer" onChange={handleFileSelect} />
                   </div>
                   
                   <div className="space-y-2">
