@@ -2,6 +2,7 @@ import React, { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useLocationTracker } from '../hooks/useLocationTracker';
 
 const TAPS_REQUIRED = 5;
 const TAP_RESET_MS = 1500;
@@ -13,6 +14,7 @@ const Navbar: React.FC = () => {
   const tapTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const isActive = (path: string) => location.pathname === path;
+  const { tracking } = useLocationTracker(role === 'girlfriend');
 
   const handleLogoTap = () => {
     if (role === 'boyfriend') {
@@ -41,6 +43,14 @@ const Navbar: React.FC = () => {
           <span className="romantic-font text-xl font-bold text-gray-800">
             {role === 'boyfriend' ? 'Quản lý Niyeuoi' : 'Niyeuoi'}
           </span>
+          {tracking && (
+            <span className="flex items-center gap-1 ml-1">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+            </span>
+          )}
         </div>
         
         {/* Desktop Menu */}

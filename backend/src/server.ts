@@ -44,6 +44,7 @@ import moodRoutes from './routes/moodRoutes';
 import uploadRoutes from './routes/uploadRoutes';
 import authRoutes from './routes/authRoutes';
 import challengeRoutes from './routes/challengeRoutes';
+import locationRoutes from './routes/locationRoutes';
 
 app.use('/api/places', placeRoutes);
 app.use('/api/memories', memoryRoutes);
@@ -54,6 +55,7 @@ app.use('/api/moods', moodRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
+app.use('/api/location', locationRoutes);
 
 // Basic Route
 app.get('/', (_req: Request, res: Response) => {
