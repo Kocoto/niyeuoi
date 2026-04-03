@@ -6,6 +6,7 @@ export interface IChallenge extends Document {
     points: number;
     isCompleted: boolean;
     difficulty: 'Dễ' | 'Trung bình' | 'Khó';
+    isAiGenerated: boolean;
 }
 
 const challengeSchema: Schema = new Schema({
@@ -13,7 +14,8 @@ const challengeSchema: Schema = new Schema({
     description: { type: String, trim: true },
     points: { type: Number, default: 10 },
     isCompleted: { type: Boolean, default: false },
-    difficulty: { type: String, enum: ['Dễ', 'Trung bình', 'Khó'], default: 'Dễ' }
+    difficulty: { type: String, enum: ['Dễ', 'Trung bình', 'Khó'], default: 'Dễ' },
+    isAiGenerated: { type: Boolean, default: false }
 }, { timestamps: true });
 
 export default mongoose.model<IChallenge>('Challenge', challengeSchema);

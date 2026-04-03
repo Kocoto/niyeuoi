@@ -19,14 +19,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const toggleRole = async () => {
     if (role === 'girlfriend') {
-      const pin = await prompt('Nhập mã PIN để vào chế độ Quản lý:', '••••••', 'password');
+      const pin = await prompt('Nhập mã PIN của Được:', '••••••', 'password');
       if (!pin) return;
       try {
         const res = await api.post('/auth/verify', { pin });
         if (res.data.success) {
           setRole('boyfriend');
           localStorage.setItem('user-role', 'boyfriend');
-          toast('Đã vào chế độ Quản lý 🔑', 'success');
+          toast('Chào Được! 👋🔑', 'success');
         }
       } catch (err: any) {
         toast(err.response?.data?.message || 'Mã PIN không chính xác!', 'error');
@@ -34,7 +34,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } else {
       setRole('girlfriend');
       localStorage.setItem('user-role', 'girlfriend');
-      toast('Đã thoát chế độ Quản lý', 'info');
+      toast('Đã chuyển sang chế độ của Ni 💕', 'info');
     }
   };
 

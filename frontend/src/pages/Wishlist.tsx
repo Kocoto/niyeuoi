@@ -34,6 +34,17 @@ const Wishlist: React.FC = () => {
   };
 
   const [formData, setFormData] = useState(initialForm);
+  const [priceDisplay, setPriceDisplay] = useState('');
+
+  const formatPrice = (num: number) =>
+    num > 0 ? num.toLocaleString('vi-VN') : '';
+
+  const handlePriceChange = (raw: string) => {
+    const digits = raw.replace(/\D/g, '');
+    const num = parseInt(digits) || 0;
+    setFormData(f => ({ ...f, price: num }));
+    setPriceDisplay(num > 0 ? num.toLocaleString('vi-VN') : '');
+  };
 
   useEffect(() => {
     fetchWishes();
@@ -55,13 +66,15 @@ const Wishlist: React.FC = () => {
   };
 
   const handleEdit = (wish: IWish) => {
+    const price = wish.price || 0;
     setFormData({
       itemName: wish.itemName,
       link: wish.link || '',
-      price: wish.price || 0,
+      price,
       isSecretlyPrepared: wish.isSecretlyPrepared,
       note: wish.note || ''
     });
+    setPriceDisplay(formatPrice(price));
     setEditingId(wish._id);
     setIsEditing(true);
     setShowModal(true);
@@ -79,6 +92,7 @@ const Wishlist: React.FC = () => {
       setIsEditing(false);
       setEditingId(null);
       setFormData(initialForm);
+      setPriceDisplay('');
       await fetchWishes();
     } catch (err) {
       toast('Lỗi khi lưu mong muốn!', 'error');
@@ -139,12 +153,10 @@ const Wishlist: React.FC = () => {
               className={`bg-white rounded-[2.5rem] overflow-hidden border-2 shadow-sm transition-all relative group ${wish.status === 'Đã mua' ? 'border-green-100 opacity-75' : 'border-pink-50 hover:border-primary'}`}
             >
               {/* Edit/Delete Overlay */}
-              {role === 'boyfriend' && (
-                <div className="absolute top-4 right-4 z-10 flex gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => handleEdit(wish)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-primary transition-all"><Pencil size={14} /></button>
-                  <button onClick={() => deleteWish(wish._id)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
-                </div>
-              )}
+              <div className="absolute top-4 right-4 z-10 flex gap-1.5 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
+                <button onClick={() => handleEdit(wish)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-primary transition-all"><Pencil size={14} /></button>
+                <button onClick={() => deleteWish(wish._id)} className="p-2.5 bg-white shadow-sm rounded-xl text-gray-500 hover:text-red-500 transition-all"><Trash2 size={14} /></button>
+              </div>
 
               <div className="p-5 md:p-8">
                 <div className="flex justify-between items-start mb-6">
@@ -210,7 +222,16 @@ const Wishlist: React.FC = () => {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-gray-400 uppercase mb-1 px-1">Giá dự kiến</label>
-                    <input type="number" className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" placeholder="Giá..." value={formData.price} onChange={e => setFormData({...formData, price: parseInt(e.target.value) || 0})} />
+                    <input
+                      type="text"
+                      inputMode="numeric"
+                      className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm"
+                      placeholder="0đ"
+                      value={priceDisplay}
+                      onChange={e => handlePriceChange(e.target.value)}
+                      onFocus={() => { if (formData.price === 0) setPriceDisplay(''); }}
+                      onBlur={() => { if (!priceDisplay) setPriceDisplay(''); }}
+                    />
                   </div>
                   {role === 'boyfriend' && (
                     <div>

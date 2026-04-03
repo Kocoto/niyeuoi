@@ -12,6 +12,7 @@ interface IChallenge {
   points: number;
   isCompleted: boolean;
   difficulty: 'Dễ' | 'Trung bình' | 'Khó';
+  isAiGenerated?: boolean;
 }
 
 const Challenges: React.FC = () => {
@@ -21,6 +22,9 @@ const Challenges: React.FC = () => {
   const { toast, confirm } = useUI();
   
   const [showModal, setShowModal] = useState(false);
+  const [detailChallenge, setDetailChallenge] = useState<IChallenge | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [activeTab, setActiveTab] = useState<'pending' | 'completed'>('pending');
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -64,6 +68,19 @@ const Challenges: React.FC = () => {
     }
   };
 
+  const handleAiGenerate = async () => {
+    setAiLoading(true);
+    try {
+      await api.post('/challenges/generate');
+      await fetchChallenges();
+      toast('AI vừa tạo thử thách mới! 🎉', 'success');
+    } catch (err) {
+      toast('AI đang bận, thử lại sau nhé!', 'error');
+    } finally {
+      setAiLoading(false);
+    }
+  };
+
   const deleteChallenge = async (id: string) => {
     if (!await confirm('Xóa thử thách này nhé?')) return;
     try {
@@ -75,6 +92,9 @@ const Challenges: React.FC = () => {
   };
 
   const totalPoints = challenges.reduce((acc, curr) => curr.isCompleted ? acc + curr.points : acc, 0);
+  const pendingList = challenges.filter(c => !c.isCompleted);
+  const completedList = challenges.filter(c => c.isCompleted);
+  const displayList = activeTab === 'pending' ? pendingList : completedList;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
@@ -99,16 +119,42 @@ const Challenges: React.FC = () => {
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          <div className="flex justify-between items-center px-2 mb-3">
-            <span className="section-label">
-              <Zap size={14} className="text-secondary" /> Nhiệm vụ hiện tại
-            </span>
-            <button onClick={() => setShowModal(true)} className="btn-add !p-2">
-              <Plus size={18} />
-            </button>
+          {/* Tabs + Actions */}
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex bg-gray-100 rounded-2xl p-1 gap-1">
+              <button
+                onClick={() => setActiveTab('pending')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+              >
+                <Zap size={13} /> Đang làm
+                {pendingList.length > 0 && <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">{pendingList.length}</span>}
+              </button>
+              <button
+                onClick={() => setActiveTab('completed')}
+                className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-bold transition-all ${activeTab === 'completed' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
+              >
+                <CheckCircle2 size={13} /> Hoàn thành
+                {completedList.length > 0 && <span className="bg-green-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">{completedList.length}</span>}
+              </button>
+            </div>
+            <div className="flex gap-2">
+              {role === 'boyfriend' && (
+                <button
+                  onClick={handleAiGenerate}
+                  disabled={aiLoading}
+                  className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
+                >
+                  {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <span>✨</span>}
+                  AI sinh
+                </button>
+              )}
+              <button onClick={() => setShowModal(true)} className="btn-add !p-2">
+                <Plus size={18} />
+              </button>
+            </div>
           </div>
 
-          {challenges.map((challenge) => (
+          {displayList.map((challenge) => (
             <motion.div 
               key={challenge._id}
               whileTap={{ scale: 0.98 }}
@@ -121,8 +167,11 @@ const Challenges: React.FC = () => {
                 {challenge.isCompleted ? <CheckCircle2 size={28} /> : <Circle size={28} />}
               </button>
 
-              <div className="flex-1">
-                <h3 className={`font-bold ${challenge.isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{challenge.title}</h3>
+              <div className="flex-1 cursor-pointer" onClick={() => setDetailChallenge(challenge)}>
+                <div className="flex items-center gap-2">
+                  <h3 className={`font-bold ${challenge.isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}>{challenge.title}</h3>
+                  {challenge.isAiGenerated && <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full shrink-0">✨ AI</span>}
+                </div>
                 <p className="text-xs text-gray-400 line-clamp-1">{challenge.description}</p>
               </div>
 
@@ -144,15 +193,70 @@ const Challenges: React.FC = () => {
             </motion.div>
           ))}
 
-          {challenges.length === 0 && (
+          {displayList.length === 0 && (
             <div className="empty-state">
               <Trophy className="text-pink-200 mx-auto mb-3" size={36} />
-              <p className="text-gray-400 font-medium">Chưa có thử thách nào.</p>
-              <p className="text-gray-300 text-sm mt-1">Hãy tạo thử thách đầu tiên cho nhau nhé! 💖</p>
+              {activeTab === 'pending' ? (
+                <>
+                  <p className="text-gray-400 font-medium">Không có thử thách nào đang chờ.</p>
+                  <p className="text-gray-300 text-sm mt-1">Tạo thêm hoặc để AI sinh thử thách mới nhé! 🔥</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-gray-400 font-medium">Chưa hoàn thành thử thách nào.</p>
+                  <p className="text-gray-300 text-sm mt-1">Cùng nhau chinh phục nhé! 💪</p>
+                </>
+              )}
             </div>
           )}
         </div>
       )}
+
+      {/* Modal Chi Tiết Thử Thách */}
+      <AnimatePresence>
+        {detailChallenge && (
+          <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDetailChallenge(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl"
+            >
+              <button onClick={() => setDetailChallenge(null)} className="absolute top-6 right-6 text-gray-400 hover:text-gray-600"><X /></button>
+
+              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-bold mb-4 ${
+                detailChallenge.difficulty === 'Dễ' ? 'bg-green-100 text-green-600' :
+                detailChallenge.difficulty === 'Trung bình' ? 'bg-orange-100 text-orange-600' : 'bg-red-100 text-red-600'
+              }`}>
+                {detailChallenge.difficulty}
+                {detailChallenge.isAiGenerated && <span className="bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ AI</span>}
+              </div>
+
+              <h2 className={`text-2xl font-bold mb-3 ${detailChallenge.isCompleted ? 'text-gray-400 line-through' : 'text-gray-800'}`}>
+                {detailChallenge.title}
+              </h2>
+              <p className="text-gray-500 text-sm leading-relaxed mb-6">
+                {detailChallenge.description || 'Không có mô tả.'}
+              </p>
+
+              <div className="flex items-center justify-between pt-4 border-t border-gray-50">
+                <span className="text-2xl font-black text-primary">+{detailChallenge.points} ✨</span>
+                <button
+                  onClick={() => { toggleComplete(detailChallenge); setDetailChallenge(null); }}
+                  className={`flex items-center gap-2 px-5 py-3 rounded-2xl font-bold text-sm transition-all active:scale-95 ${
+                    detailChallenge.isCompleted
+                      ? 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                      : 'bg-primary text-white shadow-lg shadow-pink-100 hover:scale-[1.02]'
+                  }`}
+                >
+                  {detailChallenge.isCompleted ? <><Circle size={16} /> Bỏ hoàn thành</> : <><CheckCircle2 size={16} /> Hoàn thành! 🎉</>}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Modal Thêm Thử Thách */}
       <AnimatePresence>

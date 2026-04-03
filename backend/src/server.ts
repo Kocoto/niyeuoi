@@ -45,6 +45,7 @@ import uploadRoutes from './routes/uploadRoutes';
 import authRoutes from './routes/authRoutes';
 import challengeRoutes from './routes/challengeRoutes';
 import locationRoutes from './routes/locationRoutes';
+import * as schedulerService from './services/schedulerService';
 
 app.use('/api/places', placeRoutes);
 app.use('/api/memories', memoryRoutes);
@@ -90,6 +91,7 @@ logger.info('Server', 'Đang kết nối MongoDB...', { uri: MONGODB_URI.replace
 mongoose.connect(MONGODB_URI)
     .then(() => {
         logger.success('Server', 'Kết nối MongoDB thành công');
+        schedulerService.start();
         app.listen(PORT, () => {
             logger.success('Server', `Đang chạy trên cổng ${PORT}`);
         });

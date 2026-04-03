@@ -108,7 +108,7 @@ const LoveMap: React.FC = () => {
             className="flex items-center gap-2 bg-pink-50 text-primary px-4 py-2 rounded-2xl text-sm font-bold hover:bg-primary hover:text-white transition-all shrink-0"
           >
             <Navigation size={16} />
-            Tìm em
+            Tìm Ni
           </button>
         )}
       </div>
@@ -121,13 +121,13 @@ const LoveMap: React.FC = () => {
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
               </span>
-              Đang theo dõi vị trí em
+              Đang theo dõi vị trí Ni
               {secondsAgo !== null && <span className="font-normal text-green-500">· cập nhật {secondsAgo}s trước</span>}
             </div>
           ) : (
             <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 text-gray-400 px-4 py-2 rounded-2xl text-xs font-bold">
               <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-              Em chưa bật chia sẻ vị trí
+              Ni chưa bật chia sẻ vị trí
             </div>
           )}
         </div>
@@ -157,7 +157,7 @@ const LoveMap: React.FC = () => {
                 <Marker position={[gfLocation.lat, gfLocation.lng] as any} icon={heartIcon}>
                   <Popup>
                     <div className="text-center p-1">
-                      <p className="font-bold text-pink-500 text-sm">💗 Vị trí của em</p>
+                      <p className="font-bold text-pink-500 text-sm">💗 Ni đang ở đây</p>
                       <p className="text-xs text-gray-400 mt-1">
                         {gfLocation.accuracy ? `Độ chính xác: ~${Math.round(gfLocation.accuracy)}m` : ''}
                       </p>

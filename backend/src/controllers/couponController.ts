@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import couponService from '../services/couponService';
+import { generateCoupon } from '../services/aiService';
+import Coupon from '../models/Coupon';
 
 export const getCoupons = async (req: Request, res: Response) => {
     try {
@@ -55,5 +57,22 @@ export const deleteCoupon = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, error: 'Không tìm thấy voucher' });
         }
         res.status(500).json({ success: false, error: 'Lỗi máy chủ khi xóa' });
+    }
+};
+
+export const generateAiCoupon = async (_req: Request, res: Response) => {
+    try {
+        const existing = await Coupon.find({ isUsed: false }).select('title').lean();
+        const existingTitles = existing.map((c: any) => c.title);
+
+        const data = await generateCoupon(existingTitles);
+        if (!data) {
+            return res.status(503).json({ success: false, error: 'AI không sinh được voucher, thử lại sau nhé!' });
+        }
+
+        const coupon = await couponService.createCoupon({ ...data, isAiGenerated: true } as any);
+        res.status(201).json({ success: true, data: coupon });
+    } catch (err: any) {
+        res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
     }
 };

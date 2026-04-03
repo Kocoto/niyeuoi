@@ -5,11 +5,13 @@ import {
     getCoupon,
     createCoupon,
     updateCoupon,
-    deleteCoupon
+    deleteCoupon,
+    generateAiCoupon
 } from '../controllers/couponController';
 
 const router = express.Router();
 
+router.post('/generate', generateAiCoupon);
 router.route('/')
     .get(getCoupons)
     .post(createCoupon);

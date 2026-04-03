@@ -16,7 +16,9 @@
       "Bash(do)",
       "Bash(sed -i -e 's/      fetchEvents\\(\\);/      await fetchEvents\\(\\);/g' -e 's/      fetchCoupons\\(\\);/      await fetchCoupons\\(\\);/g' -e 's/      fetchWishes\\(\\);/      await fetchWishes\\(\\);/g' -e 's/      fetchChallenges\\(\\);/      await fetchChallenges\\(\\);/g' -e 's/      fetchMemories\\(\\);/      await fetchMemories\\(\\);/g' \"$file\")",
       "Bash(done)",
-      "Bash(find /d/Code/niyeuoi/niyeuoi/frontend/src -type f -name *.ts -o -name *.tsx)"
+      "Bash(find /d/Code/niyeuoi/niyeuoi/frontend/src -type f -name *.ts -o -name *.tsx)",
+      "Bash(npx tsc:*)",
+      "Bash(node -e \"const {GoogleGenerativeAI} = require\\('@google/generative-ai'\\); console.log\\(require\\('./node_modules/@google/generative-ai/package.json'\\).version\\)\")"
     ]
   }
 }

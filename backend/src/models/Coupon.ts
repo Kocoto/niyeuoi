@@ -4,6 +4,8 @@ export interface ICoupon extends Document {
     title: string;
     description: string;
     isUsed: boolean;
+    isAiGenerated: boolean;
+    createdBy: 'boyfriend' | 'girlfriend';
 }
 
 const couponSchema: Schema = new Schema({
@@ -20,6 +22,15 @@ const couponSchema: Schema = new Schema({
     isUsed: {
         type: Boolean,
         default: false
+    },
+    isAiGenerated: {
+        type: Boolean,
+        default: false
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend'],
+        default: 'boyfriend'
     }
 }, {
     timestamps: true

@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import challengeService from '../services/challengeService';
+import { generateChallenge } from '../services/aiService';
+import Challenge from '../models/Challenge';
 
 export const getChallenges = async (req: Request, res: Response) => {
     try {
@@ -38,6 +40,23 @@ export const deleteChallenge = async (req: Request, res: Response) => {
         res.status(200).json({ success: true, data: {} });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy' });
+        res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+    }
+};
+
+export const generateAiChallenge = async (_req: Request, res: Response) => {
+    try {
+        const existing = await Challenge.find({ isCompleted: false }).select('title').lean();
+        const existingTitles = existing.map((c: any) => c.title);
+
+        const data = await generateChallenge(existingTitles);
+        if (!data) {
+            return res.status(503).json({ success: false, error: 'AI không sinh được thử thách, thử lại sau nhé!' });
+        }
+
+        const challenge = await challengeService.createChallenge({ ...data, isAiGenerated: true } as any);
+        res.status(201).json({ success: true, data: challenge });
+    } catch (err: any) {
         res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
     }
 };
