@@ -138,16 +138,14 @@ const Challenges: React.FC = () => {
               </button>
             </div>
             <div className="flex gap-2">
-              {role === 'boyfriend' && (
-                <button
-                  onClick={handleAiGenerate}
-                  disabled={aiLoading}
-                  className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
-                >
-                  {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <span>✨</span>}
-                  AI sinh
-                </button>
-              )}
+              <button
+                onClick={handleAiGenerate}
+                disabled={aiLoading}
+                className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
+              >
+                {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <span>✨</span>}
+                AI sinh
+              </button>
               <button onClick={() => setShowModal(true)} className="btn-add !p-2">
                 <Plus size={18} />
               </button>

@@ -102,16 +102,14 @@ const Coupons: React.FC = () => {
           <p className="page-subtitle">Những đặc quyền dành riêng cho bạn... 🎟️</p>
         </div>
         <div className="flex gap-2">
-          {role === 'boyfriend' && (
-            <button
-              onClick={handleAiGenerate}
-              disabled={aiLoading}
-              className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
-            >
-              {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              AI sinh
-            </button>
-          )}
+          <button
+            onClick={handleAiGenerate}
+            disabled={aiLoading}
+            className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
+          >
+            {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
+            AI sinh
+          </button>
           <button onClick={() => setShowModal(true)} className="btn-add">
             <Plus size={20} />
           </button>
