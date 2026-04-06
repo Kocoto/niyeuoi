@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy, Grid3x3, X } from 'lucide-react';
+import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy, Grid3x3, X, MessageCircleHeart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useLocationTracker } from '../hooks/useLocationTracker';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -17,7 +17,8 @@ const allPages = [
   { to: '/events',     icon: <Bell size={22} />,    label: 'Sự kiện',    emoji: '📅' },
   { to: '/wishlist',   icon: <Gift size={22} />,    label: 'Wishlist',   emoji: '🎁' },
   { to: '/map',        icon: <Map size={22} />,     label: 'Bản đồ',     emoji: '🗺️' },
-  { to: '/coupons',    icon: <Ticket size={22} />,  label: 'Voucher',    emoji: '🎟️' },
+  { to: '/coupons',    icon: <Ticket size={22} />,              label: 'Voucher',    emoji: '🎟️' },
+  { to: '/deeptalk',  icon: <MessageCircleHeart size={22} />,  label: 'Deep Talk',  emoji: '💬' },
 ];
 
 // 4 mục chính luôn hiện ở bottom nav

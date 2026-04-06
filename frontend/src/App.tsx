@@ -9,6 +9,7 @@ import Coupons from './pages/Coupons';
 import Events from './pages/Events';
 import MoodLofi from './pages/MoodLofi';
 import Challenges from './pages/Challenges';
+import DeepTalk from './pages/DeepTalk';
 
 import { AuthProvider } from './context/AuthContext';
 import { UIProvider } from './context/UIContext';
@@ -33,6 +34,7 @@ function App() {
               <Route path="/events" element={<Events />} />
               <Route path="/mood" element={<MoodLofi />} />
               <Route path="/challenges" element={<Challenges />} />
+              <Route path="/deeptalk" element={<DeepTalk />} />
               <Route path="*" element={<div className="text-center mt-20 font-medium text-gray-400">Trang này đang được lén chuẩn bị... 💕</div>} />
             </Routes>
           </main>
