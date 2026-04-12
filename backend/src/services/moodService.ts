@@ -1,6 +1,11 @@
-import Mood, { IMood } from '../models/Mood';
+﻿import Mood, { IMood } from '../models/Mood';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
+
+const ROLE_LABEL: Record<'boyfriend' | 'girlfriend', string> = {
+    boyfriend: 'Được',
+    girlfriend: 'Ni'
+};
 
 class MoodService {
     async getAllMoods() {
@@ -22,10 +27,14 @@ class MoodService {
     }
 
     async createMood(data: Partial<IMood>) {
-        logger.info('Mood', 'Ghi tâm trạng mới', { mood: data.mood, date: data.date });
+        logger.info('Mood', 'Ghi tâm trạng mới', { mood: data.mood, date: data.date, createdBy: data.createdBy });
         try {
-            const mood = await Mood.create(data);
-            logger.success('Mood', 'Ghi tâm trạng thành công', { id: mood._id, mood: mood.mood });
+            const payload = {
+                ...data,
+                createdBy: data.createdBy === 'boyfriend' ? 'boyfriend' : 'girlfriend',
+            };
+            const mood = await Mood.create(payload);
+            logger.success('Mood', 'Ghi tâm trạng thành công', { id: mood._id, mood: mood.mood, createdBy: mood.createdBy });
 
             let emoji = '✨';
             let color = 15277667;
@@ -36,10 +45,11 @@ class MoodService {
             if (mood.mood === 'Hơi buồn') { emoji = '🌧️'; color = 3447003; }
             if (mood.mood === 'Mệt mỏi') { emoji = '😫'; color = 9807270; }
 
+            const owner = ROLE_LABEL[mood.createdBy as 'boyfriend' | 'girlfriend'] || 'Ai đó';
             logger.info('Mood', `Gửi thông báo Discord với emoji ${emoji}...`);
             await notificationService.sendDiscord(
                 `${emoji} Cập nhật tâm trạng mới!`,
-                `Người ấy đang cảm thấy: **${mood.mood}**\n<i>"${mood.note || 'Không có lời nhắn nào'}"</i>`,
+                `Người đang cảm thấy điều này là: **${owner}**\nTâm trạng: **${mood.mood}**\n<i>"${mood.note || 'Không có lời nhắn nào'}"</i>`,
                 color
             );
             logger.success('Mood', 'Đã gửi thông báo Discord');

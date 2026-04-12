@@ -1,9 +1,10 @@
-import mongoose, { Document, Schema } from 'mongoose';
+﻿import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IMood extends Document {
     mood: 'Hạnh phúc' | 'Đang yêu' | 'Bình yên' | 'Hơi buồn' | 'Mệt mỏi' | 'Vui' | 'Buồn' | 'Giận' | 'Bình thường';
     note: string;
     date: Date;
+    createdBy: 'boyfriend' | 'girlfriend';
 }
 
 const moodSchema: Schema = new Schema({
@@ -19,6 +20,12 @@ const moodSchema: Schema = new Schema({
     date: {
         type: Date,
         default: Date.now
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend'],
+        default: 'girlfriend',
+        required: true
     }
 }, {
     timestamps: true

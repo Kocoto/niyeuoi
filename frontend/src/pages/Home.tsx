@@ -37,6 +37,7 @@ type Mood = {
   mood: string;
   note?: string;
   createdAt?: string;
+  createdBy?: Role;
 };
 
 type DeepTalkQuestion = {
@@ -125,6 +126,7 @@ const Home: React.FC = () => {
 
   const latestMemory = data.memories[0];
   const latestMood = data.moods[0];
+  const latestMoodOwner = latestMood?.createdBy ?? 'girlfriend';
   const unansweredQuestion = data.questions.find(question => {
     const answer = question.answers?.[role as Role];
     return !answer?.isInPerson && !answer?.text;
@@ -165,8 +167,8 @@ const Home: React.FC = () => {
   const todayCards = [
     {
       label: 'Cảm xúc gần nhất',
-      value: latestMood?.mood ?? 'Chưa có check-in',
-      hint: latestMood ? `Cập nhật ${formatRelative(latestMood.createdAt)}` : 'Ghi một dòng để không khí app ấm hơn',
+      value: latestMood ? `${latestMood.mood} · ${ROLE_NAME[latestMoodOwner]}` : 'Chưa có check-in',
+      hint: latestMood ? `Cập nhật ${formatRelative(latestMood.createdAt)} từ ${ROLE_CORNER_LABEL[latestMoodOwner]}` : 'Ghi một dòng để không khí app ấm hơn',
       to: '/mood',
       icon: <Sparkles size={18} />,
     },
@@ -194,10 +196,10 @@ const Home: React.FC = () => {
       to: '/timeline',
     },
     {
-      title: 'Điều đang đợi phía trước',
-      body: nextPlace ? `${nextPlace.name}${nextPlace.note ? ` · ${nextPlace.note}` : ''}` : 'Danh sách địa điểm đang trống. Thêm một chỗ muốn đi để lần tới mở app là có gợi ý.',
-      meta: nextPlace ? 'Từ mục Địa điểm' : 'Gợi ý cho lần hẹn tới',
-      to: '/places',
+      title: 'Cảm xúc vừa được ghi',
+      body: latestMood ? `${ROLE_NAME[latestMoodOwner]} đang thấy ${latestMood.mood.toLowerCase()}${latestMood.note ? ` · ${latestMood.note}` : ''}` : 'Khi Ni hoặc Được ghi cảm xúc, phần này sẽ nói rõ đó là của ai.',
+      meta: latestMood ? `Từ ${ROLE_CORNER_LABEL[latestMoodOwner]} · ${formatRelative(latestMood.createdAt)}` : 'Đang chờ check-in đầu tiên',
+      to: '/mood',
     },
   ];
 
