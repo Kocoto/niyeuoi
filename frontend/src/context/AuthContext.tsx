@@ -1,45 +1,99 @@
-import React, { createContext, useContext, useState } from 'react';
-import api from '../api/api';
+﻿import React, { createContext, useContext, useEffect, useState } from 'react';
+import api, { AUTH_STORAGE_KEY } from '../api/api';
 import { useUI } from './UIContext';
 
 type Role = 'boyfriend' | 'girlfriend';
 
-interface AuthContextType {
+interface AuthUser {
   role: Role;
+  displayName: string;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  role: Role;
+  isReady: boolean;
+  isAuthenticated: boolean;
+  login: (role: Role, pin: string) => Promise<boolean>;
+  logout: () => void;
   toggleRole: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [role, setRole] = useState<Role>(() => {
-    return (localStorage.getItem('user-role') as Role) || 'girlfriend';
-  });
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isReady, setIsReady] = useState(false);
   const { toast, prompt } = useUI();
 
-  const toggleRole = async () => {
-    if (role === 'girlfriend') {
-      const pin = await prompt('Nhập mã PIN của Được:', '••••••', 'password');
-      if (!pin) return;
-      try {
-        const res = await api.post('/auth/verify', { pin });
-        if (res.data.success) {
-          setRole('boyfriend');
-          localStorage.setItem('user-role', 'boyfriend');
-          toast('Chào Được! 👋🔑', 'success');
-        }
-      } catch (err: any) {
-        toast(err.response?.data?.message || 'Mã PIN không chính xác!', 'error');
+  useEffect(() => {
+    const bootstrap = async () => {
+      const token = localStorage.getItem(AUTH_STORAGE_KEY);
+      if (!token) {
+        setIsReady(true);
+        return;
       }
-    } else {
-      setRole('girlfriend');
-      localStorage.setItem('user-role', 'girlfriend');
-      toast('Đã chuyển sang chế độ của Ni 💕', 'info');
+
+      try {
+        const res = await api.get('/auth/me');
+        setUser(res.data.user);
+      } catch {
+        localStorage.removeItem(AUTH_STORAGE_KEY);
+        setUser(null);
+      } finally {
+        setIsReady(true);
+      }
+    };
+
+    void bootstrap();
+  }, []);
+
+  const login = async (role: Role, pin: string) => {
+    try {
+      const res = await api.post('/auth/verify', { role, pin });
+      if (res.data.success) {
+        localStorage.setItem(AUTH_STORAGE_KEY, res.data.token);
+        setUser(res.data.user);
+        toast(`App is now in ${res.data.user.displayName} mode`, 'success');
+        return true;
+      }
+    } catch (err: any) {
+      toast(err.response?.data?.message || 'Login failed', 'error');
     }
+
+    return false;
+  };
+
+  const logout = () => {
+    localStorage.removeItem(AUTH_STORAGE_KEY);
+    setUser(null);
+    toast('Logged out. Pick who is using the app.', 'info');
+  };
+
+  const toggleRole = async () => {
+    if (user?.role === 'boyfriend') {
+      logout();
+      return;
+    }
+
+    const pin = await prompt('Enter Duoc PIN to switch to BF', '****', 'password');
+    if (!pin) return;
+
+    await login('boyfriend', pin);
   };
 
   return (
-    <AuthContext.Provider value={{ role, toggleRole }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        role: user?.role ?? 'girlfriend',
+        isReady,
+        isAuthenticated: !!user,
+        login,
+        logout,
+        toggleRole,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

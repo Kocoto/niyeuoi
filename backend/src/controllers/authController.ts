@@ -1,26 +1,79 @@
-import { Request, Response } from 'express';
+﻿import { Request, Response } from 'express';
 import dotenv from 'dotenv';
+import {
+    AuthRole,
+    createSessionToken,
+    getBearerToken,
+    getDisplayName,
+    getExpectedPin,
+    readSessionToken,
+} from '../utils/authToken';
 
 dotenv.config();
 
 export const verifyPin = async (req: Request, res: Response) => {
     try {
-        const { pin } = req.body;
-        const MASTER_PIN = process.env['PIN'] || '1234';
+        const { pin, role } = req.body as { pin?: string; role?: AuthRole };
+        const requestedRole: AuthRole | undefined =
+            role === 'boyfriend' || role === 'girlfriend' ? role : undefined;
 
-        if (pin === MASTER_PIN) {
-            return res.status(200).json({
-                success: true,
-                message: 'Xác thực thành công',
-                token: 'mock-token-for-now' // Trong thực tế nên dùng JWT
+        const resolvedRole: AuthRole | undefined =
+            requestedRole || (pin === (process.env['PIN'] || '1234') ? 'boyfriend' : undefined);
+
+        if (!resolvedRole) {
+            return res.status(400).json({
+                success: false,
+                message: 'Missing valid login role',
             });
         }
 
-        res.status(401).json({
-            success: false,
-            message: 'Mã PIN không chính xác'
+        const expectedPin = getExpectedPin(resolvedRole);
+        const isPinValid = expectedPin ? pin === expectedPin : resolvedRole === 'girlfriend';
+
+        if (!isPinValid) {
+            return res.status(401).json({
+                success: false,
+                message: 'Incorrect PIN',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: 'Authenticated',
+            token: createSessionToken(resolvedRole),
+            user: {
+                role: resolvedRole,
+                displayName: getDisplayName(resolvedRole),
+            },
         });
-    } catch (err) {
-        res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+    } catch {
+        return res.status(500).json({ success: false, error: 'Server error' });
+    }
+};
+
+export const getCurrentUser = async (req: Request, res: Response) => {
+    try {
+        const token = getBearerToken(req.headers.authorization);
+        if (!token) {
+            return res.status(401).json({
+                success: false,
+                message: 'Not authenticated',
+            });
+        }
+
+        const user = readSessionToken(token);
+        if (!user) {
+            return res.status(401).json({
+                success: false,
+                message: 'Session is invalid or expired',
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            user,
+        });
+    } catch {
+        return res.status(500).json({ success: false, error: 'Server error' });
     }
 };
