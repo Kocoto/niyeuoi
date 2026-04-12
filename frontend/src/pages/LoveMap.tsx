@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+﻿import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import LucideL from 'leaflet';
@@ -6,7 +6,6 @@ import api from '../api/api';
 import { Loader2, Navigation } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
-// Sửa lỗi hiển thị icon của Leaflet trong React
 delete (LucideL.Icon.Default.prototype as any)._getIconUrl;
 LucideL.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
@@ -22,9 +21,9 @@ const heartIcon = LucideL.divIcon({
 });
 
 const CATEGORY_EMOJI: Record<string, string> = {
-  'Cafe': '☕', 'Trà sữa': '🧋', 'Nhà hàng': '🍽️', 'Ăn vặt': '🍢',
-  'Lẩu & Nướng': '🔥', 'Hải sản': '🦞', 'Phở & Bún': '🍜',
-  'Bánh & Kem': '🍰', 'Quán nhậu': '🍺', 'Khác': '📍',
+  Cafe: '☕', 'Tra sua': '🧋', 'Nha hang': '🍽️', 'An vat': '🍢',
+  'Lau & Nuong': '🔥', 'Hai san': '🦞', 'Pho & Bun': '🍜',
+  'Banh & Kem': '🍰', 'Quan nhau': '🍺', Khac: '📍',
 };
 
 interface IPlace {
@@ -49,7 +48,7 @@ function FlyTo({ lat, lng }: { lat: number; lng: number }) {
   const map = useMap();
   useEffect(() => {
     map.flyTo([lat, lng], 16, { duration: 1.5 });
-  }, [lat, lng]);
+  }, [lat, lng, map]);
   return null;
 }
 
@@ -68,7 +67,7 @@ const LoveMap: React.FC = () => {
         const res = await api.get('/places');
         setPlaces(res.data.data.filter((p: IPlace) => p.location && p.location.coordinates[0] !== 0));
       } catch {
-        console.error('Lỗi khi tải bản đồ');
+        console.error('Khong tai duoc du lieu ban do');
       } finally {
         setLoading(false);
       }
@@ -82,7 +81,7 @@ const LoveMap: React.FC = () => {
       setGfLocation(res.data.data);
       setLastUpdated(Date.now());
     } catch {
-      // Chưa có vị trí
+      // chua co vi tri chia se
     }
   };
 
@@ -96,70 +95,71 @@ const LoveMap: React.FC = () => {
   const secondsAgo = lastUpdated ? Math.floor((Date.now() - lastUpdated) / 1000) : null;
 
   return (
-    <div className="max-w-6xl mx-auto px-2 md:px-4 py-6 md:py-8 h-[calc(100vh-180px)] min-h-[500px]">
-      <div className="flex items-center justify-between mb-6">
-        <div className="text-center flex-1">
-          <h1 className="text-3xl font-bold text-gray-800 mb-1">Bản đồ Tình yêu</h1>
-          <p className="text-gray-600 text-sm italic">Những nơi chúng ta đã cùng nhau đi qua... 🗺️❤️</p>
+    <div className="mx-auto flex min-h-[calc(100dvh-15rem)] max-w-6xl flex-col px-2 py-6 md:h-[calc(100vh-180px)] md:min-h-[500px] md:px-4 md:py-8">
+      <div className="mb-4 flex items-start justify-between gap-3 md:mb-6 md:items-center">
+        <div className="min-w-0 flex-1 text-center">
+          <h1 className="mb-1 text-3xl font-bold text-gray-800">Ban do Tinh yeu</h1>
+          <p className="text-sm italic text-gray-600">Nhung noi chung ta da cung nhau di qua...</p>
         </div>
         {role === 'boyfriend' && gfLocation && (
           <button
             onClick={() => setFlyTo(f => !f)}
-            className="flex items-center gap-2 bg-pink-50 text-primary px-4 py-2 rounded-2xl text-sm font-bold hover:bg-primary hover:text-white transition-all shrink-0"
+            className="shrink-0 rounded-2xl bg-pink-50 px-3 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white md:px-4"
           >
-            <Navigation size={16} />
-            Tìm Ni
+            <span className="flex items-center gap-2">
+              <Navigation size={16} aria-hidden="true" />
+              Tim Ni
+            </span>
           </button>
         )}
       </div>
 
       {role === 'boyfriend' && (
-        <div className="mb-4 flex items-center gap-2">
+        <div className="mb-3 flex items-center gap-2 md:mb-4">
           {gfLocation ? (
-            <div className="flex items-center gap-2 bg-green-50 border border-green-100 text-green-700 px-4 py-2 rounded-2xl text-xs font-bold">
+            <div className="flex items-center gap-2 rounded-2xl border border-green-100 bg-green-50 px-4 py-2 text-xs font-bold text-green-700">
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
               </span>
-              Đang theo dõi vị trí Ni
-              {secondsAgo !== null && <span className="font-normal text-green-500">· cập nhật {secondsAgo}s trước</span>}
+              Dang theo doi vi tri Ni
+              {secondsAgo !== null && <span className="font-normal text-green-500">· cap nhat {secondsAgo}s truoc</span>}
             </div>
           ) : (
-            <div className="flex items-center gap-2 bg-gray-50 border border-gray-100 text-gray-400 px-4 py-2 rounded-2xl text-xs font-bold">
-              <span className="w-2 h-2 rounded-full bg-gray-300"></span>
-              Ni chưa bật chia sẻ vị trí
+            <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-400">
+              <span className="h-2 w-2 rounded-full bg-gray-300"></span>
+              Ni chua chia se vi tri
             </div>
           )}
         </div>
       )}
 
       {loading ? (
-        <div className="flex justify-center items-center h-full">
+        <div className="flex min-h-[340px] flex-1 items-center justify-center">
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
       ) : (
-        <div className="h-full rounded-[2rem] overflow-hidden shadow-lg border-4 border-white">
+        <div className="min-h-[340px] flex-1 overflow-hidden rounded-[2rem] border-4 border-white shadow-lg md:min-h-0">
           <style>{`@keyframes heartbeat { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }`}</style>
           <MapContainer
             center={gfLocation ? [gfLocation.lat, gfLocation.lng] : [10.762622, 106.660172] as any}
             zoom={13}
-            className="w-full h-full"
+            className="h-full w-full"
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
               url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             />
 
-            {/* Vị trí girlfriend */}
             {role === 'boyfriend' && gfLocation && (
               <>
                 {flyTo && <FlyTo lat={gfLocation.lat} lng={gfLocation.lng} />}
                 <Marker position={[gfLocation.lat, gfLocation.lng] as any} icon={heartIcon}>
                   <Popup>
-                    <div className="text-center p-1">
-                      <p className="font-bold text-pink-500 text-sm">💗 Ni đang ở đây</p>
-                      <p className="text-xs text-gray-400 mt-1">
-                        {gfLocation.accuracy ? `Độ chính xác: ~${Math.round(gfLocation.accuracy)}m` : ''}
+                    <div className="p-1 text-center">
+                      <p className="text-sm font-bold text-pink-500">Ni dang o day</p>
+                      <p className="mt-1 text-xs text-gray-400">
+                        {gfLocation.accuracy ? `Do chinh xac: ~${Math.round(gfLocation.accuracy)}m` : ''}
                       </p>
                     </div>
                   </Popup>
@@ -167,7 +167,6 @@ const LoveMap: React.FC = () => {
               </>
             )}
 
-            {/* Các địa điểm */}
             {places.map((place) => (
               <Marker
                 key={place._id}
@@ -175,20 +174,20 @@ const LoveMap: React.FC = () => {
               >
                 <Popup minWidth={200}>
                   <div className="p-1">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="mb-1 flex items-center gap-2">
                       <span className="text-lg">{CATEGORY_EMOJI[place.category] || '📍'}</span>
-                      <strong className="text-gray-800 text-sm">{place.name}</strong>
+                      <strong className="text-sm text-gray-800">{place.name}</strong>
                     </div>
-                    <p className="text-xs text-gray-500 mb-2 leading-relaxed">{place.address}</p>
+                    <p className="mb-2 text-xs leading-relaxed text-gray-500">{place.address}</p>
                     <div className="flex items-center justify-between">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${place.isVisited ? 'bg-pink-100 text-pink-600' : 'bg-violet-100 text-violet-600'}`}>
-                        {place.isVisited ? '✅ Đã đi' : '✨ Muốn đi'}
+                      <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold ${place.isVisited ? 'bg-pink-100 text-pink-600' : 'bg-violet-100 text-violet-600'}`}>
+                        {place.isVisited ? 'Da di' : 'Muon di'}
                       </span>
                       {place.isVisited && place.rating && (
                         <span className="text-[11px] font-bold text-yellow-500">{'⭐'.repeat(place.rating)}</span>
                       )}
                     </div>
-                    {place.note && <p className="text-[10px] text-gray-400 italic mt-1.5">"{place.note}"</p>}
+                    {place.note && <p className="mt-1.5 text-[10px] italic text-gray-400">"{place.note}"</p>}
                   </div>
                 </Popup>
               </Marker>

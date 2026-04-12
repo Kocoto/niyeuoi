@@ -54,11 +54,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data.success) {
         localStorage.setItem(AUTH_STORAGE_KEY, res.data.token);
         setUser(res.data.user);
-        toast(`App is now in ${res.data.user.displayName} mode`, 'success');
+        toast(`App dang o che do ${res.data.user.displayName}`, 'success');
         return true;
       }
     } catch (err: any) {
-      toast(err.response?.data?.message || 'Login failed', 'error');
+      toast(err.response?.data?.message || 'Dang nhap that bai', 'error');
     }
 
     return false;
@@ -67,7 +67,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const logout = () => {
     localStorage.removeItem(AUTH_STORAGE_KEY);
     setUser(null);
-    toast('Logged out. Pick who is using the app.', 'info');
+    toast('Da dang xuat. Hay chon lai nguoi dang dung app.', 'info');
   };
 
   const toggleRole = async () => {
@@ -76,7 +76,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const pin = await prompt('Enter Duoc PIN to switch to BF', '****', 'password');
+    const pin = await prompt('Nhap PIN cua Duoc de chuyen sang BF', '****', 'password');
     if (!pin) return;
 
     await login('boyfriend', pin);

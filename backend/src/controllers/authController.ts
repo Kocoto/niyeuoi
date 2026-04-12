@@ -23,7 +23,7 @@ export const verifyPin = async (req: Request, res: Response) => {
         if (!resolvedRole) {
             return res.status(400).json({
                 success: false,
-                message: 'Missing valid login role',
+                message: 'Thieu vai tro dang nhap hop le',
             });
         }
 
@@ -33,13 +33,13 @@ export const verifyPin = async (req: Request, res: Response) => {
         if (!isPinValid) {
             return res.status(401).json({
                 success: false,
-                message: 'Incorrect PIN',
+                message: 'Ma PIN khong chinh xac',
             });
         }
 
         return res.status(200).json({
             success: true,
-            message: 'Authenticated',
+            message: 'Xac thuc thanh cong',
             token: createSessionToken(resolvedRole),
             user: {
                 role: resolvedRole,
@@ -47,7 +47,7 @@ export const verifyPin = async (req: Request, res: Response) => {
             },
         });
     } catch {
-        return res.status(500).json({ success: false, error: 'Server error' });
+        return res.status(500).json({ success: false, error: 'Loi may chu' });
     }
 };
 
@@ -57,7 +57,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         if (!token) {
             return res.status(401).json({
                 success: false,
-                message: 'Not authenticated',
+                message: 'Chua dang nhap',
             });
         }
 
@@ -65,7 +65,7 @@ export const getCurrentUser = async (req: Request, res: Response) => {
         if (!user) {
             return res.status(401).json({
                 success: false,
-                message: 'Session is invalid or expired',
+                message: 'Phien dang nhap khong hop le hoac da het han',
             });
         }
 
@@ -74,6 +74,6 @@ export const getCurrentUser = async (req: Request, res: Response) => {
             user,
         });
     } catch {
-        return res.status(500).json({ success: false, error: 'Server error' });
+        return res.status(500).json({ success: false, error: 'Loi may chu' });
     }
 };

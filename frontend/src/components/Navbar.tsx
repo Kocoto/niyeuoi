@@ -7,16 +7,16 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ROLE_NAME } from '../constants/roles';
 
 const allPages = [
-  { to: '/', icon: <Home size={22} />, label: 'Trang chu', emoji: 'Home' },
-  { to: '/places', icon: <MapPin size={22} />, label: 'Am thuc', emoji: 'Food' },
-  { to: '/timeline', icon: <Calendar size={22} />, label: 'Ky niem', emoji: 'Time' },
-  { to: '/mood', icon: <Smile size={22} />, label: 'Goc nho', emoji: 'Mood' },
-  { to: '/challenges', icon: <Trophy size={22} />, label: 'Thu thach', emoji: 'Goal' },
-  { to: '/events', icon: <Bell size={22} />, label: 'Su kien', emoji: 'Plan' },
-  { to: '/wishlist', icon: <Gift size={22} />, label: 'Wishlist', emoji: 'Wish' },
-  { to: '/map', icon: <Map size={22} />, label: 'Ban do', emoji: 'Map' },
-  { to: '/coupons', icon: <Ticket size={22} />, label: 'Voucher', emoji: 'Card' },
-  { to: '/deeptalk', icon: <MessageCircleHeart size={22} />, label: 'Deep Talk', emoji: 'Chat' },
+  { to: '/', icon: <Home size={22} />, label: 'Trang chu', tag: 'Trang' },
+  { to: '/places', icon: <MapPin size={22} />, label: 'Am thuc', tag: 'Mon' },
+  { to: '/timeline', icon: <Calendar size={22} />, label: 'Ky niem', tag: 'Nho' },
+  { to: '/mood', icon: <Smile size={22} />, label: 'Goc nho', tag: 'Cam' },
+  { to: '/challenges', icon: <Trophy size={22} />, label: 'Thu thach', tag: 'Thu' },
+  { to: '/events', icon: <Bell size={22} />, label: 'Su kien', tag: 'Hen' },
+  { to: '/wishlist', icon: <Gift size={22} />, label: 'Wishlist', tag: 'Muon' },
+  { to: '/map', icon: <Map size={22} />, label: 'Ban do', tag: 'Map' },
+  { to: '/coupons', icon: <Ticket size={22} />, label: 'Voucher', tag: 'Tang' },
+  { to: '/deeptalk', icon: <MessageCircleHeart size={22} />, label: 'Deep Talk', tag: 'Noi' },
 ];
 
 const primaryNav = allPages.slice(0, 4);
@@ -34,17 +34,24 @@ const Navbar: React.FC = () => {
   return (
     <>
       <header className="sticky top-0 z-50 flex items-center justify-between border-b border-pink-50 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-md md:px-6">
-        <div className="flex items-center gap-2 select-none">
-          <Heart className={`${role === 'boyfriend' ? 'fill-blue-400 text-blue-400' : 'fill-primary text-primary'} transition-all`} size={20} />
-          <span className="romantic-font text-xl font-bold text-gray-800">
-            {role === 'boyfriend' ? 'Niyeuoi · Duoc' : 'Niyeuoi · Ni'}
-          </span>
-          {tracking && (
-            <span className="relative ml-1 flex h-2 w-2">
-              <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-              <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-            </span>
-          )}
+        <div className="min-w-0 flex items-center gap-2.5 select-none">
+          <Heart className={`${role === 'boyfriend' ? 'fill-blue-400 text-blue-400' : 'fill-primary text-primary'} shrink-0`} size={20} aria-hidden="true" />
+          <div className="min-w-0">
+            <div className="flex items-center gap-2">
+              <span className="romantic-font block truncate text-lg font-bold text-gray-800 sm:text-xl">
+                {role === 'boyfriend' ? 'Niyeuoi · Duoc' : 'Niyeuoi · Ni'}
+              </span>
+              {tracking && (
+                <span className="relative flex h-2 w-2 shrink-0" aria-label="Dang theo doi vi tri">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
+                </span>
+              )}
+            </div>
+            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400 sm:hidden">
+              {role === 'boyfriend' ? 'Goc BF' : 'Goc GF'}
+            </p>
+          </div>
         </div>
 
         <div className="hidden md:flex items-center gap-5">
@@ -54,35 +61,39 @@ const Navbar: React.FC = () => {
         </div>
 
         {role && (
-          <div className="flex items-center gap-2">
+          <div className="ml-3 flex shrink-0 items-center gap-2">
             <div className={`hidden sm:flex items-center rounded-full px-3 py-1 text-xs font-bold ${role === 'boyfriend' ? 'bg-sky-50 text-sky-600' : 'bg-pink-50 text-pink-600'}`}>
-              Active: {ROLE_NAME[role]}
+              Dang dung: {ROLE_NAME[role]}
             </div>
             <button
               type="button"
               onClick={logout}
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-xs font-bold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900"
+              aria-label="Doi nguoi dung"
+              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-2 text-xs font-bold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900 touch-manipulation sm:px-3 sm:py-1.5"
             >
-              <LogOut size={14} />
-              Switch user
+              <LogOut size={14} aria-hidden="true" />
+              <span className="hidden sm:inline">Doi nguoi dung</span>
+              <span className="sm:hidden">Doi</span>
             </button>
           </div>
         )}
       </header>
 
       <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-pink-100 bg-white/95 pb-safe backdrop-blur-lg md:hidden">
-        <div className="flex items-center justify-around px-2 py-1">
+        <div className="flex items-center justify-around gap-1 px-2 py-1.5">
           {primaryNav.map(p => (
             <MobileNavLink key={p.to} to={p.to} icon={p.icon} label={p.label} active={isActive(p.to)} />
           ))}
           <button
+            type="button"
             onClick={() => setShowMore(v => !v)}
-            className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 transition-all ${isMoreActive || showMore ? 'text-primary' : 'text-gray-400'}`}
+            aria-label={showMore ? 'Dong menu them' : 'Mo menu them'}
+            className={`flex min-h-[52px] min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-colors ${isMoreActive || showMore ? 'text-primary' : 'text-gray-400'}`}
           >
             <div className={`${isMoreActive || showMore ? 'scale-110' : 'scale-100'} transition-transform`}>
-              {showMore ? <X size={18} /> : <Grid3x3 size={18} />}
+              {showMore ? <X size={18} aria-hidden="true" /> : <Grid3x3 size={18} aria-hidden="true" />}
             </div>
-            <span className="text-[11px] font-semibold">More</span>
+            <span className="text-[11px] font-semibold">Them</span>
           </button>
         </div>
       </nav>
@@ -102,20 +113,20 @@ const Navbar: React.FC = () => {
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
               transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-              className="fixed bottom-[65px] left-0 right-0 z-40 rounded-t-[2rem] border-t border-pink-50 bg-white px-6 pb-6 pt-5 shadow-2xl md:hidden"
+              className="fixed bottom-[65px] left-0 right-0 z-40 max-h-[calc(100vh-96px)] overflow-y-auto overscroll-contain rounded-t-[2rem] border-t border-pink-50 bg-white px-5 pb-safe pt-5 shadow-2xl md:hidden"
             >
               <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200" />
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">All features</p>
-              <div className="grid grid-cols-5 gap-3">
+              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">Tat ca tinh nang</p>
+              <div className="grid grid-cols-3 gap-3">
                 {moreNav.map(p => (
                   <Link
                     key={p.to}
                     to={p.to}
                     onClick={() => setShowMore(false)}
-                    className={`flex flex-col items-center gap-1.5 rounded-2xl p-3 transition-all ${isActive(p.to) ? 'bg-pink-50 text-primary' : 'text-gray-500 hover:bg-gray-50'}`}
+                    className={`flex min-w-0 flex-col items-center gap-1.5 rounded-2xl p-3 transition-colors ${isActive(p.to) ? 'bg-pink-50 text-primary' : 'text-gray-500 hover:bg-gray-50'}`}
                   >
-                    <span className="text-xs font-bold uppercase text-gray-400">{p.emoji}</span>
-                    <span className="text-center text-[10px] font-semibold leading-tight">{p.label}</span>
+                    <span className="text-xs font-bold uppercase text-gray-400" aria-hidden="true">{p.tag}</span>
+                    <span className="text-center text-[10px] font-semibold leading-tight break-words">{p.label}</span>
                   </Link>
                 ))}
               </div>
@@ -124,7 +135,7 @@ const Navbar: React.FC = () => {
         )}
       </AnimatePresence>
 
-      <div className="h-[65px] md:hidden" />
+      <div className="h-[70px] md:hidden" />
     </>
   );
 };
@@ -137,11 +148,15 @@ const DesktopNavLink: React.FC<{ to: string; icon: React.ReactNode; label: strin
 );
 
 const MobileNavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean }> = ({ to, icon, label, active }) => (
-  <Link to={to} className={`flex min-h-[52px] flex-col items-center justify-center gap-0.5 rounded-xl px-3 py-2 transition-all ${active ? 'text-primary' : 'text-gray-400'}`}>
-    <div className={`${active ? 'scale-110' : 'scale-100'} transition-transform`}>
+  <Link
+    to={to}
+    aria-current={active ? 'page' : undefined}
+    className={`flex min-h-[52px] min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-colors ${active ? 'text-primary' : 'text-gray-400'}`}
+  >
+    <div className={`${active ? 'scale-110' : 'scale-100'} transition-transform`} aria-hidden="true">
       {icon}
     </div>
-    <span className="text-[11px] font-semibold">{label}</span>
+    <span className="truncate text-[11px] font-semibold">{label}</span>
   </Link>
 );
 

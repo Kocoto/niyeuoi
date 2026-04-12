@@ -1,10 +1,27 @@
-@import "tailwindcss";
+﻿@import "tailwindcss";
 
 @import url('https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=Quicksand:wght@300..700&display=swap');
 
 :root {
   font-family: 'Quicksand', sans-serif;
   background-color: #fffafb;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow-x: hidden;
+  background-color: #fffafb;
+  -webkit-tap-highlight-color: rgba(244, 114, 182, 0.14);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 h1, .romantic-font {
@@ -20,51 +37,51 @@ h1, .romantic-font {
 
 @layer components {
   .card-hover {
-    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-1;
+    @apply transition-transform duration-300 hover:-translate-y-1 hover:shadow-lg;
   }
 
   .btn-primary {
-    @apply bg-primary text-white px-6 py-2 rounded-full font-semibold hover:bg-primary/90 transition-all;
+    @apply rounded-full bg-primary px-6 py-2 font-semibold text-white transition-colors hover:bg-primary/90;
   }
 
-  /* Page layout */
   .page-container {
-    @apply max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8;
+    @apply mx-auto max-w-4xl px-4 py-8 pb-24 md:pb-8;
   }
 
-  /* Page header block */
   .page-header {
-    @apply flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8;
+    @apply mb-8 flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center;
   }
 
-  /* Page title */
   .page-title {
-    @apply text-3xl md:text-4xl font-bold text-gray-800;
+    @apply text-3xl font-bold text-gray-800 md:text-4xl;
     font-family: 'Dancing Script', cursive;
   }
 
-  /* Page subtitle */
   .page-subtitle {
-    @apply text-sm text-gray-500 italic mt-1;
+    @apply mt-1 text-sm italic text-gray-500;
   }
 
-  /* Section label (small uppercase label above a list) */
   .section-label {
-    @apply text-xs font-bold text-gray-400 uppercase tracking-widest flex items-center gap-2;
+    @apply flex items-center gap-2 text-xs font-bold uppercase tracking-widest text-gray-400;
   }
 
-  /* Empty state */
   .empty-state {
-    @apply text-center py-16 bg-white/60 rounded-[2rem] border-2 border-dashed border-pink-100;
+    @apply rounded-[2rem] border-2 border-dashed border-pink-100 bg-white/60 py-16 text-center;
   }
 
-  /* Add button (floating round) */
   .btn-add {
-    @apply bg-primary text-white p-3 rounded-full shadow-lg hover:scale-110 active:scale-95 transition-all shrink-0;
+    @apply shrink-0 rounded-full bg-primary p-3 text-white shadow-lg transition-transform hover:scale-110 active:scale-95;
   }
 
-  /* Card base */
   .card {
-    @apply bg-white rounded-[2rem] shadow-sm border border-pink-50;
+    @apply rounded-[2rem] border border-pink-50 bg-white shadow-sm;
+  }
+
+  .pb-safe {
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+  }
+
+  .pt-safe {
+    padding-top: max(0.75rem, env(safe-area-inset-top));
   }
 }
