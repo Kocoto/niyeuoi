@@ -95,20 +95,21 @@ const LoveMap: React.FC = () => {
   const secondsAgo = lastUpdated ? Math.floor((Date.now() - lastUpdated) / 1000) : null;
 
   return (
-    <div className="mx-auto flex min-h-[calc(100dvh-15rem)] max-w-6xl flex-col px-2 py-6 md:h-[calc(100vh-180px)] md:min-h-[500px] md:px-4 md:py-8">
-      <div className="mb-4 flex items-start justify-between gap-3 md:mb-6 md:items-center">
-        <div className="min-w-0 flex-1 text-center">
-          <h1 className="mb-1 text-3xl font-bold text-gray-800">Ban do Tinh yeu</h1>
-          <p className="text-sm italic text-gray-600">Nhung noi chung ta da cung nhau di qua...</p>
+    <div className="page-container flex min-h-[calc(100dvh-11rem)] flex-col gap-4">
+      <div className="page-header mb-0 items-start">
+        <div className="min-w-0 flex-1">
+          <p className="section-label">Tiện ích</p>
+          <h1 className="page-title">Bản đồ yêu thương</h1>
+          <p className="page-subtitle">Nhìn nhanh những nơi hai bạn đã ghé qua, và nếu đang ở chế độ BF thì có thể xem vị trí chia sẻ của Ni.</p>
         </div>
         {role === 'boyfriend' && gfLocation && (
           <button
             onClick={() => setFlyTo(f => !f)}
-            className="shrink-0 rounded-2xl bg-pink-50 px-3 py-2 text-sm font-bold text-primary transition-colors hover:bg-primary hover:text-white md:px-4"
+            className="btn-secondary shrink-0"
           >
             <span className="flex items-center gap-2">
               <Navigation size={16} aria-hidden="true" />
-              Tim Ni
+              Tìm Ni
             </span>
           </button>
         )}
@@ -117,18 +118,18 @@ const LoveMap: React.FC = () => {
       {role === 'boyfriend' && (
         <div className="mb-3 flex items-center gap-2 md:mb-4">
           {gfLocation ? (
-            <div className="flex items-center gap-2 rounded-2xl border border-green-100 bg-green-50 px-4 py-2 text-xs font-bold text-green-700">
+            <div className="flex items-center gap-2 rounded-full border border-green-100 bg-green-50 px-4 py-2 text-xs font-bold text-green-700">
               <span className="relative flex h-2 w-2">
                 <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75"></span>
                 <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500"></span>
               </span>
-              Dang theo doi vi tri Ni
-              {secondsAgo !== null && <span className="font-normal text-green-500">· cap nhat {secondsAgo}s truoc</span>}
+              Đang theo dõi vị trí của Ni
+              {secondsAgo !== null && <span className="font-normal text-green-500">· cập nhật {secondsAgo}s trước</span>}
             </div>
           ) : (
-            <div className="flex items-center gap-2 rounded-2xl border border-gray-100 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-400">
+            <div className="flex items-center gap-2 rounded-full border border-gray-100 bg-gray-50 px-4 py-2 text-xs font-bold text-gray-400">
               <span className="h-2 w-2 rounded-full bg-gray-300"></span>
-              Ni chua chia se vi tri
+              Ni chưa chia sẻ vị trí
             </div>
           )}
         </div>
@@ -139,12 +140,12 @@ const LoveMap: React.FC = () => {
           <Loader2 className="animate-spin text-primary" size={40} />
         </div>
       ) : (
-        <div className="min-h-[340px] flex-1 overflow-hidden rounded-[2rem] border-4 border-white shadow-lg md:min-h-0">
+        <div className="surface-card-strong min-h-[340px] flex-1 overflow-hidden p-2 md:min-h-0">
           <style>{`@keyframes heartbeat { 0%,100%{transform:scale(1)} 50%{transform:scale(1.25)} }`}</style>
           <MapContainer
             center={gfLocation ? [gfLocation.lat, gfLocation.lng] : [10.762622, 106.660172] as any}
             zoom={13}
-            className="h-full w-full"
+            className="h-full min-h-[340px] w-full overflow-hidden rounded-[1.5rem]"
           >
             <TileLayer
               attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'

@@ -1,162 +1,265 @@
-﻿import React, { useState } from 'react';
+﻿import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { Heart, MapPin, Calendar, Gift, Home, Map, Ticket, Bell, Smile, Trophy, Grid3x3, X, MessageCircleHeart, LogOut } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronRight,
+  Grid3x3,
+  Heart,
+  LogOut,
+  Map,
+  MapPinned,
+  MessageCircleHeart,
+  NotebookTabs,
+  Sparkles,
+  Ticket,
+  Trophy,
+  X,
+} from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLocationTracker } from '../hooks/useLocationTracker';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ROLE_NAME } from '../constants/roles';
+import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roleLabels';
 
-const allPages = [
-  { to: '/', icon: <Home size={22} />, label: 'Trang chu', tag: 'Trang' },
-  { to: '/places', icon: <MapPin size={22} />, label: 'Am thuc', tag: 'Mon' },
-  { to: '/timeline', icon: <Calendar size={22} />, label: 'Ky niem', tag: 'Nho' },
-  { to: '/mood', icon: <Smile size={22} />, label: 'Goc nho', tag: 'Cam' },
-  { to: '/challenges', icon: <Trophy size={22} />, label: 'Thu thach', tag: 'Thu' },
-  { to: '/events', icon: <Bell size={22} />, label: 'Su kien', tag: 'Hen' },
-  { to: '/wishlist', icon: <Gift size={22} />, label: 'Wishlist', tag: 'Muon' },
-  { to: '/map', icon: <Map size={22} />, label: 'Ban do', tag: 'Map' },
-  { to: '/coupons', icon: <Ticket size={22} />, label: 'Voucher', tag: 'Tang' },
-  { to: '/deeptalk', icon: <MessageCircleHeart size={22} />, label: 'Deep Talk', tag: 'Noi' },
+type NavItem = {
+  to: string;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+};
+
+type NavGroup = {
+  title: string;
+  items: NavItem[];
+};
+
+const primaryNav: NavItem[] = [
+  {
+    to: '/',
+    label: 'Trang chủ',
+    description: 'Nơi bắt đầu cho hôm nay',
+    icon: <Heart size={18} />,
+  },
+  {
+    to: '/timeline',
+    label: 'Kỷ niệm',
+    description: 'Những điều vừa đi qua',
+    icon: <CalendarDays size={18} />,
+  },
+  {
+    to: '/places',
+    label: 'Địa điểm',
+    description: 'Chỗ đã đi và muốn đi',
+    icon: <MapPinned size={18} />,
+  },
 ];
 
-const primaryNav = allPages.slice(0, 4);
-const moreNav = allPages.slice(4);
+const groupedNav: NavGroup[] = [
+  {
+    title: 'Cảm xúc và trò chuyện',
+    items: [
+      { to: '/mood', label: 'Góc cảm xúc', description: 'Check-in nhẹ nhàng hôm nay', icon: <Sparkles size={18} /> },
+      { to: '/deeptalk', label: 'Trò chuyện sâu', description: 'Những câu hỏi cần thời gian', icon: <MessageCircleHeart size={18} /> },
+    ],
+  },
+  {
+    title: 'Hẹn hò và ý tưởng',
+    items: [
+      { to: '/wishlist', label: 'Điều mong muốn', description: 'Những món quà và ý tưởng', icon: <NotebookTabs size={18} /> },
+      { to: '/events', label: 'Ngày hẹn', description: 'Những ngày đáng nhớ phía trước', icon: <CalendarDays size={18} /> },
+      { to: '/challenges', label: 'Thử thách', description: 'Những việc mình cùng làm', icon: <Trophy size={18} /> },
+    ],
+  },
+  {
+    title: 'Tiện ích',
+    items: [
+      { to: '/map', label: 'Bản đồ yêu thương', description: 'Nhìn lại các điểm chung', icon: <Map size={18} /> },
+      { to: '/coupons', label: 'Vé yêu thương', description: 'Những đặc quyền dành cho nhau', icon: <Ticket size={18} /> },
+    ],
+  },
+];
+
+const desktopNav = [...primaryNav, ...groupedNav.flatMap(group => group.items)];
 
 const Navbar: React.FC = () => {
-  const location = useLocation();
+  const { pathname } = useLocation();
   const { role, logout } = useAuth();
   const [showMore, setShowMore] = useState(false);
-
-  const isActive = (path: string) => location.pathname === path;
-  const isMoreActive = moreNav.some(p => isActive(p.to));
   const { tracking } = useLocationTracker(role === 'girlfriend');
+
+  const roleTone = role === 'boyfriend' ? 'pill-duoc' : 'pill-ni';
+  const isMoreActive = groupedNav.some(group => group.items.some(item => item.to === pathname));
+
+  const activeLabel = useMemo(() => {
+    const item = [...primaryNav, ...groupedNav.flatMap(group => group.items)].find(entry => entry.to === pathname);
+    return item?.label ?? 'Trang chủ';
+  }, [pathname]);
 
   return (
     <>
-      <header className="sticky top-0 z-50 flex items-center justify-between border-b border-pink-50 bg-white/80 px-4 py-3 shadow-sm backdrop-blur-md md:px-6">
-        <div className="min-w-0 flex items-center gap-2.5 select-none">
-          <Heart className={`${role === 'boyfriend' ? 'fill-blue-400 text-blue-400' : 'fill-primary text-primary'} shrink-0`} size={20} aria-hidden="true" />
+      <header className="sticky top-0 z-50 border-b border-white/70 bg-white/70 backdrop-blur-xl">
+        <div className="pt-safe mx-auto flex max-w-[78rem] items-center justify-between gap-3 px-4 pb-3 md:px-6">
           <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="romantic-font block truncate text-lg font-bold text-gray-800 sm:text-xl">
-                {role === 'boyfriend' ? 'Niyeuoi · Duoc' : 'Niyeuoi · Ni'}
-              </span>
-              {tracking && (
-                <span className="relative flex h-2 w-2 shrink-0" aria-label="Dang theo doi vi tri">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-green-400 opacity-75" />
-                  <span className="relative inline-flex h-2 w-2 rounded-full bg-green-500" />
-                </span>
-              )}
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white shadow-sm ring-1 ring-black/5">
+                <Heart
+                  size={20}
+                  className={role === 'boyfriend' ? 'fill-sky-500 text-sky-500' : 'fill-primary text-primary'}
+                />
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-sm font-black uppercase tracking-[0.24em] text-[#b292a6]">Niyeuoi</p>
+                  {tracking && (
+                    <span className="relative flex h-2.5 w-2.5" aria-label="Đang chia sẻ vị trí">
+                      <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-75" />
+                      <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-emerald-500" />
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2">
+                  <p className="truncate text-lg font-black text-ink md:text-[1.35rem]">{ROLE_CORNER_LABEL[role]}</p>
+                  <span className={`role-pill ${roleTone}`}>Đang là {ROLE_NAME[role]}</span>
+                </div>
+                <p className="truncate text-xs text-soft md:text-sm">{activeLabel}</p>
+              </div>
             </div>
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.24em] text-gray-400 sm:hidden">
-              {role === 'boyfriend' ? 'Goc BF' : 'Goc GF'}
-            </p>
           </div>
-        </div>
 
-        <div className="hidden md:flex items-center gap-5">
-          {allPages.map(p => (
-            <DesktopNavLink key={p.to} to={p.to} icon={p.icon} label={p.label} active={isActive(p.to)} />
-          ))}
-        </div>
+          <nav className="hidden items-center gap-2 md:flex">
+            {desktopNav.map(item => {
+              const active = pathname === item.to;
+              return (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                    active ? 'bg-white text-ink shadow-sm ring-1 ring-black/5' : 'text-soft hover:bg-white/80 hover:text-ink'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
 
-        {role && (
-          <div className="ml-3 flex shrink-0 items-center gap-2">
-            <div className={`hidden sm:flex items-center rounded-full px-3 py-1 text-xs font-bold ${role === 'boyfriend' ? 'bg-sky-50 text-sky-600' : 'bg-pink-50 text-pink-600'}`}>
-              Dang dung: {ROLE_NAME[role]}
-            </div>
-            <button
-              type="button"
-              onClick={logout}
-              aria-label="Doi nguoi dung"
-              className="inline-flex items-center gap-1.5 rounded-full border border-gray-200 bg-white px-2.5 py-2 text-xs font-bold text-gray-600 transition-colors hover:border-gray-300 hover:text-gray-900 touch-manipulation sm:px-3 sm:py-1.5"
-            >
-              <LogOut size={14} aria-hidden="true" />
-              <span className="hidden sm:inline">Doi nguoi dung</span>
-              <span className="sm:hidden">Doi</span>
-            </button>
-          </div>
-        )}
+          <button
+            type="button"
+            onClick={logout}
+            className="btn-secondary shrink-0 px-3 py-2 text-xs md:px-4 md:text-sm"
+            aria-label="Đổi người dùng"
+          >
+            <LogOut size={15} />
+            <span className="hidden sm:inline">Đổi người dùng</span>
+          </button>
+        </div>
       </header>
 
-      <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-pink-100 bg-white/95 pb-safe backdrop-blur-lg md:hidden">
-        <div className="flex items-center justify-around gap-1 px-2 py-1.5">
-          {primaryNav.map(p => (
-            <MobileNavLink key={p.to} to={p.to} icon={p.icon} label={p.label} active={isActive(p.to)} />
+      <nav className="nav-safe-bottom fixed inset-x-0 bottom-0 z-50 border-t border-white/80 bg-white/86 backdrop-blur-xl md:hidden">
+        <div className="mx-auto flex max-w-[38rem] items-center gap-1 px-2 pt-2">
+          {primaryNav.map(item => (
+            <MobileNavLink
+              key={item.to}
+              to={item.to}
+              label={item.label}
+              active={pathname === item.to}
+              icon={item.icon}
+            />
           ))}
           <button
             type="button"
-            onClick={() => setShowMore(v => !v)}
-            aria-label={showMore ? 'Dong menu them' : 'Mo menu them'}
-            className={`flex min-h-[52px] min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-colors ${isMoreActive || showMore ? 'text-primary' : 'text-gray-400'}`}
+            onClick={() => setShowMore(value => !value)}
+            className={`flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition ${
+              isMoreActive || showMore ? 'bg-rose-50 text-primary' : 'text-soft'
+            }`}
+            aria-label={showMore ? 'Đóng thêm' : 'Mở thêm'}
           >
-            <div className={`${isMoreActive || showMore ? 'scale-110' : 'scale-100'} transition-transform`}>
-              {showMore ? <X size={18} aria-hidden="true" /> : <Grid3x3 size={18} aria-hidden="true" />}
-            </div>
-            <span className="text-[11px] font-semibold">Them</span>
+            {showMore ? <X size={18} /> : <Grid3x3 size={18} />}
+            Thêm
           </button>
         </div>
       </nav>
 
       <AnimatePresence>
         {showMore && (
-          <>
-            <motion.div
+          <div className="sheet-shell md:hidden">
+            <motion.button
+              type="button"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               onClick={() => setShowMore(false)}
-              className="fixed inset-0 z-40 bg-black/20 md:hidden"
+              className="sheet-backdrop"
+              aria-label="Đóng menu thêm"
             />
             <motion.div
               initial={{ y: '100%' }}
               animate={{ y: 0 }}
               exit={{ y: '100%' }}
-              transition={{ type: 'spring', stiffness: 400, damping: 35 }}
-              className="fixed bottom-[65px] left-0 right-0 z-40 max-h-[calc(100vh-96px)] overflow-y-auto overscroll-contain rounded-t-[2rem] border-t border-pink-50 bg-white px-5 pb-safe pt-5 shadow-2xl md:hidden"
+              transition={{ type: 'spring', stiffness: 360, damping: 34 }}
+              className="sheet-panel max-h-[82vh] overflow-y-auto"
             >
-              <div className="mx-auto mb-5 h-1 w-10 rounded-full bg-gray-200" />
-              <p className="mb-4 text-xs font-bold uppercase tracking-widest text-gray-400">Tat ca tinh nang</p>
-              <div className="grid grid-cols-3 gap-3">
-                {moreNav.map(p => (
-                  <Link
-                    key={p.to}
-                    to={p.to}
-                    onClick={() => setShowMore(false)}
-                    className={`flex min-w-0 flex-col items-center gap-1.5 rounded-2xl p-3 transition-colors ${isActive(p.to) ? 'bg-pink-50 text-primary' : 'text-gray-500 hover:bg-gray-50'}`}
-                  >
-                    <span className="text-xs font-bold uppercase text-gray-400" aria-hidden="true">{p.tag}</span>
-                    <span className="text-center text-[10px] font-semibold leading-tight break-words">{p.label}</span>
-                  </Link>
+              <div className="mx-auto mb-4 h-1.5 w-12 rounded-full bg-rose-100" />
+              <div className="mb-5 flex items-center justify-between">
+                <div>
+                  <p className="section-label">Không gian khác</p>
+                  <h2 className="mt-2 text-2xl font-black text-ink">Thêm cho hai bạn</h2>
+                </div>
+                <button type="button" onClick={() => setShowMore(false)} className="rounded-full p-2 text-soft">
+                  <X size={18} />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                {groupedNav.map(group => (
+                  <section key={group.title}>
+                    <p className="mb-3 text-xs font-bold uppercase tracking-[0.24em] text-[#b292a6]">{group.title}</p>
+                    <div className="space-y-2">
+                      {group.items.map(item => (
+                        <Link
+                          key={item.to}
+                          to={item.to}
+                          onClick={() => setShowMore(false)}
+                          className={`flex items-center gap-3 rounded-[1.4rem] px-4 py-4 transition ${
+                            pathname === item.to ? 'bg-rose-50 text-ink' : 'bg-[#faf6f8] text-ink'
+                          }`}
+                        >
+                          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm">
+                            {item.icon}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <p className="truncate text-sm font-bold">{item.label}</p>
+                            <p className="truncate text-xs text-soft">{item.description}</p>
+                          </div>
+                          <ChevronRight size={16} className="text-soft" />
+                        </Link>
+                      ))}
+                    </div>
+                  </section>
                 ))}
               </div>
             </motion.div>
-          </>
+          </div>
         )}
       </AnimatePresence>
-
-      <div className="h-[70px] md:hidden" />
     </>
   );
 };
 
-const DesktopNavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean }> = ({ to, icon, label, active }) => (
-  <Link to={to} className={`flex items-center gap-1.5 font-medium transition-colors ${active ? 'text-primary' : 'text-gray-500 hover:text-primary'}`}>
-    {icon}
-    <span className="text-[13px]">{label}</span>
-  </Link>
-);
-
-const MobileNavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean }> = ({ to, icon, label, active }) => (
+const MobileNavLink: React.FC<{ to: string; icon: React.ReactNode; label: string; active: boolean }> = ({
+  to,
+  icon,
+  label,
+  active,
+}) => (
   <Link
     to={to}
     aria-current={active ? 'page' : undefined}
-    className={`flex min-h-[52px] min-w-0 touch-manipulation flex-col items-center justify-center gap-0.5 rounded-xl px-2 py-2 transition-colors ${active ? 'text-primary' : 'text-gray-400'}`}
+    className={`flex min-h-[58px] flex-1 flex-col items-center justify-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-bold transition ${
+      active ? 'bg-rose-50 text-primary' : 'text-soft'
+    }`}
   >
-    <div className={`${active ? 'scale-110' : 'scale-100'} transition-transform`} aria-hidden="true">
-      {icon}
-    </div>
-    <span className="truncate text-[11px] font-semibold">{label}</span>
+    {icon}
+    <span>{label}</span>
   </Link>
 );
 

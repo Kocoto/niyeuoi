@@ -1,10 +1,10 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Plus, Trash2, Loader2, X, Send, MessageCircleHeart } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import api from '../api/api';
-import { ROLE_NAME } from '../constants/roles';
+import { ROLE_NAME } from '../constants/roleLabels';
 
 interface IAnswer {
   text?: string;
@@ -204,7 +204,7 @@ const DeepTalk: React.FC = () => {
       <div className="mb-6">
         <div className="flex items-center gap-2 mb-1">
           <MessageCircleHeart size={24} className="text-primary" />
-          <h1 className="text-2xl font-black text-gray-800">Deep Talk</h1>
+          <h1 className="text-2xl font-black text-gray-800">Trò chuyện sâu</h1>
         </div>
         <p className="text-sm text-gray-400">Hiểu nhau hơn qua từng câu hỏi và cảm xúc... 💕</p>
       </div>

@@ -22,9 +22,9 @@ function App() {
         <AuthProvider>
           <AuthGate>
             <Router>
-              <div className="min-h-screen bg-background text-gray-800">
+              <div className="app-shell">
                 <Navbar />
-                <main className="container mx-auto px-4 py-8 pb-24 md:pb-8">
+                <main className="app-main">
                   <Routes>
                     <Route path="/" element={<Home />} />
                     <Route path="/places" element={<Places />} />
@@ -36,7 +36,7 @@ function App() {
                     <Route path="/mood" element={<MoodLofi />} />
                     <Route path="/challenges" element={<Challenges />} />
                     <Route path="/deeptalk" element={<DeepTalk />} />
-                    <Route path="*" element={<div className="mt-20 text-center font-medium text-gray-400">This page is being prepared.</div>} />
+                    <Route path="*" element={<div className="surface-card mx-auto mt-20 max-w-xl px-8 py-12 text-center text-sm font-medium text-soft">Trang này đang được chuẩn bị để vừa hơn với không gian riêng của hai bạn.</div>} />
                   </Routes>
                 </main>
               </div>

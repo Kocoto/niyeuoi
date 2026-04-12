@@ -1,207 +1,306 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { Heart, Stars, BookHeart, UtensilsCrossed, Smile, Frown, Coffee, CloudRain } from 'lucide-react';
+﻿import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import {
+  ArrowRight,
+  CalendarDays,
+  Heart,
+  MapPinned,
+  MessageCircleHeart,
+  NotebookPen,
+  Sparkles,
+  TimerReset,
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 import api from '../api/api';
+import { useAuth } from '../context/AuthContext';
+import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roleLabels';
 
-const START_DATE = new Date(2026, 1, 7, 20, 46, 0); // 20:46 ngày 7/2/2026
+type Role = 'boyfriend' | 'girlfriend';
 
-interface TimeElapsed {
-  days: number;
-  hours: number;
-  minutes: number;
-  seconds: number;
-}
-
-interface Stats {
-  memories: number;
-  places: number;
-  latestMood: string | null;
-}
-
-function calcElapsed(): TimeElapsed {
-  const diff = Math.max(0, Date.now() - START_DATE.getTime());
-  const totalSeconds = Math.floor(diff / 1000);
-  return {
-    days: Math.floor(totalSeconds / 86400),
-    hours: Math.floor((totalSeconds % 86400) / 3600),
-    minutes: Math.floor((totalSeconds % 3600) / 60),
-    seconds: totalSeconds % 60,
-  };
-}
-
-const moodIcon: Record<string, React.ReactNode> = {
-  'Hạnh phúc':  <Smile size={16} className="text-yellow-500" />,
-  'Đang yêu':   <Heart size={16} className="text-pink-500" />,
-  'Bình yên':   <Coffee size={16} className="text-orange-400" />,
-  'Hơi buồn':   <CloudRain size={16} className="text-blue-400" />,
-  'Mệt mỏi':    <Frown size={16} className="text-gray-400" />,
+type Memory = {
+  _id: string;
+  title: string;
+  date: string;
+  content: string;
+  media?: string[];
+  mood?: string;
 };
 
+type Place = {
+  _id: string;
+  name: string;
+  isVisited: boolean;
+  note?: string;
+};
+
+type Mood = {
+  mood: string;
+  note?: string;
+  createdAt?: string;
+};
+
+type DeepTalkQuestion = {
+  _id: string;
+  content: string;
+  answers: Record<Role, { text?: string; isInPerson: boolean }>;
+};
+
+type DashboardState = {
+  memories: Memory[];
+  places: Place[];
+  moods: Mood[];
+  questions: DeepTalkQuestion[];
+};
+
+const START_DATE = new Date(2026, 1, 7, 20, 46, 0);
+
+const roleCopy: Record<Role, { eyebrow: string; title: string; subtitle: string; accent: string }> = {
+  girlfriend: {
+    eyebrow: 'Không gian của Ni',
+    title: 'Mọi điều hôm nay nên thật nhẹ và gần.',
+    subtitle: 'Mở app lên để nhớ mình đang ở đâu trong câu chuyện của hai đứa, chứ không phải chỉ đi qua một danh sách tính năng.',
+    accent: 'from-pink-100 via-rose-50 to-white',
+  },
+  boyfriend: {
+    eyebrow: 'Không gian của Được',
+    title: 'Giữ nhịp cho những điều đáng nhớ của hai đứa.',
+    subtitle: 'Trang chủ giờ là nơi nhìn nhanh điều quan trọng, việc còn chờ, và bước tiếp theo nên làm trong hôm nay.',
+    accent: 'from-sky-100 via-white to-rose-50',
+  },
+};
+
+function getElapsedDays() {
+  return Math.max(0, Math.floor((Date.now() - START_DATE.getTime()) / 86400000));
+}
+
+function formatRelative(dateStr?: string) {
+  if (!dateStr) return 'gần đây';
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+  if (mins < 1) return 'vừa xong';
+  if (mins < 60) return `${mins} phút trước`;
+  if (hours < 24) return `${hours} giờ trước`;
+  if (days === 1) return 'hôm qua';
+  return `${days} ngày trước`;
+}
+
 const Home: React.FC = () => {
-  const [elapsed, setElapsed] = useState<TimeElapsed>(calcElapsed);
-  const [stats, setStats] = useState<Stats>({ memories: 0, places: 0, latestMood: null });
+  const { role } = useAuth();
+  const [data, setData] = useState<DashboardState>({ memories: [], places: [], moods: [], questions: [] });
+  const [loading, setLoading] = useState(true);
+  const [daysTogether, setDaysTogether] = useState(getElapsedDays);
 
   useEffect(() => {
-    const timer = setInterval(() => setElapsed(calcElapsed()), 1000);
-    return () => clearInterval(timer);
+    const timer = window.setInterval(() => setDaysTogether(getElapsedDays()), 60000);
+    return () => window.clearInterval(timer);
   }, []);
 
   useEffect(() => {
+    let mounted = true;
     Promise.all([
       api.get('/memories'),
       api.get('/places'),
       api.get('/moods'),
-    ]).then(([memRes, placeRes, moodRes]) => {
-      setStats({
-        memories: memRes.data.count ?? memRes.data.data.length,
-        places: (placeRes.data.data as { isVisited: boolean }[]).filter(p => p.isVisited).length,
-        latestMood: moodRes.data.data[0]?.mood ?? null,
+      api.get('/deeptalk/questions'),
+    ])
+      .then(([memoryRes, placeRes, moodRes, questionRes]) => {
+        if (!mounted) return;
+        setData({
+          memories: memoryRes.data.data ?? [],
+          places: placeRes.data.data ?? [],
+          moods: moodRes.data.data ?? [],
+          questions: questionRes.data.data ?? [],
+        });
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
       });
-    }).catch(() => {});
+
+    return () => {
+      mounted = false;
+    };
   }, []);
 
-  return (
-    <div className="relative max-w-4xl mx-auto py-8 md:py-12 px-4 text-center overflow-hidden">
-      {/* Background decoration */}
-      <div aria-hidden className="pointer-events-none select-none">
-        <span className="absolute top-8 left-4 text-5xl opacity-[0.04] rotate-[-20deg]">♥</span>
-        <span className="absolute top-24 right-6 text-7xl opacity-[0.04] rotate-[15deg]">♥</span>
-        <span className="absolute bottom-40 left-8 text-6xl opacity-[0.04] rotate-[10deg]">♥</span>
-        <span className="absolute bottom-20 right-10 text-4xl opacity-[0.04] rotate-[-10deg]">♥</span>
-        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[260px] opacity-[0.025]">♥</span>
-      </div>
+  const latestMemory = data.memories[0];
+  const latestMood = data.moods[0];
+  const unansweredQuestion = data.questions.find(question => {
+    const answer = question.answers?.[role as Role];
+    return !answer?.isInPerson && !answer?.text;
+  });
+  const nextPlace = data.places.find(place => !place.isVisited);
+  const visitedCount = data.places.filter(place => place.isVisited).length;
 
-      <motion.div
+  const nextStep = useMemo(() => {
+    if (unansweredQuestion) {
+      return {
+        to: '/deeptalk',
+        title: 'Có một câu hỏi vẫn đang chờ bạn',
+        detail: unansweredQuestion.content,
+        button: 'Trả lời ngay',
+        icon: <MessageCircleHeart size={18} />,
+      };
+    }
+
+    if (nextPlace) {
+      return {
+        to: '/places',
+        title: 'Có một địa điểm nên lên lịch cho lần tới',
+        detail: nextPlace.name,
+        button: 'Xem địa điểm',
+        icon: <MapPinned size={18} />,
+      };
+    }
+
+    return {
+      to: latestMood ? '/timeline' : '/mood',
+      title: latestMood ? 'Ghi lại thêm một khoảnh khắc mới' : 'Check-in cảm xúc cho hôm nay',
+      detail: latestMood ? 'Trang chủ sẽ đỡ lạnh hơn khi có thêm điều mới để nhớ.' : 'Chỉ cần một câu ngắn để app biết hôm nay của bạn đang thế nào.',
+      button: latestMood ? 'Viết kỷ niệm' : 'Ghi cảm xúc',
+      icon: latestMood ? <NotebookPen size={18} /> : <Sparkles size={18} />,
+    };
+  }, [latestMood, nextPlace, unansweredQuestion]);
+
+  const todayCards = [
+    {
+      label: 'Cảm xúc gần nhất',
+      value: latestMood?.mood ?? 'Chưa có check-in',
+      hint: latestMood ? `Cập nhật ${formatRelative(latestMood.createdAt)}` : 'Ghi một dòng để không khí app ấm hơn',
+      to: '/mood',
+      icon: <Sparkles size={18} />,
+    },
+    {
+      label: 'Kỷ niệm mới nhất',
+      value: latestMemory?.title ?? 'Chưa có điều gì mới được lưu',
+      hint: latestMemory ? new Date(latestMemory.date).toLocaleDateString('vi-VN') : 'Một tấm ảnh hay một dòng ngắn cũng đủ',
+      to: '/timeline',
+      icon: <CalendarDays size={18} />,
+    },
+    {
+      label: 'Địa điểm đã đi',
+      value: `${visitedCount} nơi`,
+      hint: nextPlace ? `Lần tới có thể ghé ${nextPlace.name}` : 'Danh sách của hai bạn đã khá đầy rồi',
+      to: '/places',
+      icon: <MapPinned size={18} />,
+    },
+  ];
+
+  const recentBlocks = [
+    {
+      title: 'Kỷ niệm gần đây',
+      body: latestMemory ? latestMemory.content : 'Khi có một khoảnh khắc mới được lưu, phần này sẽ kể lại cho bạn ngay ở đây.',
+      meta: latestMemory ? new Date(latestMemory.date).toLocaleDateString('vi-VN') : 'Đang chờ điều mới',
+      to: '/timeline',
+    },
+    {
+      title: 'Điều đang đợi phía trước',
+      body: nextPlace ? `${nextPlace.name}${nextPlace.note ? ` · ${nextPlace.note}` : ''}` : 'Danh sách địa điểm đang trống. Thêm một chỗ muốn đi để lần tới mở app là có gợi ý.',
+      meta: nextPlace ? 'Từ mục Địa điểm' : 'Gợi ý cho lần hẹn tới',
+      to: '/places',
+    },
+  ];
+
+  return (
+    <div className="page-container space-y-5 md:space-y-6">
+      <motion.section
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.8 }}
+        className={`surface-card-strong overflow-hidden bg-gradient-to-br ${roleCopy[role as Role].accent} p-5 md:p-8`}
       >
-        {/* Heart icon */}
-        <div className="flex justify-center mb-4 md:mb-6">
-          <motion.div
-            animate={{ scale: [1, 1.1, 1] }}
-            transition={{ repeat: Infinity, duration: 2 }}
-          >
-            <Heart className="text-primary fill-primary w-12 h-12 md:w-16 md:h-16" />
-          </motion.div>
+        <div className="grid gap-5 md:grid-cols-[1.4fr_0.9fr] md:gap-8">
+          <div>
+            <p className="section-label">{roleCopy[role as Role].eyebrow}</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className={`role-pill ${role === 'boyfriend' ? 'pill-duoc' : 'pill-ni'}`}>{ROLE_CORNER_LABEL[role]}</span>
+              <span className="chip bg-white/80 text-soft">Đang dùng với vai trò {ROLE_NAME[role]}</span>
+            </div>
+            <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[0.95] text-ink md:text-6xl">{roleCopy[role as Role].title}</h1>
+            <p className="mt-4 max-w-xl text-sm leading-7 text-soft md:text-base">{roleCopy[role as Role].subtitle}</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link to={nextStep.to} className="btn-primary">
+                {nextStep.icon}
+                {nextStep.button}
+              </Link>
+              <Link to="/timeline" className="btn-secondary">
+                <CalendarDays size={16} />
+                Xem dòng kỷ niệm
+              </Link>
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-3 md:grid-cols-1">
+            <StatTile icon={<TimerReset size={16} />} label="Đã bên nhau" value={`${daysTogether} ngày`} hint="Vẫn đang tiếp tục tăng" />
+            <StatTile icon={<MessageCircleHeart size={16} />} label="Câu hỏi đang chờ" value={`${data.questions.filter(question => !(question.answers?.[role as Role]?.isInPerson || question.answers?.[role as Role]?.text)).length}`} hint="Để không bỏ lỡ điều cần nói" />
+            <StatTile icon={<Heart size={16} />} label="Kỷ niệm đã lưu" value={`${data.memories.length}`} hint="Những lần quay lại để nhớ" />
+          </div>
+        </div>
+      </motion.section>
+
+      <section className="grid gap-4 lg:grid-cols-[1.25fr_0.9fr]">
+        <div className="surface-card p-5 md:p-6">
+          <div className="mb-4 flex items-end justify-between gap-3">
+            <div>
+              <p className="section-label">Hôm nay</p>
+              <h2 className="mt-2 text-2xl font-black text-ink">Điều đáng để xem ngay</h2>
+            </div>
+            {loading && <span className="text-xs font-bold text-soft">Đang làm mới...</span>}
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {todayCards.map(card => (
+              <Link key={card.label} to={card.to} className="card-hover rounded-[1.4rem] bg-[#fcf7fa] p-4">
+                <div className="mb-4 flex h-11 w-11 items-center justify-center rounded-2xl bg-white shadow-sm text-primary">{card.icon}</div>
+                <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b292a6]">{card.label}</p>
+                <p className="mt-2 line-clamp-2 text-base font-bold text-ink">{card.value}</p>
+                <p className="mt-2 text-sm leading-6 text-soft">{card.hint}</p>
+              </Link>
+            ))}
+          </div>
         </div>
 
-        <h1 className="text-3xl md:text-5xl font-bold mb-2 md:mb-4 text-gray-800">Chúng ta đã bên nhau</h1>
-
-        {/* Số ngày */}
-        <div className="relative inline-block my-4 md:my-8">
-          <Stars className="absolute -top-4 -left-4 md:-top-6 md:-left-6 text-yellow-400 w-5 h-5 md:w-8 md:h-8" />
-          <span className="text-6xl md:text-8xl font-black text-primary romantic-font leading-tight">
-            {elapsed.days}
-          </span>
-          <Stars className="absolute -bottom-4 -right-4 md:-bottom-6 md:-right-6 text-yellow-400 w-5 h-5 md:w-8 md:h-8" />
+        <div className="surface-card p-5 md:p-6">
+          <p className="section-label">Tiếp theo</p>
+          <h2 className="mt-2 text-2xl font-black text-ink">Một bước đủ rõ ràng</h2>
+          <div className="mt-5 rounded-[1.6rem] bg-gradient-to-br from-rose-50 to-white p-5">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">{nextStep.icon}</div>
+            <p className="mt-4 text-xl font-black text-ink">{nextStep.title}</p>
+            <p className="mt-2 text-sm leading-6 text-soft">{nextStep.detail}</p>
+            <Link to={nextStep.to} className="btn-primary mt-5">
+              {nextStep.button}
+              <ArrowRight size={16} />
+            </Link>
+          </div>
         </div>
+      </section>
 
-        <p className="text-xl md:text-2xl font-semibold text-gray-600 mb-8">Ngày hạnh phúc</p>
-
-        {/* Bộ đếm giờ/phút/giây */}
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="flex justify-center gap-3 md:gap-4 mb-12 md:mb-16"
-        >
-          <TimeUnit value={elapsed.hours} label="Giờ" />
-          <Separator />
-          <TimeUnit value={elapsed.minutes} label="Phút" />
-          <Separator />
-          <TimeUnit value={elapsed.seconds} label="Giây" />
-        </motion.div>
-
-        {/* Feature cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
-          <FeatureCard
-            to="/timeline"
-            icon={<BookHeart size={22} className="text-pink-400" />}
-            iconBg="bg-pink-100"
-            title="Kỷ niệm"
-            desc="Lưu lại những khoảnh khắc đáng nhớ nhất của chúng mình."
-            color="bg-pink-50"
-            stat={stats.memories > 0 ? `${stats.memories} kỷ niệm` : undefined}
-            statColor="text-pink-400"
-          />
-          <FeatureCard
-            to="/places"
-            icon={<UtensilsCrossed size={22} className="text-orange-400" />}
-            iconBg="bg-orange-100"
-            title="Ẩm thực"
-            desc="Đi ăn ở đâu, món gì ngon nhất đều ở đây cả."
-            color="bg-orange-50"
-            stat={stats.places > 0 ? `${stats.places} quán đã đi` : undefined}
-            statColor="text-orange-400"
-          />
-          <FeatureCard
-            to="/mood"
-            icon={moodIcon[stats.latestMood ?? ''] ?? <Smile size={22} className="text-purple-400" />}
-            iconBg="bg-purple-100"
-            title="Góc cảm xúc"
-            desc="Hôm nay bạn thấy thế nào? Ghi lại tâm trạng của mình nhé."
-            color="bg-purple-50"
-            stat={stats.latestMood ? `Đang: ${stats.latestMood}` : undefined}
-            statColor="text-purple-400"
-          />
-        </div>
-      </motion.div>
+      <section className="grid gap-4 md:grid-cols-2">
+        {recentBlocks.map(block => (
+          <Link key={block.title} to={block.to} className="surface-card card-hover p-5 md:p-6">
+            <p className="section-label">Gần đây</p>
+            <h2 className="mt-2 text-2xl font-black text-ink">{block.title}</h2>
+            <p className="mt-4 line-clamp-4 text-sm leading-7 text-soft">{block.body}</p>
+            <div className="mt-5 flex items-center justify-between text-sm font-bold text-primary">
+              <span className="text-soft">{block.meta}</span>
+              <span className="inline-flex items-center gap-1">
+                Mở ra
+                <ArrowRight size={15} />
+              </span>
+            </div>
+          </Link>
+        ))}
+      </section>
     </div>
   );
 };
 
-const TimeUnit: React.FC<{ value: number; label: string }> = ({ value, label }) => (
-  <div className="flex flex-col items-center">
-    <div className="bg-white border border-pink-100 shadow-sm rounded-2xl px-4 py-3 min-w-[64px] md:min-w-[80px]">
-      <motion.span
-        key={value}
-        initial={{ y: -8, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        transition={{ duration: 0.15 }}
-        className="block text-2xl md:text-3xl font-black text-primary tabular-nums"
-      >
-        {String(value).padStart(2, '0')}
-      </motion.span>
-    </div>
-    <span className="text-[10px] md:text-xs font-bold text-gray-400 uppercase tracking-widest mt-1.5">{label}</span>
+const StatTile: React.FC<{ icon: React.ReactNode; label: string; value: string; hint: string }> = ({ icon, label, value, hint }) => (
+  <div className="rounded-[1.4rem] bg-white/82 p-4 shadow-sm ring-1 ring-black/5">
+    <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-rose-50 text-primary">{icon}</div>
+    <p className="text-xs font-bold uppercase tracking-[0.22em] text-[#b292a6]">{label}</p>
+    <p className="mt-2 text-xl font-black text-ink">{value}</p>
+    <p className="mt-1 text-sm text-soft">{hint}</p>
   </div>
-);
-
-const Separator: React.FC = () => (
-  <span className="text-2xl md:text-3xl font-black text-pink-200 self-start mt-3">:</span>
-);
-
-interface FeatureCardProps {
-  to: string;
-  icon: React.ReactNode;
-  iconBg: string;
-  title: string;
-  desc: string;
-  color: string;
-  stat?: string;
-  statColor: string;
-}
-
-const FeatureCard: React.FC<FeatureCardProps> = ({ to, icon, iconBg, title, desc, color, stat, statColor }) => (
-  <Link to={to}>
-    <motion.div
-      whileTap={{ scale: 0.97 }}
-      className={`${color} p-6 rounded-[2rem] text-left border-2 border-transparent hover:border-white shadow-sm card-hover transition-all h-full`}
-    >
-      <div className={`${iconBg} w-10 h-10 rounded-xl flex items-center justify-center mb-4`}>
-        {icon}
-      </div>
-      <h3 className="text-lg font-bold mb-1.5 text-gray-800">{title}</h3>
-      <p className="text-gray-500 text-sm leading-relaxed mb-3">{desc}</p>
-      {stat && (
-        <span className={`text-xs font-bold ${statColor} bg-white/70 px-2.5 py-1 rounded-full`}>
-          {stat}
-        </span>
-      )}
-    </motion.div>
-  </Link>
 );
 
 export default Home;
