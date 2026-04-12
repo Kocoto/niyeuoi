@@ -1,4 +1,4 @@
-import Memory, { IMemory } from '../models/Memory';
+import Memory, { IMemoryRecord } from '../models/MemoryRecord';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
 
@@ -21,10 +21,13 @@ class MemoryService {
         return memory;
     }
 
-    async createMemory(data: Partial<IMemory>) {
+    async createMemory(data: Partial<IMemoryRecord>) {
         logger.info('Memory', 'Tạo kỷ niệm mới', { title: data.title, mood: data.mood, date: data.date });
         try {
-            const memory = await Memory.create(data);
+            const memory = await Memory.create({
+                ...data,
+                createdBy: data.createdBy === 'boyfriend' ? 'boyfriend' : 'girlfriend',
+            });
             logger.success('Memory', 'Tạo kỷ niệm thành công', { id: memory._id, title: memory.title });
 
             logger.info('Memory', 'Gửi thông báo Discord...');
@@ -47,7 +50,7 @@ class MemoryService {
         }
     }
 
-    async updateMemory(id: string, data: Partial<IMemory>) {
+    async updateMemory(id: string, data: Partial<IMemoryRecord>) {
         logger.info('Memory', 'Cập nhật kỷ niệm', { id, fields: Object.keys(data) });
         const memory = await Memory.findByIdAndUpdate(id, data, {
             new: true,

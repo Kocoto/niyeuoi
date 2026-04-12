@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import deepTalkService from '../services/deepTalkService';
 import { generateDeepQuestion } from '../services/aiService';
-import DeepTalkQuestion from '../models/DeepTalkQuestion';
+import DeepTalkQuestion from '../models/DeepTalkQuestionRecord';
 
 // --- Questions ---
 

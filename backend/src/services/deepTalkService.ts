@@ -1,4 +1,4 @@
-import DeepTalkQuestion, { IDeepTalkQuestion } from '../models/DeepTalkQuestion';
+import DeepTalkQuestion, { IDeepTalkQuestionRecord } from '../models/DeepTalkQuestionRecord';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
@@ -6,17 +6,20 @@ import logger from '../utils/logger';
 class DeepTalkService {
     // --- Questions ---
 
-    async getAllQuestions(): Promise<IDeepTalkQuestion[]> {
+    async getAllQuestions(): Promise<IDeepTalkQuestionRecord[]> {
         logger.info('DeepTalk', 'Lấy danh sách câu hỏi');
         const questions = await DeepTalkQuestion.find().sort({ createdAt: -1 });
         logger.success('DeepTalk', `Trả về ${questions.length} câu hỏi`);
         return questions;
     }
 
-    async createQuestion(data: { content: string; isAiGenerated?: boolean }): Promise<IDeepTalkQuestion> {
+    async createQuestion(data: { content: string; isAiGenerated?: boolean; createdBy?: 'boyfriend' | 'girlfriend' }): Promise<IDeepTalkQuestionRecord> {
         logger.info('DeepTalk', 'Tạo câu hỏi mới', { content: data.content.substring(0, 40) });
         try {
-            const question = await DeepTalkQuestion.create(data);
+            const question = await DeepTalkQuestion.create({
+                ...data,
+                createdBy: data.createdBy === 'boyfriend' ? 'boyfriend' : 'girlfriend',
+            });
             logger.success('DeepTalk', 'Tạo câu hỏi thành công', { id: question._id });
 
             await notificationService.sendDiscord(
@@ -40,7 +43,7 @@ class DeepTalkService {
         id: string,
         role: 'boyfriend' | 'girlfriend',
         answerData: { text?: string; isInPerson?: boolean }
-    ): Promise<IDeepTalkQuestion> {
+    ): Promise<IDeepTalkQuestionRecord> {
         logger.info('DeepTalk', 'Trả lời câu hỏi', { id, role });
         const question = await DeepTalkQuestion.findById(id);
         if (!question) {
