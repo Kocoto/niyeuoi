@@ -159,7 +159,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### A4 - Áp shared identity vào Mood / Deep Talk / Timeline
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - 3 màn cốt lõi nhìn vào là biết dữ liệu của ai
 - Reference Sections:
@@ -184,7 +184,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### A5 - Home dùng lớp dữ liệu mới
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - Home không còn dựa vào một khối cảm xúc mơ hồ
 - Reference Sections:
@@ -204,7 +204,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### A6 - Legacy QA pass
 
-- Status: `pending`
+- Status: `active`
 - Mục tiêu:
   - chốt rằng dữ liệu cũ không bị phá sau Đợt A
 - Reference Sections:
@@ -220,23 +220,23 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Active Slice
 
-- ID: `A4`
+- ID: `A6`
 - Status: `active`
-- Tên: `Áp shared identity vào Mood / Deep Talk / Timeline`
+- Tên: `Legacy QA pass`
 - Việc phải làm ngay:
-  1. Áp `PersonBadge` hoặc helper identity mới vào Mood / Deep Talk / Timeline.
-  2. Hiện rõ ai tạo mood, ai viết journal, ai trả lời deep talk, ai đang chờ.
-  3. Làm fallback trung tính cho record cũ thiếu metadata.
-  4. Không mở rộng sang Home, Places, Wishlist hay Events trong bước này.
+  1. Kiểm tra lại `Mood`, `Deep Talk`, `Timeline`, `Home` với record cũ thiếu metadata.
+  2. Kiểm tra luồng đổi role đăng nhập và các create/edit/delete chính sau Đợt A.
+  3. Ghi rõ case nào đã chạy thủ công, case nào mới chỉ qua build.
+  4. Không mở rộng sang phase B hay thêm feature mới trong lượt QA này.
 - Không được làm trong slice này:
-  - redesign page ngoài 3 màn cốt lõi
-  - đổi auth flow hay app shell
-  - thêm semantics `owner` mới
-  - đụng backend schema/API nếu không thực sự cần
+  - redesign lại UI đã chốt ở A4/A5
+  - thêm mới semantics `owner`
+  - mở rộng sang Places / Wishlist / Events / Challenges
+  - đổi backend schema/API nếu chưa có bug thật
 - Done checklist:
-  - nhìn vào Mood / Deep Talk / Timeline là biết dữ liệu của ai
-  - record cũ và record mới đều render an toàn
-  - nếu thiếu metadata thì UI dùng wording trung tính
+  - có danh sách QA rõ cho record cũ và record mới
+  - có kết luận phần nào đã an toàn, phần nào còn thiếu test tay
+  - không có regression rõ ở Mood / Deep Talk / Timeline / Home
   - file này được cập nhật đúng trạng thái thật
 
 ## Quy tắc cập nhật trước khi dừng
@@ -255,29 +255,21 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `A3 - Frontend shared identity primitives`
+- `A5 - Home dùng lớp dữ liệu mới`
 
 ### Current status
 
-- `A3` đã xong:
-  - `frontend/src/constants/roles.ts` là source-of-truth chính cho role labels, tone và auth labels
-  - `frontend/src/constants/roleLabels.ts` chỉ còn là compatibility shim re-export từ `roles.ts`
-  - thêm `frontend/src/components/PersonBadge.tsx` để dùng chung cho shell/auth
-  - `Navbar`, `AuthGate`, `AuthContext` đã dùng chung contract hiển thị `Ni` / `Được`
-  - các page đang dùng role labels đã chuyển sang import từ `roles.ts`
-- `A4` chưa bắt đầu code.
+- `A5` đã xong:
+  - `frontend/src/pages/Home.tsx` không còn dựa vào một khối dashboard KPI mơ hồ
+  - Home đã tách thành `Hôm nay của Ni` và `Hôm nay của Được` bằng dữ liệu mood / deep talk / memory theo từng người
+  - thêm khối `Điều đang chờ giữa hai người` và `Một bước tiếp theo` nhưng vẫn giữ tone ấm, riêng tư
+  - thêm `Gần đây` dạng feed ngắn để Home có cảm giác đang sống mà chưa mở rộng sang activity feed phase B
+  - luồng fetch của Home đã chuyển sang degrade gracefully với `Promise.allSettled`, tránh một endpoint lỗi làm sập toàn màn
+- `A6` chưa bắt đầu QA.
 
 ### Files touched in latest session
 
-- `frontend/src/constants/roles.ts`
-- `frontend/src/constants/roleLabels.ts`
-- `frontend/src/components/PersonBadge.tsx`
-- `frontend/src/components/Navbar.tsx`
-- `frontend/src/components/AuthGate.tsx`
-- `frontend/src/context/AuthContext.tsx`
 - `frontend/src/pages/Home.tsx`
-- `frontend/src/pages/MoodLofi.tsx`
-- `frontend/src/pages/DeepTalk.tsx`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
@@ -287,16 +279,16 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Known blockers
 
-- Chưa có blocker kỹ thuật cho `A4`.
-- `roleLabels.ts` đang được giữ làm shim tương thích; source-of-truth thực tế là `roles.ts`.
-- Vẫn cần giữ semantics `owner` ở slice sau; `A4` chỉ nên dùng `createdBy`/role labels đã có.
+- Chưa có blocker kỹ thuật cho `A6`.
+- `A6` cần dữ liệu legacy đủ đa dạng để xác nhận các fallback trung tính trên UI, nếu repo hiện tại chưa có sẵn thì phải note rõ phần nào mới chỉ được bảo chứng bằng build.
+- Vẫn cần giữ semantics `owner` cho slice sau; `A6` chỉ kiểm tra `createdBy`/answer state đã có từ phase A.
 
 ### Next concrete step
 
-- Bắt đầu `A4` ở frontend.
+- Bắt đầu `A6`.
 - Đọc trước các file:
-  - `frontend/src/pages/Timeline.tsx`
-  - `frontend/src/pages/DeepTalk.tsx`
   - `frontend/src/pages/MoodLofi.tsx`
-  - `frontend/src/components/PersonBadge.tsx`
-- Ưu tiên làm rõ creator/waiting state trên 3 màn cốt lõi mà không phá record cũ.
+  - `frontend/src/pages/DeepTalk.tsx`
+  - `frontend/src/pages/Timeline.tsx`
+  - `frontend/src/pages/Home.tsx`
+- Ưu tiên lập checklist QA cho record cũ thiếu metadata, đổi role, và các thao tác create/edit/delete chính sau Đợt A.

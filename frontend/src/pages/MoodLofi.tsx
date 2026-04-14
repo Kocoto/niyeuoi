@@ -4,7 +4,8 @@ import { motion } from 'framer-motion';
 import api from '../api/api';
 import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_CORNER_LABEL, ROLE_NAME, ROLE_PILL_CLASS, type Role } from '../constants/roles';
+import PersonBadge from '../components/PersonBadge';
+import { ROLE_CORNER_LABEL, ROLE_NAME, isRole, type Role } from '../constants/roles';
 
 type MoodRole = Role;
 
@@ -36,6 +37,10 @@ function formatRelative(dateStr?: string) {
   if (hours < 24) return `${hours} giờ trước`;
   if (days === 1) return 'hôm qua';
   return `${days} ngày trước`;
+}
+
+function resolveMoodOwner(createdBy?: MoodRole): MoodRole | null {
+  return isRole(createdBy) ? createdBy : null;
 }
 
 const MoodLofi: React.FC = () => {
@@ -81,8 +86,9 @@ const MoodLofi: React.FC = () => {
 
   const grouped = useMemo(() => {
     const byRole = {
-      girlfriend: entries.filter(entry => (entry.createdBy ?? 'girlfriend') === 'girlfriend'),
-      boyfriend: entries.filter(entry => entry.createdBy === 'boyfriend'),
+      girlfriend: entries.filter(entry => resolveMoodOwner(entry.createdBy) === 'girlfriend'),
+      boyfriend: entries.filter(entry => resolveMoodOwner(entry.createdBy) === 'boyfriend'),
+      legacy: entries.filter(entry => resolveMoodOwner(entry.createdBy) === null),
     };
     return byRole;
   }, [entries]);
@@ -95,7 +101,7 @@ const MoodLofi: React.FC = () => {
         <p className="page-subtitle">Ở đây cần rõ ràng cảm xúc là của ai. Mỗi lần ghi sẽ gắn thẳng với Ni hoặc Được, không còn là một luồng chung mơ hồ.</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>Bạn đang ghi với vai trò {ROLE_NAME[role]}</span>
+          <PersonBadge role={role} prefix="Bạn đang ghi với vai trò" />
           <span className="chip bg-white/80 text-soft">{ROLE_CORNER_LABEL[role]}</span>
         </div>
 
@@ -112,7 +118,7 @@ const MoodLofi: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-ink">{mood.label}</p>
-                  <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>{ROLE_NAME[role]}</span>
+                  <PersonBadge role={role} showIcon={false} className="shrink-0" />
                 </div>
                 <p className="mt-1 text-sm text-soft">{mood.note}</p>
               </div>
@@ -167,6 +173,33 @@ const MoodLofi: React.FC = () => {
             loading={historyLoading}
           />
         </div>
+
+        {grouped.legacy.length > 0 && (
+          <section className="surface-card p-5 md:p-6">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="section-label">Bản ghi cũ</p>
+                <h2 className="mt-2 text-2xl font-black text-ink">Một vài check-in chưa rõ là của ai</h2>
+              </div>
+              <span className="chip bg-white/80 text-soft">Giữ nguyên dữ liệu cũ</span>
+            </div>
+            <p className="mt-3 text-sm text-soft">
+              Các check-in này chưa có metadata người tạo. Màn hình sẽ giữ wording trung tính thay vì tự gán về Ni hay Được.
+            </p>
+            <div className="mt-4 space-y-3">
+              {grouped.legacy.slice(0, 4).map(entry => (
+                <div key={entry._id} className="rounded-[1.35rem] bg-[#faf6f8] p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <p className="text-sm font-bold text-ink">{entry.mood}</p>
+                    <span className="text-xs text-soft">{formatRelative(entry.createdAt || entry.date)}</span>
+                  </div>
+                  <p className="mt-2 text-sm text-soft">{entry.note || 'Check-in cũ chưa có lời nhắn kèm theo.'}</p>
+                  <p className="mt-3 text-xs font-medium text-soft">Chưa rõ ai đã ghi check-in này.</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
       </section>
     </div>
   );
@@ -179,7 +212,7 @@ const MoodColumn: React.FC<{ title: string; role: MoodRole; entries: MoodEntry[]
         <p className="section-label">Luồng riêng</p>
         <h2 className="mt-2 text-2xl font-black text-ink">{title}</h2>
       </div>
-      <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>{ROLE_NAME[role]}</span>
+      <PersonBadge role={role} prefix="Nhịp của" />
     </div>
 
     {loading ? (

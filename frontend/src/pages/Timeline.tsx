@@ -2,8 +2,10 @@ import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Loader2, Plus, X, Trash2, Camera, Pencil } from 'lucide-react';
+import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
+import { isRole, type Role } from '../constants/roles';
 
 interface IMemory {
   _id: string;
@@ -12,7 +14,10 @@ interface IMemory {
   content: string;
   media: string[];
   mood: string;
+  createdBy?: Role;
 }
+
+const resolveMemoryOwner = (createdBy?: Role): Role | null => (isRole(createdBy) ? createdBy : null);
 
 const Timeline: React.FC = () => {
   const [memories, setMemories] = useState<IMemory[]>([]);
@@ -44,7 +49,7 @@ const Timeline: React.FC = () => {
   const fetchMemories = async () => {
     try {
       const res = await api.get('/memories');
-      setMemories(res.data.data);
+      setMemories(res.data.data ?? []);
     } catch (err) {
       console.error('Lỗi khi tải kỷ niệm');
     } finally {
@@ -122,7 +127,10 @@ const Timeline: React.FC = () => {
       <div className="page-header">
         <div>
           <h1 className="page-title">Dòng thời gian Kỷ niệm</h1>
-          <p className="page-subtitle">Nơi lưu giữ những thước phim hạnh phúc của hai ta... 🎞️</p>
+          <p className="page-subtitle">Nơi lưu giữ những thước phim hạnh phúc của hai ta, và nhìn vào là biết ai đã ghi lại khoảnh khắc đó.</p>
+          <div className="mt-3">
+            <PersonBadge role={role} prefix="Bạn đang xem với vai trò" />
+          </div>
         </div>
         <button
           onClick={() => { setIsEditing(false); setFormData(initialForm); setShowModal(true); }}
@@ -136,36 +144,52 @@ const Timeline: React.FC = () => {
         <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
       ) : (
         <div className="relative border-l-2 border-pink-200 ml-6 md:ml-0 md:left-1/2">
-          {memories.map((memory, index) => (
-            <motion.div key={memory._id} initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className={`mb-8 md:mb-12 relative w-full md:w-1/2 pl-8 md:pl-0 ${index % 2 === 0 ? 'md:pr-12 md:text-right md:left-[-50%]' : 'md:pl-12 md:left-[50%]'}`}>
-              <div className="absolute top-2 w-5 h-5 bg-primary rounded-full border-4 border-white shadow-sm -left-[11px] md:left-auto md:right-[-10px] desktop-dot"></div>
+          {memories.map((memory, index) => {
+            const owner = resolveMemoryOwner(memory.createdBy);
 
-              <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-pink-50 hover:shadow-md transition-shadow relative group">
-                {role === 'boyfriend' && (
-                  <div className="absolute top-3 right-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all">
-                    <button onClick={() => handleEdit(memory)} className="p-2 text-gray-400 hover:text-primary rounded-lg"><Pencil size={16} /></button>
-                    <button onClick={() => deleteMemory(memory._id)} className="p-2 text-gray-400 hover:text-red-400 rounded-lg"><Trash2 size={16} /></button>
+            return (
+              <motion.div key={memory._id} initial={{ opacity: 0, x: index % 2 === 0 ? -30 : 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }} className={`mb-8 md:mb-12 relative w-full md:w-1/2 pl-8 md:pl-0 ${index % 2 === 0 ? 'md:pr-12 md:text-right md:left-[-50%]' : 'md:pl-12 md:left-[50%]'}`}>
+                <div className="absolute top-2 w-5 h-5 bg-primary rounded-full border-4 border-white shadow-sm -left-[11px] md:left-auto md:right-[-10px] desktop-dot"></div>
+
+                <div className="bg-white p-5 md:p-6 rounded-2xl md:rounded-3xl shadow-sm border border-pink-50 hover:shadow-md transition-shadow relative group">
+                  {role === 'boyfriend' && (
+                    <div className="absolute top-3 right-3 flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all">
+                      <button onClick={() => handleEdit(memory)} className="p-2 text-gray-400 hover:text-primary rounded-lg"><Pencil size={16} /></button>
+                      <button onClick={() => deleteMemory(memory._id)} className="p-2 text-gray-400 hover:text-red-400 rounded-lg"><Trash2 size={16} /></button>
+                    </div>
+                  )}
+                  <div className={`flex flex-wrap items-center gap-2 text-primary font-bold mb-3 ${index % 2 === 0 ? 'md:justify-end' : 'justify-start'}`}>
+                    {owner ? (
+                      <PersonBadge role={owner} prefix="Ghi lại bởi" />
+                    ) : (
+                      <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 ring-1 ring-stone-200">
+                        Kỷ niệm cũ chưa rõ ai ghi lại
+                      </span>
+                    )}
+                    <div className="flex items-center gap-1 text-sm order-2 md:order-none">
+                      <Calendar size={14} />
+                      {new Date(memory.date).toLocaleDateString('vi-VN')}
+                    </div>
+                    <span className="bg-pink-100 text-primary text-[10px] px-2 py-1 rounded-lg uppercase">{memory.mood}</span>
                   </div>
-                )}
-                <div className={`flex flex-wrap items-center gap-2 text-primary font-bold mb-2 ${index % 2 === 0 ? 'md:justify-end' : 'justify-start'}`}>
-                  <div className="flex items-center gap-1 text-sm order-2 md:order-none">
-                    <Calendar size={14} />
-                    {new Date(memory.date).toLocaleDateString('vi-VN')}
-                  </div>
-                  <span className="bg-pink-100 text-primary text-[10px] px-2 py-1 rounded-lg uppercase">{memory.mood}</span>
+                  <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2 md:mb-3 line-clamp-2">{memory.title}</h3>
+                  
+                  {memory.media && memory.media.length > 0 && (
+                    <div className="mb-3 md:mb-4 overflow-hidden rounded-xl md:rounded-2xl bg-gray-100 aspect-video flex items-center justify-center">
+                      <img src={memory.media[0]} alt={memory.title} className="w-full h-full object-cover" />
+                    </div>
+                  )}
+                  
+                  <p className="text-gray-600 leading-relaxed text-xs md:text-sm">{memory.content}</p>
+                  {!owner && (
+                    <p className="mt-3 text-[11px] font-medium text-gray-400">
+                      Bản ghi này được giữ nguyên vì dữ liệu cũ chưa có metadata người tạo.
+                    </p>
+                  )}
                 </div>
-                <h3 className="text-lg md:text-xl font-bold text-gray-800 mb-2 md:mb-3 line-clamp-2">{memory.title}</h3>
-                
-                {memory.media && memory.media.length > 0 && (
-                  <div className="mb-3 md:mb-4 overflow-hidden rounded-xl md:rounded-2xl bg-gray-100 aspect-video flex items-center justify-center">
-                    <img src={memory.media[0]} alt={memory.title} className="w-full h-full object-cover" />
-                  </div>
-                )}
-                
-                <p className="text-gray-600 leading-relaxed text-xs md:text-sm">{memory.content}</p>
-              </div>
-            </motion.div>
-          ))}
+              </motion.div>
+            );
+          })}
         </div>
       )}
 
@@ -180,6 +204,12 @@ const Timeline: React.FC = () => {
                 <button type="button" onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } }}><X /></button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="space-y-2">
+                  <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai trò' : 'Kỷ niệm mới sẽ gắn với'} />
+                  <p className="text-xs text-gray-400">
+                    Nếu bản ghi cũ chưa có metadata người tạo, màn hình timeline sẽ giữ wording trung tính thay vì gán bừa.
+                  </p>
+                </div>
                 <div className="relative aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden group cursor-pointer">
                   {(previewUrl || formData.media) ? <img src={previewUrl || formData.media} alt="Preview" className="w-full h-full object-cover" /> : (
                     <div className="text-center"><Camera className="text-gray-400 mx-auto mb-2" /><span className="text-[10px] text-gray-400 font-bold uppercase tracking-widest">Chọn ảnh kỷ niệm</span></div>

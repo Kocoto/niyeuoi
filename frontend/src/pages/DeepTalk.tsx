@@ -1,14 +1,16 @@
 ﻿import { useState, useEffect } from 'react';
+import { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Plus, Trash2, Loader2, X, Send, MessageCircleHeart } from 'lucide-react';
+import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import api from '../api/api';
-import { ROLE_NAME, type Role } from '../constants/roles';
+import { ROLE_NAME, isRole, type Role } from '../constants/roles';
 
 interface IAnswer {
   text?: string;
-  isInPerson: boolean;
+  isInPerson?: boolean;
   answeredAt?: string;
 }
 
@@ -26,12 +28,52 @@ interface IDeepTalkQuestion {
 interface IJournalEntry {
   _id: string;
   content: string;
-  createdBy: Role;
+  createdBy?: Role;
   createdAt: string;
 }
 
-const hasAnswered = (q: IDeepTalkQuestion, r: Role) =>
-  q.answers[r].isInPerson || !!q.answers[r].text;
+type DeepTalkTab = 'pending' | 'answered' | 'journal';
+type AnswerState = 'waiting' | 'answered' | 'inPerson';
+
+const ROLE_ORDER: Role[] = ['girlfriend', 'boyfriend'];
+const EMPTY_ANSWER: IAnswer = { isInPerson: false };
+const STATUS_TONE: Record<AnswerState, string> = {
+  waiting: 'bg-amber-50 text-amber-700',
+  answered: 'bg-emerald-50 text-emerald-700',
+  inPerson: 'bg-sky-50 text-sky-700',
+};
+
+const getAnswer = (q: IDeepTalkQuestion, r: Role): IAnswer => q.answers?.[r] ?? EMPTY_ANSWER;
+
+const getAnswerState = (answer?: IAnswer): AnswerState => {
+  if (answer?.isInPerson) return 'inPerson';
+  if (answer?.text) return 'answered';
+  return 'waiting';
+};
+
+const hasAnswered = (q: IDeepTalkQuestion, r: Role) => getAnswerState(getAnswer(q, r)) !== 'waiting';
+
+const isQuestionComplete = (q: IDeepTalkQuestion) => ROLE_ORDER.every(role => hasAnswered(q, role));
+
+const getAnswerStateLabel = (answer?: IAnswer): string => {
+  const state = getAnswerState(answer);
+  if (state === 'inPerson') return 'Đã nói ngoài đời';
+  if (state === 'answered') return 'Đã trả lời';
+  return 'Đang chờ';
+};
+
+const getQuestionSummary = (q: IDeepTalkQuestion): string => {
+  const waitingRoles = ROLE_ORDER.filter(currentRole => !hasAnswered(q, currentRole));
+  if (waitingRoles.length === 0) {
+    return ROLE_ORDER.every(currentRole => getAnswerState(getAnswer(q, currentRole)) === 'inPerson')
+      ? 'Cả hai đã nói ngoài đời'
+      : 'Cả hai đã có câu trả lời';
+  }
+  if (waitingRoles.length === ROLE_ORDER.length) return 'Cả hai vẫn đang chờ';
+  return `Đang chờ ${waitingRoles.map(waitingRole => ROLE_NAME[waitingRole]).join(' và ')}`;
+};
+
+const getJournalAuthor = (createdBy?: Role): Role | null => (isRole(createdBy) ? createdBy : null);
 
 function formatRelativeTime(dateStr: string): string {
   const diff = Date.now() - new Date(dateStr).getTime();
@@ -49,7 +91,7 @@ const DeepTalk: React.FC = () => {
   const { role } = useAuth();
   const { toast, confirm } = useUI();
 
-  const [activeTab, setActiveTab] = useState<'questions' | 'journal'>('questions');
+  const [activeTab, setActiveTab] = useState<DeepTalkTab>('pending');
 
   // Questions state
   const [questions, setQuestions] = useState<IDeepTalkQuestion[]>([]);
@@ -72,7 +114,7 @@ const DeepTalk: React.FC = () => {
   const fetchQuestions = async () => {
     try {
       const res = await api.get('/deeptalk/questions');
-      setQuestions(res.data.data);
+      setQuestions(res.data.data ?? []);
     } catch {
       toast('Không tải được câu hỏi!', 'error');
     } finally {
@@ -83,7 +125,7 @@ const DeepTalk: React.FC = () => {
   const fetchJournal = async () => {
     try {
       const res = await api.get('/deeptalk/journal');
-      setJournalEntries(res.data.data);
+      setJournalEntries(res.data.data ?? []);
     } catch {
       toast('Không tải được nhật ký!', 'error');
     } finally {
@@ -196,29 +238,49 @@ const DeepTalk: React.FC = () => {
     }
   };
 
-  const unansweredCount = questions.filter(q => !hasAnswered(q, role)).length;
+  const pendingQuestions = useMemo(() => questions.filter(question => !isQuestionComplete(question)), [questions]);
+  const answeredQuestions = useMemo(() => questions.filter(question => isQuestionComplete(question)), [questions]);
+  const visibleQuestions = activeTab === 'pending' ? pendingQuestions : answeredQuestions;
+  const unansweredCount = pendingQuestions.filter(question => !hasAnswered(question, role)).length;
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-3xl mx-auto">
       {/* Header */}
-      <div className="mb-6">
+      <div className="mb-6 rounded-[2rem] border border-rose-100 bg-white/90 p-5 shadow-sm">
         <div className="flex items-center gap-2 mb-1">
           <MessageCircleHeart size={24} className="text-primary" />
           <h1 className="text-2xl font-black text-gray-800">Trò chuyện sâu</h1>
         </div>
-        <p className="text-sm text-gray-400">Hiểu nhau hơn qua từng câu hỏi và cảm xúc... 💕</p>
+        <p className="text-sm text-gray-500">Nhìn là biết ai đã trả lời, ai còn đang chờ, và nhật ký riêng là của ai.</p>
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <PersonBadge role={role} prefix="Bạn đang tiếp tục với vai trò" />
+          <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${unansweredCount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
+            {unansweredCount > 0 ? `Bạn còn ${unansweredCount} câu đang chờ` : 'Phần của bạn hiện không còn câu nào đang chờ'}
+          </span>
+        </div>
       </div>
 
       {/* Tabs */}
       <div className="flex bg-gray-100 rounded-2xl p-1 gap-1 mb-6">
         <button
-          onClick={() => setActiveTab('questions')}
-          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'questions' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+          onClick={() => setActiveTab('pending')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
         >
-          💬 Câu hỏi
-          {unansweredCount > 0 && (
+          💬 Đang chờ
+          {pendingQuestions.length > 0 && (
             <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
-              {unansweredCount}
+              {pendingQuestions.length}
+            </span>
+          )}
+        </button>
+        <button
+          onClick={() => setActiveTab('answered')}
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'answered' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
+        >
+          ✍️ Đã trả lời
+          {answeredQuestions.length > 0 && (
+            <span className="bg-emerald-100 text-emerald-700 text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
+              {answeredQuestions.length}
             </span>
           )}
         </button>
@@ -235,8 +297,8 @@ const DeepTalk: React.FC = () => {
         </button>
       </div>
 
-      {/* ===== QUESTIONS TAB ===== */}
-      {activeTab === 'questions' && (
+      {/* ===== QUESTIONS TABS ===== */}
+      {activeTab !== 'journal' && (
         <>
           <div className="flex justify-end gap-2 mb-4">
             <button
@@ -245,7 +307,7 @@ const DeepTalk: React.FC = () => {
               className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
             >
               {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-              AI sinh
+              AI gợi ý
             </button>
             <button
               onClick={() => setShowAddQuestion(true)}
@@ -257,15 +319,19 @@ const DeepTalk: React.FC = () => {
 
           {questionsLoading ? (
             <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={28} /></div>
-          ) : questions.length === 0 ? (
+          ) : visibleQuestions.length === 0 ? (
             <div className="text-center py-16">
-              <p className="text-gray-400 font-medium">Chưa có câu hỏi nào.</p>
-              <p className="text-gray-300 text-sm mt-1">Để AI sinh hoặc tự thêm nhé! 💬</p>
+              <p className="text-gray-400 font-medium">
+                {activeTab === 'pending' ? 'Không có câu hỏi nào đang chờ cả hai.' : 'Chưa có câu hỏi nào cả hai đã hoàn thành.'}
+              </p>
+              <p className="text-gray-300 text-sm mt-1">
+                {activeTab === 'pending' ? 'Có thể để AI gợi ý hoặc tự thêm một câu hỏi dịu dàng.' : 'Khi cả hai đều trả lời, câu hỏi sẽ nằm ở đây để xem lại.'}
+              </p>
             </div>
           ) : (
             <div className="flex flex-col gap-3">
               <AnimatePresence>
-                {questions.map(q => (
+                {visibleQuestions.map(q => (
                   <motion.div
                     key={q._id}
                     initial={{ opacity: 0, y: 10 }}
@@ -278,18 +344,21 @@ const DeepTalk: React.FC = () => {
                       <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2 flex-wrap">
                           {q.isAiGenerated && (
-                            <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ AI</span>
+                            <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ Gợi ý AI</span>
                           )}
+                          <span className="text-[11px] font-medium text-gray-400">{getQuestionSummary(q)}</span>
+                          <span className="text-[11px] text-gray-300">•</span>
+                          <span className="text-[11px] text-gray-400">{formatRelativeTime(q.createdAt)}</span>
                         </div>
                         <p className="text-gray-800 font-semibold leading-snug">{q.content}</p>
-                        <div className="flex gap-2 mt-3 flex-wrap">
-                          {(['boyfriend', 'girlfriend'] as const).map(r => (
-                            <span
-                              key={r}
-                              className={`text-[11px] font-bold px-2 py-1 rounded-lg ${hasAnswered(q, r) ? 'bg-green-50 text-green-600' : 'bg-gray-100 text-gray-400'}`}
-                            >
-                              {ROLE_NAME[r]}: {hasAnswered(q, r) ? (q.answers[r].isInPerson ? '🗣️' : '✍️') : '...'}
-                            </span>
+                        <div className="grid gap-2 mt-3">
+                          {ROLE_ORDER.map(currentRole => (
+                            <div key={currentRole} className="flex items-center justify-between gap-3 rounded-2xl bg-[#fcfafb] px-3 py-3">
+                              <PersonBadge role={currentRole} showIcon={false} />
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_TONE[getAnswerState(getAnswer(q, currentRole))]}`}>
+                                {getAnswerStateLabel(getAnswer(q, currentRole))}
+                              </span>
+                            </div>
                           ))}
                         </div>
                       </div>
@@ -329,36 +398,43 @@ const DeepTalk: React.FC = () => {
           ) : (
             <div className="flex flex-col gap-3">
               <AnimatePresence>
-                {journalEntries.map(entry => (
-                  <motion.div
-                    key={entry._id}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, scale: 0.95 }}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 group"
-                  >
-                    <div className="flex items-start gap-3">
-                      <div className={`w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-black shrink-0 ${entry.createdBy === 'boyfriend' ? 'bg-blue-400' : 'bg-pink-400'}`}>
-                        {ROLE_NAME[entry.createdBy][0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-gray-700">{ROLE_NAME[entry.createdBy]}</span>
-                          <span className="text-[11px] text-gray-400">{formatRelativeTime(entry.createdAt)}</span>
+                {journalEntries.map(entry => {
+                  const author = getJournalAuthor(entry.createdBy);
+
+                  return (
+                    <motion.div
+                      key={entry._id}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 group"
+                    >
+                      <div className="flex items-start gap-3">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex flex-wrap items-center gap-2 mb-3">
+                            {author ? (
+                              <PersonBadge role={author} prefix="Nhật ký của" />
+                            ) : (
+                              <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 ring-1 ring-stone-200">
+                                Bản ghi cũ chưa rõ người viết
+                              </span>
+                            )}
+                            <span className="text-[11px] text-gray-400">{formatRelativeTime(entry.createdAt)}</span>
+                          </div>
+                          <p className="text-gray-700 leading-relaxed text-sm">{entry.content}</p>
                         </div>
-                        <p className="text-gray-700 leading-relaxed text-sm">{entry.content}</p>
+                        {role === 'boyfriend' && (
+                          <button
+                            onClick={() => handleDeleteJournal(entry._id)}
+                            className="p-2 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-all rounded-xl shrink-0"
+                          >
+                            <Trash2 size={15} />
+                          </button>
+                        )}
                       </div>
-                      {role === 'boyfriend' && (
-                        <button
-                          onClick={() => handleDeleteJournal(entry._id)}
-                          className="p-2 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-all rounded-xl shrink-0"
-                        >
-                          <Trash2 size={15} />
-                        </button>
-                      )}
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  );
+                })}
               </AnimatePresence>
             </div>
           )}
@@ -385,8 +461,9 @@ const DeepTalk: React.FC = () => {
               <div className="flex items-start justify-between gap-3 mb-5">
                 <div className="flex items-center gap-2 flex-wrap">
                   {detailQuestion.isAiGenerated && (
-                    <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ AI</span>
+                    <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ Gợi ý AI</span>
                   )}
+                  <span className="text-[11px] font-medium text-gray-400">{getQuestionSummary(detailQuestion)}</span>
                 </div>
                 <button onClick={() => setDetailQuestion(null)} className="p-1.5 text-gray-400 hover:text-gray-600 shrink-0">
                   <X size={18} />
@@ -397,30 +474,39 @@ const DeepTalk: React.FC = () => {
 
               {/* Both answers */}
               <div className="flex flex-col gap-3 mb-6">
-                {(['boyfriend', 'girlfriend'] as const).map(r => (
-                  <div key={r} className={`rounded-2xl p-4 ${r === 'boyfriend' ? 'bg-blue-50' : 'bg-pink-50'}`}>
-                    <p className={`text-xs font-bold mb-2 ${r === 'boyfriend' ? 'text-blue-500' : 'text-pink-500'}`}>
-                      {ROLE_NAME[r]}
-                    </p>
-                    {detailQuestion.answers[r].isInPerson ? (
-                      <p className="text-sm text-gray-600 font-medium">🗣️ Đã nói ngoài đời rồi</p>
-                    ) : detailQuestion.answers[r].text ? (
-                      <p className="text-sm text-gray-700 leading-relaxed">{detailQuestion.answers[r].text}</p>
-                    ) : (
-                      <p className="text-sm text-gray-400 italic">Chưa trả lời...</p>
-                    )}
-                  </div>
-                ))}
+                {ROLE_ORDER.map(currentRole => {
+                  const answer = getAnswer(detailQuestion, currentRole);
+                  const answerState = getAnswerState(answer);
+
+                  return (
+                    <div key={currentRole} className={`rounded-2xl p-4 ${currentRole === 'boyfriend' ? 'bg-blue-50' : 'bg-pink-50'}`}>
+                      <div className="flex items-center justify-between gap-3 mb-3">
+                        <PersonBadge role={currentRole} prefix="Phần của" />
+                        <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${STATUS_TONE[answerState]}`}>
+                          {getAnswerStateLabel(answer)}
+                        </span>
+                      </div>
+                      {answerState === 'inPerson' ? (
+                        <p className="text-sm text-gray-600 font-medium">Hai người đã nói câu này ngoài đời rồi.</p>
+                      ) : answer.text ? (
+                        <p className="text-sm text-gray-700 leading-relaxed">{answer.text}</p>
+                      ) : (
+                        <p className="text-sm text-gray-400 italic">Đang chờ phần này được trả lời.</p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Answer controls */}
               {!hasAnswered(detailQuestion, role) ? (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-xs font-bold text-gray-500 mb-3">Câu trả lời của {ROLE_NAME[role]}:</p>
+                  <p className="text-xs font-bold text-gray-500 mb-3">Bạn đang trả lời với vai trò:</p>
+                  <PersonBadge role={role} prefix="Đang là" className="mb-3" />
                   <textarea
                     value={answerText}
                     onChange={e => setAnswerText(e.target.value)}
-                    placeholder="Viết câu trả lời của bạn..."
+                    placeholder={`Viết phần của ${ROLE_NAME[role]}...`}
                     rows={3}
                     className="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-primary transition-colors mb-3"
                   />
@@ -444,7 +530,7 @@ const DeepTalk: React.FC = () => {
                 </div>
               ) : (
                 <p className="text-center text-xs text-gray-400 border-t border-gray-100 pt-4">
-                  Bạn đã trả lời câu hỏi này ✓
+                  Phần của {ROLE_NAME[role]} đã được lưu rồi ✓
                 </p>
               )}
             </motion.div>
@@ -505,6 +591,7 @@ const DeepTalk: React.FC = () => {
                 <button onClick={() => setShowAddJournal(false)} className="p-1.5 text-gray-400 hover:text-gray-600"><X size={18} /></button>
               </div>
               <form onSubmit={handleAddJournal}>
+                <PersonBadge role={role} prefix="Bạn đang ghi với vai trò" className="mb-4" />
                 <textarea
                   value={newJournalText}
                   onChange={e => setNewJournalText(e.target.value)}
