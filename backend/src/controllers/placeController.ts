@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import type { IPlace } from '../models/Place';
 import placeService from '../services/placeService';
+import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getPlaces = async (req: Request, res: Response) => {
     try {
@@ -24,7 +26,8 @@ export const getPlace = async (req: Request, res: Response) => {
 
 export const createPlace = async (req: Request, res: Response) => {
     try {
-        const place = await placeService.createPlace(req.body);
+        const payload = resolveCreatePayload<IPlace>(req, req.body as Partial<IPlace>);
+        const place = await placeService.createPlace(payload);
         res.status(201).json({ success: true, data: place });
     } catch (err: any) {
         if (err.message.startsWith('VALIDATION_ERROR')) {
@@ -36,7 +39,8 @@ export const createPlace = async (req: Request, res: Response) => {
 
 export const updatePlace = async (req: Request, res: Response) => {
     try {
-        const place = await placeService.updatePlace(req.params.id as string, req.body);
+        const payload = resolveUpdatePayload<IPlace>(req.body as Partial<IPlace>);
+        const place = await placeService.updatePlace(req.params.id as string, payload);
         res.status(200).json({ success: true, data: place });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {

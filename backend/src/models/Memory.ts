@@ -1,11 +1,14 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+import type { AuthRole } from '../utils/authToken';
+
 export interface IMemory extends Document {
     title: string;
     date: Date;
     content: string;
     media: string[];
     mood: string;
+    createdBy?: AuthRole;
 }
 
 const memorySchema: Schema = new Schema({
@@ -31,6 +34,10 @@ const memorySchema: Schema = new Schema({
     mood: {
         type: String,
         default: 'Hạnh phúc'
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend']
     }
 }, {
     timestamps: true

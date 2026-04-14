@@ -1,5 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+import type { AuthRole } from '../utils/authToken';
+
 export interface IPlace extends Document {
     name: string;
     address: string;
@@ -12,6 +14,7 @@ export interface IPlace extends Document {
         type: string;
         coordinates: number[];
     };
+    createdBy?: AuthRole;
 }
 
 const placeSchema: Schema = new Schema({
@@ -56,6 +59,10 @@ const placeSchema: Schema = new Schema({
             type: [Number], // [longitude, latitude]
             default: [0, 0]
         }
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend']
     }
 }, {
     timestamps: true

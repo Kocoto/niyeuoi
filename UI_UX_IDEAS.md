@@ -677,6 +677,25 @@ khi có thể gọi rõ.
 - unresolved
 - waiting
 
+### 17.5 Nguyên tắc migration khi thêm `creator` / `owner`
+
+- Không nên thêm field mới theo kiểu:
+  - sửa schema
+  - bắt buộc field ngay
+  - rồi để dữ liệu cũ tự lỗi
+- Nên đi theo 3 bước:
+  - thêm field mới ở trạng thái tương thích ngược
+  - backfill dữ liệu cũ
+  - chỉ siết chặt validation sau khi backfill xong
+- Với dữ liệu cũ chưa biết chính xác ai tạo:
+  - không xóa
+  - không overwrite bừa
+  - tạm hiển thị `không rõ ai thêm` hoặc `dữ liệu cũ`
+- Mục tiêu:
+  - không làm mất dữ liệu cũ
+  - không làm app hỏng khi đọc record cũ
+  - cho phép UI mới sống chung với dữ liệu cũ trong giai đoạn chuyển tiếp
+
 ---
 
 ## 18. Những điều nên tránh

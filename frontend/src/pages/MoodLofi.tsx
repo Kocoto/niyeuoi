@@ -4,9 +4,9 @@ import { motion } from 'framer-motion';
 import api from '../api/api';
 import { useUI } from '../context/UIContext';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roleLabels';
+import { ROLE_CORNER_LABEL, ROLE_NAME, ROLE_PILL_CLASS, type Role } from '../constants/roles';
 
-type MoodRole = 'boyfriend' | 'girlfriend';
+type MoodRole = Role;
 
 type MoodEntry = {
   _id: string;
@@ -95,7 +95,7 @@ const MoodLofi: React.FC = () => {
         <p className="page-subtitle">Ở đây cần rõ ràng cảm xúc là của ai. Mỗi lần ghi sẽ gắn thẳng với Ni hoặc Được, không còn là một luồng chung mơ hồ.</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <span className={`role-pill ${role === 'boyfriend' ? 'pill-duoc' : 'pill-ni'}`}>Bạn đang ghi với vai trò {ROLE_NAME[role]}</span>
+          <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>Bạn đang ghi với vai trò {ROLE_NAME[role]}</span>
           <span className="chip bg-white/80 text-soft">{ROLE_CORNER_LABEL[role]}</span>
         </div>
 
@@ -112,7 +112,7 @@ const MoodLofi: React.FC = () => {
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-bold text-ink">{mood.label}</p>
-                  <span className={`role-pill ${role === 'boyfriend' ? 'pill-duoc' : 'pill-ni'}`}>{ROLE_NAME[role]}</span>
+                  <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>{ROLE_NAME[role]}</span>
                 </div>
                 <p className="mt-1 text-sm text-soft">{mood.note}</p>
               </div>
@@ -179,7 +179,7 @@ const MoodColumn: React.FC<{ title: string; role: MoodRole; entries: MoodEntry[]
         <p className="section-label">Luồng riêng</p>
         <h2 className="mt-2 text-2xl font-black text-ink">{title}</h2>
       </div>
-      <span className={`role-pill ${role === 'boyfriend' ? 'pill-duoc' : 'pill-ni'}`}>{ROLE_NAME[role]}</span>
+      <span className={`role-pill ${ROLE_PILL_CLASS[role]}`}>{ROLE_NAME[role]}</span>
     </div>
 
     {loading ? (

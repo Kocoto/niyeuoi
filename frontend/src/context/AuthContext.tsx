@@ -1,8 +1,7 @@
 ﻿import React, { createContext, useContext, useEffect, useState } from 'react';
 import api, { AUTH_STORAGE_KEY } from '../api/api';
+import { ROLE_NAME, type Role } from '../constants/roles';
 import { useUI } from './UIContext';
-
-type Role = 'boyfriend' | 'girlfriend';
 
 interface AuthUser {
   role: Role;
@@ -54,7 +53,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       if (res.data.success) {
         localStorage.setItem(AUTH_STORAGE_KEY, res.data.token);
         setUser(res.data.user);
-        toast(`App dang o che do ${res.data.user.displayName}`, 'success');
+        toast(`App dang o che do ${ROLE_NAME[res.data.user.role as Role]}`, 'success');
         return true;
       }
     } catch (err: any) {
@@ -76,7 +75,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return;
     }
 
-    const pin = await prompt('Nhap PIN cua Duoc de chuyen sang BF', '****', 'password');
+    const pin = await prompt(`Nhap PIN cua ${ROLE_NAME.boyfriend} de chuyen sang ${ROLE_NAME.boyfriend}`, '****', 'password');
     if (!pin) return;
 
     await login('boyfriend', pin);

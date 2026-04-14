@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import type { IWishlist } from '../models/Wishlist';
 import wishlistService from '../services/wishlistService';
+import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getWishlist = async (req: Request, res: Response) => {
     try {
@@ -24,7 +26,8 @@ export const getWishlistItem = async (req: Request, res: Response) => {
 
 export const createWishlistItem = async (req: Request, res: Response) => {
     try {
-        const wish = await wishlistService.createWish(req.body);
+        const payload = resolveCreatePayload<IWishlist>(req, req.body as Partial<IWishlist>);
+        const wish = await wishlistService.createWish(payload);
         res.status(201).json({ success: true, data: wish });
     } catch (err: any) {
         if (err.message.startsWith('VALIDATION_ERROR')) {
@@ -36,7 +39,8 @@ export const createWishlistItem = async (req: Request, res: Response) => {
 
 export const updateWishlistItem = async (req: Request, res: Response) => {
     try {
-        const wish = await wishlistService.updateWish(req.params.id as string, req.body);
+        const payload = resolveUpdatePayload<IWishlist>(req.body as Partial<IWishlist>);
+        const wish = await wishlistService.updateWish(req.params.id as string, payload);
         res.status(200).json({ success: true, data: wish });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {

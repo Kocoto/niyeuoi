@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import type { IEvent } from '../models/Event';
 import eventService from '../services/eventService';
+import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getEvents = async (req: Request, res: Response) => {
     try {
@@ -24,7 +26,8 @@ export const getEvent = async (req: Request, res: Response) => {
 
 export const createEvent = async (req: Request, res: Response) => {
     try {
-        const event = await eventService.createEvent(req.body);
+        const payload = resolveCreatePayload<IEvent>(req, req.body as Partial<IEvent>);
+        const event = await eventService.createEvent(payload);
         res.status(201).json({ success: true, data: event });
     } catch (err: any) {
         if (err.message.startsWith('VALIDATION_ERROR')) {
@@ -36,7 +39,8 @@ export const createEvent = async (req: Request, res: Response) => {
 
 export const updateEvent = async (req: Request, res: Response) => {
     try {
-        const event = await eventService.updateEvent(req.params.id as string, req.body);
+        const payload = resolveUpdatePayload<IEvent>(req.body as Partial<IEvent>);
+        const event = await eventService.updateEvent(req.params.id as string, payload);
         res.status(200).json({ success: true, data: event });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {

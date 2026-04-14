@@ -1,5 +1,7 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+import type { AuthRole } from '../utils/authToken';
+
 export interface IWishlist extends Document {
     itemName: string;
     link: string;
@@ -7,6 +9,7 @@ export interface IWishlist extends Document {
     isSecretlyPrepared: boolean;
     status: 'Đang đợi' | 'Đã mua' | 'Đã đi';
     note: string;
+    createdBy?: AuthRole;
 }
 
 const wishlistSchema: Schema = new Schema({
@@ -36,6 +39,10 @@ const wishlistSchema: Schema = new Schema({
     note: {
         type: String,
         trim: true
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend']
     }
 }, {
     timestamps: true

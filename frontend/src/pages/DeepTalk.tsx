@@ -4,7 +4,7 @@ import { Sparkles, Plus, Trash2, Loader2, X, Send, MessageCircleHeart } from 'lu
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import api from '../api/api';
-import { ROLE_NAME } from '../constants/roleLabels';
+import { ROLE_NAME, type Role } from '../constants/roles';
 
 interface IAnswer {
   text?: string;
@@ -26,11 +26,11 @@ interface IDeepTalkQuestion {
 interface IJournalEntry {
   _id: string;
   content: string;
-  createdBy: 'boyfriend' | 'girlfriend';
+  createdBy: Role;
   createdAt: string;
 }
 
-const hasAnswered = (q: IDeepTalkQuestion, r: 'boyfriend' | 'girlfriend') =>
+const hasAnswered = (q: IDeepTalkQuestion, r: Role) =>
   q.answers[r].isInPerson || !!q.answers[r].text;
 
 function formatRelativeTime(dateStr: string): string {

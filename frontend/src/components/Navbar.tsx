@@ -18,7 +18,8 @@ import {
 import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLocationTracker } from '../hooks/useLocationTracker';
-import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roleLabels';
+import PersonBadge from './PersonBadge';
+import { ROLE_CORNER_LABEL } from '../constants/roles';
 
 type NavItem = {
   to: string;
@@ -85,8 +86,6 @@ const Navbar: React.FC = () => {
   const { role, logout } = useAuth();
   const [showMore, setShowMore] = useState(false);
   const { tracking } = useLocationTracker(role === 'girlfriend');
-
-  const roleTone = role === 'boyfriend' ? 'pill-duoc' : 'pill-ni';
   const isMoreActive = groupedNav.some(group => group.items.some(item => item.to === pathname));
 
   const activeLabel = useMemo(() => {
@@ -118,7 +117,7 @@ const Navbar: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2">
                   <p className="truncate text-lg font-black text-ink md:text-[1.35rem]">{ROLE_CORNER_LABEL[role]}</p>
-                  <span className={`role-pill ${roleTone}`}>Đang là {ROLE_NAME[role]}</span>
+                  <PersonBadge role={role} prefix="Đang là" variant="soft" />
                 </div>
                 <p className="truncate text-xs text-soft md:text-sm">{activeLabel}</p>
               </div>

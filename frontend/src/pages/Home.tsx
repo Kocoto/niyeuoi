@@ -13,9 +13,7 @@ import {
 import { motion } from 'framer-motion';
 import api from '../api/api';
 import { useAuth } from '../context/AuthContext';
-import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roleLabels';
-
-type Role = 'boyfriend' | 'girlfriend';
+import { ROLE_CORNER_LABEL, ROLE_NAME, ROLE_PILL_CLASS, type Role } from '../constants/roles';
 
 type Memory = {
   _id: string;
@@ -214,7 +212,7 @@ const Home: React.FC = () => {
           <div>
             <p className="section-label">{roleCopy[role as Role].eyebrow}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <span className={`role-pill ${role === 'boyfriend' ? 'pill-duoc' : 'pill-ni'}`}>{ROLE_CORNER_LABEL[role]}</span>
+              <span className={`role-pill ${ROLE_PILL_CLASS[role as Role]}`}>{ROLE_CORNER_LABEL[role as Role]}</span>
               <span className="chip bg-white/80 text-soft">Đang dùng với vai trò {ROLE_NAME[role]}</span>
             </div>
             <h1 className="mt-4 max-w-2xl text-4xl font-black leading-[0.95] text-ink md:text-6xl">{roleCopy[role as Role].title}</h1>

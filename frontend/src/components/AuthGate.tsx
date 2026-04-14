@@ -1,32 +1,24 @@
 ﻿import React, { useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Heart, KeyRound, LogIn, ShieldCheck } from 'lucide-react';
+import PersonBadge from './PersonBadge';
 import { useAuth } from '../context/AuthContext';
+import { ROLE_AUTH_LABEL, ROLE_META, ROLE_NAME, type Role } from '../constants/roles';
 
 const roleCards = [
   {
     role: 'girlfriend' as const,
-    title: 'Ni',
-    subtitle: 'GF',
-    description: 'Dang nhap de app biet phien nay la cua Ni.',
-    accent: 'from-pink-200 via-rose-100 to-white',
-    border: 'border-pink-200',
-    button: 'bg-pink-500 hover:bg-pink-600',
+    description: `Dang nhap de app biet phien nay la cua ${ROLE_NAME.girlfriend}.`,
   },
   {
     role: 'boyfriend' as const,
-    title: 'Duoc',
-    subtitle: 'BF',
-    description: 'Dang nhap de cac thao tac cua Duoc duoc gan dung nguoi dung.',
-    accent: 'from-sky-200 via-cyan-100 to-white',
-    border: 'border-sky-200',
-    button: 'bg-sky-500 hover:bg-sky-600',
+    description: `Dang nhap de cac thao tac cua ${ROLE_NAME.boyfriend} duoc gan dung nguoi dung.`,
   },
 ];
 
 const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { isReady, isAuthenticated, login } = useAuth();
-  const [selectedRole, setSelectedRole] = useState<'boyfriend' | 'girlfriend'>('girlfriend');
+  const [selectedRole, setSelectedRole] = useState<Role>('girlfriend');
   const [pin, setPin] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
@@ -86,23 +78,24 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             </div>
 
             <p className="max-w-lg text-sm leading-6 text-gray-600">
-              App se luu phien dang nhap de biet nguoi dung hien tai la <span className="font-bold text-pink-500">GF</span> hay <span className="font-bold text-sky-500">BF</span>, thay vi chi doi role o phia client.
+              App se luu phien dang nhap de biet hien tai dang la {ROLE_NAME.girlfriend} hay {ROLE_NAME.boyfriend}, thay vi chi doi role o phia client.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 md:mt-6 md:gap-4">
               {roleCards.map(card => {
                 const active = card.role === selectedRole;
+                const meta = ROLE_META[card.role];
                 return (
                   <button
                     key={card.role}
                     type="button"
                     onClick={() => setSelectedRole(card.role)}
-                    className={`rounded-[1.35rem] border p-4 text-left ${active ? `${card.border} bg-gradient-to-br ${card.accent} shadow-lg` : 'border-gray-200 bg-white hover:border-gray-300'} transition-colors shadow-sm`}
+                    className={`rounded-[1.35rem] border p-4 text-left ${active ? `${meta.authBorderClassName} bg-gradient-to-br ${meta.authGradientClassName} shadow-lg` : 'border-gray-200 bg-white hover:border-gray-300'} transition-colors shadow-sm`}
                   >
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="text-lg font-black text-gray-900">{card.title}</p>
-                        <p className="text-xs font-bold uppercase tracking-[0.28em] text-gray-400">{card.subtitle}</p>
+                        <PersonBadge role={card.role} variant={active ? 'solid' : 'soft'} />
+                        <p className="mt-2 text-xs font-bold uppercase tracking-[0.28em] text-gray-400">{ROLE_AUTH_LABEL[card.role]}</p>
                       </div>
                       {active && <ShieldCheck className="text-emerald-500" size={20} />}
                     </div>
@@ -117,7 +110,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
             <div>
               <p className="text-sm font-bold uppercase tracking-[0.25em] text-gray-400">Dang nhap</p>
               <h2 className="mt-2 text-xl font-black text-gray-900 md:text-2xl">
-                Vao voi vai tro {selectedCard.title} <span className="text-gray-400">({selectedCard.subtitle})</span>
+                Vao voi vai tro {ROLE_NAME[selectedCard.role]} <span className="text-gray-400">({ROLE_AUTH_LABEL[selectedCard.role]})</span>
               </h2>
               <p className="mt-3 text-sm leading-6 text-gray-500">
                 Nhap dung PIN de ca phien hien tai dung dung role.
@@ -146,10 +139,10 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               <button
                 type="submit"
                 disabled={submitting}
-                className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${selectedCard.button}`}
+                className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${ROLE_META[selectedCard.role].authButtonClassName}`}
               >
                 <LogIn size={16} aria-hidden="true" />
-                {submitting ? 'Dang xac thuc...' : `Dang nhap voi ${selectedCard.subtitle}`}
+                {submitting ? 'Dang xac thuc...' : `Dang nhap voi ${ROLE_AUTH_LABEL[selectedCard.role]}`}
               </button>
             </div>
           </form>

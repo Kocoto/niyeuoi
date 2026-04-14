@@ -1,9 +1,12 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
+import type { AuthRole } from '../utils/authToken';
+
 export interface IEvent extends Document {
     title: string;
     date: Date;
     description: string;
+    createdBy?: AuthRole;
 }
 
 const eventSchema: Schema = new Schema({
@@ -20,6 +23,10 @@ const eventSchema: Schema = new Schema({
         type: String,
         trim: true,
         default: ''
+    },
+    createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend']
     }
 }, {
     timestamps: true

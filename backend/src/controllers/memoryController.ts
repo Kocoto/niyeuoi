@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
+import type { IMemory } from '../models/Memory';
 import memoryService from '../services/memoryService';
+import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getMemories = async (req: Request, res: Response) => {
     try {
@@ -24,7 +26,8 @@ export const getMemory = async (req: Request, res: Response) => {
 
 export const createMemory = async (req: Request, res: Response) => {
     try {
-        const memory = await memoryService.createMemory(req.body);
+        const payload = resolveCreatePayload<IMemory>(req, req.body as Partial<IMemory>);
+        const memory = await memoryService.createMemory(payload);
         res.status(201).json({ success: true, data: memory });
     } catch (err: any) {
         if (err.message.startsWith('VALIDATION_ERROR')) {
@@ -36,7 +39,8 @@ export const createMemory = async (req: Request, res: Response) => {
 
 export const updateMemory = async (req: Request, res: Response) => {
     try {
-        const memory = await memoryService.updateMemory(req.params.id as string, req.body);
+        const payload = resolveUpdatePayload<IMemory>(req.body as Partial<IMemory>);
+        const memory = await memoryService.updateMemory(req.params.id as string, payload);
         res.status(200).json({ success: true, data: memory });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {
