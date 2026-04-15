@@ -50,7 +50,7 @@ const Timeline: React.FC = () => {
     try {
       const res = await api.get('/memories');
       setMemories(res.data.data ?? []);
-    } catch (err) {
+    } catch {
       console.error('Lỗi khi tải kỷ niệm');
     } finally {
       setLoading(false);
@@ -91,7 +91,11 @@ const Timeline: React.FC = () => {
         });
         mediaUrl = res.data.data.url;
       }
-      const data = { ...formData, media: mediaUrl ? [mediaUrl] : [] };
+      const data = {
+        ...formData,
+        media: mediaUrl ? [mediaUrl] : [],
+        ...(isEditing ? {} : { createdBy: role }),
+      };
       if (isEditing && editingId) {
         await api.put(`/memories/${editingId}`, data);
       } else {
@@ -105,7 +109,7 @@ const Timeline: React.FC = () => {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewUrl('');
       await fetchMemories();
-    } catch (err) {
+    } catch {
       toast('Lỗi khi lưu kỷ niệm!', 'error');
     } finally {
       setUploading(false);
@@ -117,7 +121,7 @@ const Timeline: React.FC = () => {
     try {
       await api.delete(`/memories/${id}`);
       await fetchMemories();
-    } catch (err) {
+    } catch {
       toast('Không xóa được rồi!', 'error');
     }
   };

@@ -62,11 +62,11 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Phase
 
-- Đang ở: `Đợt A - lớp nền bắt buộc`
+- Đang ở: `Đợt B - nhịp sử dụng hằng ngày và kết nối các màn`
 - Mục tiêu của đợt này:
-  - chốt contract dữ liệu theo người
-  - giữ tương thích ngược cho dữ liệu cũ
-  - chuẩn hóa shared identity để các màn sau dùng chung
+  - khiến app có lý do quay lại thường xuyên hơn
+  - làm các màn bắt đầu liên kết với nhau thay vì đứng riêng lẻ
+  - chuyển từ cảm giác “nhiều tính năng” sang một trải nghiệm có nhịp dùng hàng ngày
 
 ## Current Phase Breakdown
 
@@ -204,7 +204,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### A6 - Legacy QA pass
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - chốt rằng dữ liệu cũ không bị phá sau Đợt A
 - Reference Sections:
@@ -218,25 +218,105 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
   - đổi role đăng nhập
   - create/edit/delete vẫn hoạt động
 
+### B1 - Places redesign
+
+- Status: `done`
+- Mục tiêu:
+  - tách rõ `Muốn đi`, `Đã đi`, `Lần tới nên thử`
+  - làm Places bớt cảm giác một list phẳng, tăng ngữ cảnh vì sao địa điểm này đáng quay lại
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `6. Places / Địa điểm`
+    - `27. Wireflow Places`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - sắp lại IA và grouping chính của màn Places
+  - gắn rõ note / reason / trạng thái cho từng địa điểm nếu dữ liệu hiện có cho phép
+  - giữ tinh thần mobile-first và rõ `Ni` / `Được` từ Phase A
+- Out of scope:
+  - map privacy redesign
+  - global filter theo người
+  - wishlist / events / challenges / activity feed
+  - thay đổi semantics `owner` ngoài những gì đã chốt ở Phase A
+- Likely files:
+  - `frontend/src/pages/Places.tsx`
+  - `backend/src/models/Place.ts`
+  - `backend/src/services/placeService.ts`
+- Done when:
+  - người dùng nhìn vào là phân biệt được `Muốn đi`, `Đã đi`, `Lần tới nên thử`
+  - dữ liệu cũ vẫn render an toàn
+  - empty state và copy không còn generic như một list CRUD
+
+### B2 - Wishlist redesign
+
+- Status: `active`
+- Mục tiêu:
+  - tách rõ `Ni muốn`, `Được muốn`, `Đang chuẩn bị`
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `8. Wishlist`
+    - `28. Wireflow Wishlist`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - tách wishlist theo người và trạng thái chuẩn bị
+  - làm rõ ai muốn gì, ai đang chuẩn bị điều gì
+  - giữ ngôn ngữ riêng tư, mobile-first, không làm wishlist thành list mua sắm chung mơ hồ
+
+### B3 - Events redesign
+
+- Status: `pending`
+- Mục tiêu:
+  - làm rõ ai tạo, ngày đó dành cho ai, và ý nghĩa của ngày
+
+### B4 - Challenges redesign
+
+- Status: `pending`
+- Mục tiêu:
+  - bớt cảm giác game nhiệm vụ, tăng nghĩa “cùng nhau” hoặc “dành cho nhau”
+
+### B5 - Activity feed
+
+- Status: `pending`
+- Mục tiêu:
+  - tạo luồng `vừa rồi` để Home có nhịp sống hàng ngày rõ hơn
+
+### B6 - Global filter theo người
+
+- Status: `pending`
+- Mục tiêu:
+  - hỗ trợ `Tất cả` / `Ni` / `Được` ở các màn có nhiều nội dung cá nhân
+
+### B7 - Navigation / app shell refinement
+
+- Status: `pending`
+- Mục tiêu:
+  - tối ưu `Thêm`, recently used destinations, và cross-links giữa các màn
+
+### B8 - Empty states / reminder UX
+
+- Status: `pending`
+- Mục tiêu:
+  - biến empty state thành lời mời bắt đầu đúng ngữ cảnh, reminder nhẹ và có giá trị
+
 ## Current Active Slice
 
-- ID: `A6`
+- ID: `B2`
 - Status: `active`
-- Tên: `Legacy QA pass`
+- Tên: `Wishlist redesign`
 - Việc phải làm ngay:
-  1. Kiểm tra lại `Mood`, `Deep Talk`, `Timeline`, `Home` với record cũ thiếu metadata.
-  2. Kiểm tra luồng đổi role đăng nhập và các create/edit/delete chính sau Đợt A.
-  3. Ghi rõ case nào đã chạy thủ công, case nào mới chỉ qua build.
-  4. Không mở rộng sang phase B hay thêm feature mới trong lượt QA này.
+  1. Đọc đúng `8`, `28`, và nếu cần empty state thì `36` trong `UI_UX_IDEAS.md`.
+  2. Tách rõ wishlist theo `Ni muốn`, `Được muốn`, `Đang chuẩn bị`.
+  3. Giữ rõ ai muốn gì, không gộp hai người vào một luồng wishlist mơ hồ.
+  4. Không mở rộng sang `B3+`, không đụng global filter hay activity feed trong lượt này.
 - Không được làm trong slice này:
-  - redesign lại UI đã chốt ở A4/A5
-  - thêm mới semantics `owner`
-  - mở rộng sang Places / Wishlist / Events / Challenges
-  - đổi backend schema/API nếu chưa có bug thật
+  - map privacy redesign
+  - global filter theo người
+  - events / challenges / activity feed
+  - reward / trigger / voucher / smart suggestions
 - Done checklist:
-  - có danh sách QA rõ cho record cũ và record mới
-  - có kết luận phần nào đã an toàn, phần nào còn thiếu test tay
-  - không có regression rõ ở Mood / Deep Talk / Timeline / Home
+  - wishlist tách nhóm rõ và dễ hiểu trên mobile
+  - copy/empty state phản ánh đúng tinh thần sản phẩm
+  - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
 ## Quy tắc cập nhật trước khi dừng
@@ -255,40 +335,57 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `A5 - Home dùng lớp dữ liệu mới`
+- `B1 - Places redesign`
 
 ### Current status
 
-- `A5` đã xong:
-  - `frontend/src/pages/Home.tsx` không còn dựa vào một khối dashboard KPI mơ hồ
-  - Home đã tách thành `Hôm nay của Ni` và `Hôm nay của Được` bằng dữ liệu mood / deep talk / memory theo từng người
-  - thêm khối `Điều đang chờ giữa hai người` và `Một bước tiếp theo` nhưng vẫn giữ tone ấm, riêng tư
-  - thêm `Gần đây` dạng feed ngắn để Home có cảm giác đang sống mà chưa mở rộng sang activity feed phase B
-  - luồng fetch của Home đã chuyển sang degrade gracefully với `Promise.allSettled`, tránh một endpoint lỗi làm sập toàn màn
-- `A6` chưa bắt đầu QA.
+- `B1` đã hoàn tất và `B2 - Wishlist redesign` đã được chuyển sang active.
+- Kết quả chốt cho `B1`:
+  - `Place` có thêm field trạng thái theo kiểu backward-compatible để giữ được `Muốn đi` / `Lần tới nên thử` / `Đã đi` mà không phá dữ liệu cũ
+  - `frontend/src/pages/Places.tsx` đã được sắp lại IA thành ba nhóm rõ ràng, có quick decision, empty state đúng ngữ cảnh, và wording không còn giống list CRUD phẳng
+  - role `Ni` / `Được` được giữ rõ ở Places qua `PersonBadge`; record cũ thiếu metadata vẫn render bằng wording trung tính thay vì gán bừa
+  - flow add/edit/mark visited vẫn hoạt động trên contract mới; `isVisited` cũ vẫn được dùng để map an toàn khi record chưa có field trạng thái mới
+- Chưa chạy browser/manual smoke cho `B1` trong phiên này; xác nhận hiện có đang ở mức build + eslint file vừa sửa
 
 ### Files touched in latest session
 
-- `frontend/src/pages/Home.tsx`
+- `backend/src/models/Place.ts`
+- `backend/src/services/placeService.ts`
+- `frontend/src/pages/Places.tsx`
 - `NEXT_STEP.md`
+- Các file còn đang modified từ slice trước trong worktree:
+  - `backend/src/controllers/deepTalkController.ts`
+  - `backend/src/controllers/moodController.ts`
+  - `frontend/src/pages/Timeline.tsx`
 
 ### Tests run in latest session
 
 - Đã chạy `npm run build` trong `frontend`.
 - Kết quả: pass.
+- Đã chạy `npx eslint src/pages/Places.tsx` trong `frontend`.
+- Kết quả: pass.
+- Đã chạy `npm run build` trong `backend`.
+- Kết quả: pass.
+- Ghi chú:
+  - frontend build vẫn có cảnh báo chunk size của Vite, nhưng không fail build
+  - chưa có browser smoke riêng cho `B1`
 
 ### Known blockers
 
-- Chưa có blocker kỹ thuật cho `A6`.
-- `A6` cần dữ liệu legacy đủ đa dạng để xác nhận các fallback trung tính trên UI, nếu repo hiện tại chưa có sẵn thì phải note rõ phần nào mới chỉ được bảo chứng bằng build.
-- Vẫn cần giữ semantics `owner` cho slice sau; `A6` chỉ kiểm tra `createdBy`/answer state đã có từ phase A.
+- Không có blocker mở cho `B1`.
+- Lượt tiếp theo vẫn cần giữ guardrail:
+  - không kéo `B2` sang global filter theo người
+  - không gộp `Ni` và `Được` thành một wishlist chung mơ hồ
+  - không phá dữ liệu cũ chỉ để ép schema theo UI mới
 
 ### Next concrete step
 
-- Bắt đầu `A6`.
-- Đọc trước các file:
-  - `frontend/src/pages/MoodLofi.tsx`
-  - `frontend/src/pages/DeepTalk.tsx`
-  - `frontend/src/pages/Timeline.tsx`
-  - `frontend/src/pages/Home.tsx`
-- Ưu tiên lập checklist QA cho record cũ thiếu metadata, đổi role, và các thao tác create/edit/delete chính sau Đợt A.
+- Bắt đầu `B2 - Wishlist redesign`.
+- Đọc đúng các section:
+  - `8. Wishlist`
+  - `28. Wireflow Wishlist`
+  - nếu cần empty state thì `36. Wireflow empty states / zero states`
+- Ưu tiên đọc trước:
+  - `frontend/src/pages/Wishlist.tsx`
+  - `backend/src/models/Wishlist.ts`
+  - `backend/src/services/wishlistService.ts`

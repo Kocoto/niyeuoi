@@ -1,6 +1,51 @@
-import Place, { IPlace } from '../models/Place';
+import Place, { IPlace, PLACE_STATUS_VALUES, type PlaceStatus } from '../models/Place';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
+
+const isPlaceStatus = (value: unknown): value is PlaceStatus =>
+    typeof value === 'string' && PLACE_STATUS_VALUES.includes(value as PlaceStatus);
+
+const normalizePlacePayload = (data: Partial<IPlace>) => {
+    const payload: Partial<IPlace> = { ...data };
+    const hasStatus = isPlaceStatus(payload.status);
+    const hasVisitedFlag = typeof payload.isVisited === 'boolean';
+
+    if (hasStatus) {
+        payload.isVisited = payload.status === 'visited';
+    } else if (hasVisitedFlag) {
+        payload.status = payload.isVisited ? 'visited' : 'want_to_go';
+    }
+
+    if (payload.status && payload.status !== 'visited') {
+        payload.rating = null;
+    }
+
+    return payload;
+};
+
+const getPlaceNotificationMeta = (place: IPlace) => {
+    if (place.isVisited) {
+        return {
+            title: '📍 Một địa điểm vừa thành kỷ niệm mới',
+            description: `Người ấy vừa đi tại **${place.name}**`,
+            color: 15844367
+        };
+    }
+
+    if (place.status === 'next_time') {
+        return {
+            title: '📍 Một địa điểm được ghim cho lần tới',
+            description: `Người ấy vừa ghim **${place.name}** cho buổi hẹn kế tiếp`,
+            color: 3447003
+        };
+    }
+
+    return {
+        title: '📍 Một địa điểm mới trong danh sách muốn đi',
+        description: `Người ấy vừa lưu **${place.name}** vào danh sách muốn đi`,
+        color: 3066993
+    };
+};
 
 class PlaceService {
     async getAllPlaces() {
@@ -22,19 +67,24 @@ class PlaceService {
     }
 
     async createPlace(data: Partial<IPlace>) {
-        logger.info('Places', 'Tạo địa điểm mới', { name: data.name, category: data.category, isVisited: data.isVisited });
+        const payload = normalizePlacePayload(data);
+        logger.info('Places', 'Tạo địa điểm mới', {
+            name: payload.name,
+            category: payload.category,
+            isVisited: payload.isVisited,
+            status: payload.status
+        });
         try {
-            const place = await Place.create(data);
+            const place = await Place.create(payload);
             logger.success('Places', 'Tạo địa điểm thành công', { id: place._id, name: place.name });
 
-            const action = place.isVisited ? 'vừa măm măm tại' : 'vừa tìm thấy một quán cực xịn:';
-            const color = place.isVisited ? 15844367 : 3066993;
+            const notification = getPlaceNotificationMeta(place);
 
             logger.info('Places', 'Gửi thông báo Discord...');
             await notificationService.sendDiscord(
-                `🍴 Địa điểm ăn uống mới!`,
-                `Người ấy ${action} **${place.name}**\n📍 Địa chỉ: ${place.address}\n<i>"${place.note || 'Hãy cùng nhau đi nhé!'}"</i>`,
-                color
+                notification.title,
+                `${notification.description}\n📍 Địa chỉ: ${place.address}\n<i>"${place.note || 'Giữ lại để hai bạn quyết định khi cần nhé.'}"</i>`,
+                notification.color
             );
             logger.success('Places', 'Đã gửi thông báo Discord');
 
@@ -52,7 +102,8 @@ class PlaceService {
 
     async updatePlace(id: string, data: Partial<IPlace>) {
         logger.info('Places', 'Cập nhật địa điểm', { id, fields: Object.keys(data) });
-        const place = await Place.findByIdAndUpdate(id, data, {
+        const payload = normalizePlacePayload(data);
+        const place = await Place.findByIdAndUpdate(id, payload, {
             new: true,
             runValidators: true
         });
@@ -60,7 +111,13 @@ class PlaceService {
             logger.warn('Places', 'Không tìm thấy địa điểm để cập nhật', { id });
             throw new Error('NOT_FOUND');
         }
-        logger.success('Places', 'Cập nhật thành công', { id, name: place.name, isVisited: place.isVisited, rating: place.rating });
+        logger.success('Places', 'Cập nhật thành công', {
+            id,
+            name: place.name,
+            isVisited: place.isVisited,
+            status: place.status,
+            rating: place.rating
+        });
         return place;
     }
 

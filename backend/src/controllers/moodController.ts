@@ -1,5 +1,7 @@
 import { Request, Response } from 'express';
 import moodService from '../services/moodService';
+import type { IMood } from '../models/Mood';
+import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getMoods = async (req: Request, res: Response) => {
     try {
@@ -24,7 +26,8 @@ export const getMood = async (req: Request, res: Response) => {
 
 export const createMood = async (req: Request, res: Response) => {
     try {
-        const mood = await moodService.createMood(req.body);
+        const payload = resolveCreatePayload<IMood>(req, req.body as Partial<IMood>);
+        const mood = await moodService.createMood(payload);
         res.status(201).json({ success: true, data: mood });
     } catch (err: any) {
         if (err.message.startsWith('VALIDATION_ERROR')) {
@@ -36,7 +39,8 @@ export const createMood = async (req: Request, res: Response) => {
 
 export const updateMood = async (req: Request, res: Response) => {
     try {
-        const mood = await moodService.updateMood(req.params.id as string, req.body);
+        const payload = resolveUpdatePayload<IMood>(req.body as Partial<IMood>);
+        const mood = await moodService.updateMood(req.params.id as string, payload);
         res.status(200).json({ success: true, data: mood });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {

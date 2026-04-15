@@ -2,6 +2,8 @@ import { Request, Response } from 'express';
 import deepTalkService from '../services/deepTalkService';
 import { generateDeepQuestion } from '../services/aiService';
 import DeepTalkQuestion from '../models/DeepTalkQuestion';
+import type { IJournalEntry } from '../models/JournalEntry';
+import { getRequestAuthRole, isAuthRole, resolveCreatePayload } from '../utils/requestIdentity';
 
 // --- Questions ---
 
@@ -55,8 +57,11 @@ export const generateAiQuestion = async (_req: Request, res: Response) => {
 
 export const answerQuestion = async (req: Request, res: Response) => {
     try {
-        const { role, text, isInPerson } = req.body;
-        if (!role || !['boyfriend', 'girlfriend'].includes(role)) {
+        const sessionRole = getRequestAuthRole(req);
+        const bodyRole = isAuthRole(req.body?.role) ? req.body.role : undefined;
+        const role = sessionRole ?? bodyRole;
+        const { text, isInPerson } = req.body;
+        if (!role) {
             return res.status(400).json({ success: false, error: 'role không hợp lệ' });
         }
         const question = await deepTalkService.answerQuestion(req.params.id as string, role, { text, isInPerson });
@@ -80,7 +85,8 @@ export const getJournalEntries = async (_req: Request, res: Response) => {
 
 export const createJournalEntry = async (req: Request, res: Response) => {
     try {
-        const entry = await deepTalkService.createJournalEntry(req.body);
+        const payload = resolveCreatePayload<IJournalEntry>(req, req.body as Partial<IJournalEntry>);
+        const entry = await deepTalkService.createJournalEntry(payload as { content: string; createdBy: 'boyfriend' | 'girlfriend' });
         res.status(201).json({ success: true, data: entry });
     } catch (err: any) {
         if (err.message?.startsWith('VALIDATION_ERROR')) {

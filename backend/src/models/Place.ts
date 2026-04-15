@@ -2,14 +2,19 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 import type { AuthRole } from '../utils/authToken';
 
+export const PLACE_STATUS_VALUES = ['want_to_go', 'next_time', 'visited'] as const;
+
+export type PlaceStatus = (typeof PLACE_STATUS_VALUES)[number];
+
 export interface IPlace extends Document {
     name: string;
     address: string;
     image: string;
-    rating: number;
+    rating: number | null;
     note: string;
     category: 'Cafe' | 'Trà sữa' | 'Nhà hàng' | 'Ăn vặt' | 'Lẩu & Nướng' | 'Hải sản' | 'Phở & Bún' | 'Bánh & Kem' | 'Quán nhậu' | 'Khác';
     isVisited: boolean;
+    status?: PlaceStatus;
     location: {
         type: string;
         coordinates: number[];
@@ -48,6 +53,11 @@ const placeSchema: Schema = new Schema({
     isVisited: {
         type: Boolean,
         default: false
+    },
+    status: {
+        type: String,
+        enum: PLACE_STATUS_VALUES,
+        default: undefined
     },
     location: {
         type: {
