@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../api/api';
 import { Ticket, CheckCircle, Loader2, Plus, X, Trash2, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import ContextualEmptyState from '../components/ContextualEmptyState';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { ROLE_NAME } from '../constants/roles';
@@ -29,18 +30,20 @@ const Coupons: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'mine' | 'theirs'>('theirs');
   const [formData, setFormData] = useState({ title: '', description: '' });
 
-  useEffect(() => { fetchCoupons(); }, []);
-
-  const fetchCoupons = async () => {
+  const fetchCoupons = useCallback(async () => {
     try {
       const res = await api.get('/coupons');
       setCoupons(res.data.data);
-    } catch (err) {
+    } catch {
       console.error('Lỗi khi tải voucher');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchCoupons();
+  }, [fetchCoupons]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,17 +52,17 @@ const Coupons: React.FC = () => {
       setShowModal(false);
       setFormData({ title: '', description: '' });
       await fetchCoupons();
-    } catch (err) {
+    } catch {
       toast('Lỗi khi tặng voucher!', 'error');
     }
   };
 
-  const useCoupon = async (id: string) => {
+  const redeemCoupon = async (id: string) => {
     if (!await confirm('Bạn có chắc muốn sử dụng tấm vé này không? 💕')) return;
     try {
       await api.put(`/coupons/${id}`, { isUsed: true });
       await fetchCoupons();
-    } catch (err) {
+    } catch {
       toast('Không thể sử dụng voucher lúc này!', 'error');
     }
   };
@@ -70,7 +73,7 @@ const Coupons: React.FC = () => {
       await api.post('/coupons/generate');
       await fetchCoupons();
       toast('AI vừa tạo voucher mới! 🎉', 'success');
-    } catch (err) {
+    } catch {
       toast('AI đang bận, thử lại sau nhé!', 'error');
     } finally {
       setAiLoading(false);
@@ -82,7 +85,7 @@ const Coupons: React.FC = () => {
     try {
       await api.delete(`/coupons/${id}`);
       await fetchCoupons();
-    } catch (err) {
+    } catch {
       toast('Không xóa được!', 'error');
     }
   };
@@ -93,13 +96,28 @@ const Coupons: React.FC = () => {
   const displayList = activeTab === 'theirs' ? theirCoupons : myCoupons;
 
   const oppositeRole = role === 'boyfriend' ? 'girlfriend' : 'boyfriend';
+  const emptyState =
+    activeTab === 'theirs'
+      ? {
+          title: `Ví của ${ROLE_LABEL[role]} đang yên`,
+          description: `Khi ${ROLE_LABEL[oppositeRole]} để dành một đặc quyền cho ${ROLE_LABEL[role]}, tấm vé sẽ nằm rõ ở đây thay vì trôi mất trong lời nói thoáng qua.`,
+          action:
+            myCoupons.length > 0
+              ? { label: 'Xem những voucher bạn đã tặng', onClick: () => setActiveTab('mine'), variant: 'secondary' as const }
+              : { label: `Tạo voucher cho ${ROLE_LABEL[oppositeRole]}`, onClick: () => setShowModal(true) },
+        }
+      : {
+          title: `${ROLE_LABEL[role]} chưa để dành voucher nào cho ${ROLE_LABEL[oppositeRole]}`,
+          description: `Một voucher có thể là lời hẹn nhỏ, một đặc quyền, hoặc điều muốn làm cho ${ROLE_LABEL[oppositeRole]}. Ví này giữ chúng thật rõ để không phải nhớ bằng miệng.`,
+          action: { label: 'Tạo voucher đầu tiên', onClick: () => setShowModal(true) },
+        };
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
       <div className="page-header">
         <div>
           <h1 className="page-title">Ví Voucher Tình yêu</h1>
-          <p className="page-subtitle">Những đặc quyền dành riêng cho bạn... 🎟️</p>
+          <p className="page-subtitle">Những đặc quyền Ni và Được để dành cho nhau, giữ rõ ai tặng ai nhận để nhịp quan tâm không bị trôi.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -149,20 +167,12 @@ const Coupons: React.FC = () => {
           </div>
 
           {displayList.length === 0 ? (
-            <div className="empty-state">
-              <Ticket className="text-pink-200 mx-auto mb-3" size={36} />
-              {activeTab === 'theirs' ? (
-                <>
-                  <p className="text-gray-400 font-medium">{ROLE_LABEL[oppositeRole]} chưa tặng voucher nào.</p>
-                  <p className="text-gray-300 text-sm mt-1">Hãy nhắc {ROLE_LABEL[oppositeRole].toLowerCase()} tặng bạn một đặc quyền nào! 🥺</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-gray-400 font-medium">Bạn chưa tặng voucher nào.</p>
-                  <p className="text-gray-300 text-sm mt-1">Tặng {ROLE_LABEL[oppositeRole].toLowerCase()} một đặc quyền đặc biệt nào! 🎁</p>
-                </>
-              )}
-            </div>
+            <ContextualEmptyState
+              icon={<Ticket size={18} />}
+              title={emptyState.title}
+              description={emptyState.description}
+              action={emptyState.action}
+            />
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {displayList.map((coupon) => (
@@ -197,7 +207,7 @@ const Coupons: React.FC = () => {
                         <div className="flex items-center gap-1 text-green-500 text-xs font-bold"><CheckCircle size={14} /> Đã dùng</div>
                       ) : (
                         <button
-                          onClick={e => { e.stopPropagation(); useCoupon(coupon._id); }}
+                          onClick={e => { e.stopPropagation(); redeemCoupon(coupon._id); }}
                           className="bg-primary text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all"
                         >
                           Sử dụng
@@ -259,7 +269,7 @@ const Coupons: React.FC = () => {
                   </div>
                 ) : (
                   <button
-                    onClick={() => { useCoupon(detailCoupon._id); setDetailCoupon(null); }}
+                    onClick={() => { redeemCoupon(detailCoupon._id); setDetailCoupon(null); }}
                     className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all"
                   >
                     Sử dụng ngay 🎁

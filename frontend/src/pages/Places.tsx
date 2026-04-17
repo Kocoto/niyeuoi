@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/api';
 import { OpenLocationCode } from 'open-location-code';
 import {
@@ -17,7 +17,8 @@ import {
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import PersonBadge from '../components/PersonBadge';
-import { isRole, type Role } from '../constants/roles';
+import PersonScopeTabs, { type PersonScope } from '../components/PersonScopeTabs';
+import { ROLE_NAME, isRole, type Role } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 
@@ -142,6 +143,13 @@ const resolvePlaceStatus = (place: Pick<IPlace, 'status' | 'isVisited'>): PlaceS
 
 const resolvePlaceOwner = (createdBy?: Role): Role | null => (isRole(createdBy) ? createdBy : null);
 
+const matchesPlaceScope = (place: IPlace, scope: PersonScope) => {
+  if (scope === 'all') return true;
+  return resolvePlaceOwner(place.createdBy) === scope;
+};
+
+const getPersonScopeLabel = (scope: PersonScope) => (scope === 'all' ? 'Tất cả' : ROLE_NAME[scope]);
+
 const createInitialForm = (status: PlaceStatus = 'want_to_go'): PlaceFormState => ({
   name: '',
   address: '',
@@ -160,6 +168,7 @@ const Places: React.FC = () => {
   const [places, setPlaces] = useState<IPlace[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<PlaceStatus>('want_to_go');
+  const [personScope, setPersonScope] = useState<PersonScope>('all');
   const [randomPlace, setRandomPlace] = useState<IPlace | null>(null);
   const [isRolling, setIsRolling] = useState(false);
   const { role } = useAuth();
@@ -186,18 +195,41 @@ const Places: React.FC = () => {
   const [formLocationResults, setFormLocationResults] = useState<LocationResult[]>([]);
   const [formData, setFormData] = useState<PlaceFormState>(createInitialForm());
 
-  const groupedPlaces: Record<PlaceStatus, IPlace[]> = {
-    want_to_go: [],
-    next_time: [],
-    visited: [],
-  };
+  const groupedPlaces = useMemo<Record<PlaceStatus, IPlace[]>>(() => {
+    const groups: Record<PlaceStatus, IPlace[]> = {
+      want_to_go: [],
+      next_time: [],
+      visited: [],
+    };
 
-  places.forEach((place) => {
-    groupedPlaces[resolvePlaceStatus(place)].push(place);
-  });
+    places.forEach((place) => {
+      groups[resolvePlaceStatus(place)].push(place);
+    });
 
-  const visiblePlaces = groupedPlaces[activeTab];
+    return groups;
+  }, [places]);
+
+  const filteredPlacesByStatus = useMemo<Record<PlaceStatus, IPlace[]>>(() => ({
+    want_to_go: groupedPlaces.want_to_go.filter((place) => matchesPlaceScope(place, personScope)),
+    next_time: groupedPlaces.next_time.filter((place) => matchesPlaceScope(place, personScope)),
+    visited: groupedPlaces.visited.filter((place) => matchesPlaceScope(place, personScope)),
+  }), [groupedPlaces, personScope]);
+
+  const scopeCounts = useMemo<Record<PersonScope, number>>(() => ({
+    all: places.length,
+    girlfriend: places.filter((place) => matchesPlaceScope(place, 'girlfriend')).length,
+    boyfriend: places.filter((place) => matchesPlaceScope(place, 'boyfriend')).length,
+  }), [places]);
+
+  const visiblePlaces = filteredPlacesByStatus[activeTab];
   const activeStatusMeta = STATUS_META[activeTab];
+  const activeScopeLabel = getPersonScopeLabel(personScope);
+  const filteredEmptyTitle = personScope === 'all'
+    ? activeStatusMeta.emptyTitle
+    : `Chưa có địa điểm nào trong nhóm "${activeStatusMeta.label}" từ phía ${activeScopeLabel}`;
+  const filteredEmptyBody = personScope === 'all'
+    ? activeStatusMeta.emptyBody
+    : `${ROLE_NAME[personScope]} chưa có địa điểm nào khớp nhóm này. Các record cũ chưa rõ người lưu vẫn ở mục Tất cả để không bị mất dấu.`;
 
   const cleanupPreview = () => {
     if (previewUrl) {
@@ -233,22 +265,23 @@ const Places: React.FC = () => {
       const data: IPlace[] = res.data.data ?? [];
       setPlaces(data);
       setDetailPlace((prev) => (prev ? data.find((place) => place._id === prev._id) ?? null : null));
-      setRandomPlace((prev) => {
-        if (!prev) return null;
-        const nextPlace = data.find((place) => place._id === prev._id);
-        if (!nextPlace) return null;
-        return resolvePlaceStatus(nextPlace) === activeTab ? nextPlace : null;
-      });
     } catch {
       console.error('Lỗi khi tải địa điểm');
     } finally {
       setLoading(false);
     }
-  }, [activeTab]);
+  }, []);
 
   useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
+
+  useEffect(() => {
+    setRandomPlace((current) => {
+      if (!current) return null;
+      return visiblePlaces.find((place) => place._id === current._id) ?? null;
+    });
+  }, [visiblePlaces]);
 
   const handleEdit = (place: IPlace) => {
     cleanupPreview();
@@ -543,9 +576,9 @@ const Places: React.FC = () => {
   };
 
   const handleRandom = async () => {
-    const candidates = groupedPlaces[activeTab];
+    const candidates = filteredPlacesByStatus[activeTab];
     if (candidates.length === 0) {
-      toast(activeStatusMeta.emptyTitle, 'warning');
+      toast(filteredEmptyTitle, 'warning');
       return;
     }
 
@@ -575,23 +608,40 @@ const Places: React.FC = () => {
               <p className="mt-3 text-sm leading-6 text-slate-600 md:text-[15px]">
                 Màn này không chỉ để cất địa chỉ. Nó giúp hai bạn giữ những nơi muốn đi, chốt nhanh chỗ cho lần tới, và nhớ lại nơi đã thành kỷ niệm.
               </p>
-              <div className="mt-4 flex flex-wrap gap-2">
-                <PersonBadge role={role} prefix="Đang xem với vai" />
-                {PLACE_STATUS_ORDER.map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() => setActiveTab(status)}
-                    className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition-all ${
-                      activeTab === status
-                        ? STATUS_META[status].chipClassName
-                        : 'bg-white/80 text-slate-500 ring-slate-200 hover:text-slate-700'
-                    }`}
-                  >
-                    <span>{STATUS_META[status].shortLabel}</span>
-                    <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px]">{groupedPlaces[status].length}</span>
-                  </button>
-                ))}
+              <div className="mt-4 space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  <PersonBadge role={role} prefix="Đang xem với vai" />
+                  {PLACE_STATUS_ORDER.map((status) => (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setActiveTab(status)}
+                      className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 transition-all ${
+                        activeTab === status
+                          ? STATUS_META[status].chipClassName
+                          : 'bg-white/80 text-slate-500 ring-slate-200 hover:text-slate-700'
+                      }`}
+                    >
+                      <span>{STATUS_META[status].shortLabel}</span>
+                      <span className="rounded-full bg-white/80 px-2 py-0.5 text-[11px]">{filteredPlacesByStatus[status].length}</span>
+                    </button>
+                  ))}
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Xem theo người lưu</p>
+                  <PersonScopeTabs
+                    value={personScope}
+                    onChange={setPersonScope}
+                    counts={scopeCounts}
+                    ariaLabel="Lọc Places theo người lưu"
+                  />
+                  {personScope !== 'all' ? (
+                    <p className="text-xs leading-5 text-slate-500">
+                      Chế độ này chỉ hiện các địa điểm đã gắn rõ với {ROLE_NAME[personScope]}. Record cũ chưa rõ người lưu vẫn nằm ở mục Tất cả.
+                    </p>
+                  ) : null}
+                </div>
               </div>
             </div>
 
@@ -626,6 +676,11 @@ const Places: React.FC = () => {
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-900">{activeStatusMeta.label}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">{activeStatusMeta.description}</p>
+            {personScope !== 'all' ? (
+              <p className="mt-3 text-sm font-semibold text-slate-500">
+                Đang nhìn riêng phần của {activeScopeLabel.toLowerCase()} trong nhóm này.
+              </p>
+            ) : null}
           </div>
           <div className="grid grid-cols-3 gap-2 rounded-2xl bg-white/80 p-1.5 ring-1 ring-white/80">
             {PLACE_STATUS_ORDER.map((status) => (
@@ -638,12 +693,12 @@ const Places: React.FC = () => {
                     ? STATUS_META[status].tabClassName
                     : 'text-slate-500 hover:bg-slate-50 hover:text-slate-700'
                 }`}
-              >
-                <span className="block">{STATUS_META[status].shortLabel}</span>
-                <span className="mt-1 block text-[11px] font-semibold opacity-80">{groupedPlaces[status].length} nơi</span>
-              </button>
-            ))}
-          </div>
+                >
+                  <span className="block">{STATUS_META[status].shortLabel}</span>
+                  <span className="mt-1 block text-[11px] font-semibold opacity-80">{filteredPlacesByStatus[status].length} nơi</span>
+                </button>
+              ))}
+            </div>
         </div>
 
         <AnimatePresence>
@@ -705,8 +760,8 @@ const Places: React.FC = () => {
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-slate-500">
             <MapPin size={24} />
           </div>
-          <h2 className="mt-5 text-2xl font-black text-slate-900">{activeStatusMeta.emptyTitle}</h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">{activeStatusMeta.emptyBody}</p>
+          <h2 className="mt-5 text-2xl font-black text-slate-900">{filteredEmptyTitle}</h2>
+          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-slate-600">{filteredEmptyBody}</p>
           <button
             type="button"
             onClick={() => openCreateModal(activeTab)}

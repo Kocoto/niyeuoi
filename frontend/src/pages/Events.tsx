@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import api from '../api/api';
 import { AnimatePresence, motion } from 'framer-motion';
 import {
@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from 'lucide-react';
 import PersonBadge from '../components/PersonBadge';
+import PersonScopeTabs, { type PersonScope } from '../components/PersonScopeTabs';
 import { ROLE_NAME, isRole, type Role } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -145,6 +146,14 @@ const formatInputDate = (value: string) => {
   return `${year}-${month}-${day}`;
 };
 
+const matchesEventScope = (item: EventCard, scope: PersonScope) => {
+  if (scope === 'all') return true;
+  if (item.target === 'both' || item.target === scope) return true;
+  return !item.target && item.creator === scope;
+};
+
+const getPersonScopeLabel = (scope: PersonScope) => (scope === 'all' ? 'Tất cả' : ROLE_NAME[scope]);
+
 const createInitialForm = (defaults: Partial<EventFormState> = {}): EventFormState => ({
   title: '',
   date: '',
@@ -234,6 +243,7 @@ const getCountdownCopy = (item: EventCard) => {
 const Events: React.FC = () => {
   const [events, setEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState(true);
+  const [personScope, setPersonScope] = useState<PersonScope>('all');
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -314,21 +324,53 @@ const Events: React.FC = () => {
     }
   };
 
-  const cards: EventCard[] = events.map((event) => ({
+  const cards = useMemo<EventCard[]>(() => events.map((event) => ({
     event,
     date: parseEventDate(event.date),
     daysLeft: getDaysLeft(event.date),
     type: isEventType(event.eventType) ? event.eventType : null,
     target: isEventTarget(event.forWhom) ? event.forWhom : null,
     creator: isRole(event.createdBy) ? event.createdBy : null,
-  }));
+  })), [events]);
 
-  const important = cards.filter((item) => item.daysLeft >= 0 && (item.type === 'birthday' || item.type === 'anniversary'));
-  const importantIds = new Set(important.map((item) => item.event._id));
-  const upcoming = cards.filter((item) => item.daysLeft >= 0 && !importantIds.has(item.event._id));
-  const past = [...cards.filter((item) => item.daysLeft < 0)].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const scopeCounts = useMemo<Record<PersonScope, number>>(() => ({
+    all: cards.length,
+    girlfriend: cards.filter((item) => matchesEventScope(item, 'girlfriend')).length,
+    boyfriend: cards.filter((item) => matchesEventScope(item, 'boyfriend')).length,
+  }), [cards]);
+
+  const filteredCards = useMemo(
+    () => cards.filter((item) => matchesEventScope(item, personScope)),
+    [cards, personScope],
+  );
+
+  const important = useMemo(
+    () => filteredCards.filter((item) => item.daysLeft >= 0 && (item.type === 'birthday' || item.type === 'anniversary')),
+    [filteredCards],
+  );
+  const importantIds = useMemo(() => new Set(important.map((item) => item.event._id)), [important]);
+  const upcoming = useMemo(
+    () => filteredCards.filter((item) => item.daysLeft >= 0 && !importantIds.has(item.event._id)),
+    [filteredCards, importantIds],
+  );
+  const past = useMemo(
+    () => [...filteredCards.filter((item) => item.daysLeft < 0)].sort((a, b) => b.date.getTime() - a.date.getTime()),
+    [filteredCards],
+  );
   const sections: Record<SectionKey, EventCard[]> = { important, upcoming, past };
-  const closestUpcoming = cards.find((item) => item.daysLeft >= 0) ?? null;
+  const closestUpcoming = filteredCards.find((item) => item.daysLeft >= 0) ?? null;
+  const activeScopeLabel = getPersonScopeLabel(personScope);
+  const filteredEmptyTitle = personScope === 'all'
+    ? 'Chưa có ngày nào được ghim lại'
+    : `Chưa có ngày nào đang chạm tới ${activeScopeLabel}`;
+  const filteredEmptyBody = personScope === 'all'
+    ? 'Events là nơi giữ sinh nhật, ngày quen nhau, buổi hẹn, và các dịp đặc biệt để nhìn vào là biết ngày đó thuộc về ai và vì sao nó đáng nhớ. Hiện tại phần này còn trống, nên bước đầu tiên là lưu một ngày thật sự có nghĩa.'
+    : `${activeScopeLabel} chưa có ngày riêng hoặc ngày chung nào khớp với bộ lọc này. Các record cũ chưa rõ người liên quan vẫn được giữ ở mục Tất cả để không mất ngữ cảnh.`;
+  const countdownSummary = closestUpcoming
+    ? getCountdownCopy(closestUpcoming)
+    : personScope === 'all'
+      ? 'Chưa có ngày nào sắp tới được lưu lại.'
+      : `Chưa có ngày sắp tới nào chạm tới ${activeScopeLabel.toLowerCase()}.`;
 
   const renderTarget = (target: EventTarget | null) => {
     if (target === 'both') {
@@ -477,11 +519,28 @@ const Events: React.FC = () => {
             </button>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            <PersonBadge role={role} prefix="Đang xem với vai" variant="solid" />
-            <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-white/70">
-              {closestUpcoming ? <CalendarClock size={15} className="text-rose-500" /> : <Clock3 size={15} className="text-slate-400" />}
-              {closestUpcoming ? getCountdownCopy(closestUpcoming) : 'Chưa có ngày nào sắp tới được lưu lại.'}
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+            <div className="flex flex-wrap items-center gap-3">
+              <PersonBadge role={role} prefix="Đang xem với vai" variant="solid" />
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-white/70">
+                {closestUpcoming ? <CalendarClock size={15} className="text-rose-500" /> : <Clock3 size={15} className="text-slate-400" />}
+                {countdownSummary}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-[11px] font-black uppercase tracking-[0.24em] text-slate-400">Xem theo người liên quan</p>
+              <PersonScopeTabs
+                value={personScope}
+                onChange={setPersonScope}
+                counts={scopeCounts}
+                ariaLabel="Lọc Events theo người liên quan"
+              />
+              {personScope !== 'all' ? (
+                <p className="text-xs leading-5 text-slate-500">
+                  Filter này vẫn giữ các ngày chung của cả hai, và chỉ ẩn những ngày không chạm tới {activeScopeLabel.toLowerCase()}.
+                </p>
+              ) : null}
             </div>
           </div>
 
@@ -511,12 +570,12 @@ const Events: React.FC = () => {
       <div className="mt-8 space-y-10">
         {loading ? (
           <div className="flex justify-center py-24"><Loader2 className="animate-spin text-rose-400" size={40} /></div>
-        ) : events.length === 0 ? (
+        ) : filteredCards.length === 0 ? (
           <section className="rounded-[2rem] border border-dashed border-rose-200 bg-white/85 p-6 text-center shadow-sm md:p-8">
             <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-500 ring-1 ring-rose-200"><Calendar size={24} /></div>
-            <h2 className="mt-4 text-2xl font-black tracking-tight text-slate-900">Chưa có ngày nào được ghim lại</h2>
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-slate-900">{filteredEmptyTitle}</h2>
             <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-              Events là nơi giữ sinh nhật, ngày quen nhau, buổi hẹn, và các dịp đặc biệt để nhìn vào là biết ngày đó thuộc về ai và vì sao nó đáng nhớ. Hiện tại phần này còn trống, nên bước đầu tiên là lưu một ngày thật sự có nghĩa.
+              {filteredEmptyBody}
             </p>
             <button onClick={() => openCreateModal({ eventType: 'anniversary', forWhom: 'both' })} className="mt-5 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
               <Plus size={16} />

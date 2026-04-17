@@ -1,7 +1,7 @@
-﻿import { useState, useEffect } from 'react';
-import { useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, Plus, Trash2, Loader2, X, Send, MessageCircleHeart } from 'lucide-react';
+import ContextualEmptyState from '../components/ContextualEmptyState';
 import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
@@ -59,7 +59,7 @@ const getAnswerStateLabel = (answer?: IAnswer): string => {
   const state = getAnswerState(answer);
   if (state === 'inPerson') return 'Đã nói ngoài đời';
   if (state === 'answered') return 'Đã trả lời';
-  return 'Đang chờ';
+  return 'Đang mở';
 };
 
 const getQuestionSummary = (q: IDeepTalkQuestion): string => {
@@ -69,8 +69,8 @@ const getQuestionSummary = (q: IDeepTalkQuestion): string => {
       ? 'Cả hai đã nói ngoài đời'
       : 'Cả hai đã có câu trả lời';
   }
-  if (waitingRoles.length === ROLE_ORDER.length) return 'Cả hai vẫn đang chờ';
-  return `Đang chờ ${waitingRoles.map(waitingRole => ROLE_NAME[waitingRole]).join(' và ')}`;
+  if (waitingRoles.length === ROLE_ORDER.length) return 'Cả hai đang để mở câu này';
+  return `Đang mở cho ${waitingRoles.map(waitingRole => ROLE_NAME[waitingRole]).join(' và ')}`;
 };
 
 const getJournalAuthor = (createdBy?: Role): Role | null => (isRole(createdBy) ? createdBy : null);
@@ -111,7 +111,7 @@ const DeepTalk: React.FC = () => {
   const [newJournalText, setNewJournalText] = useState('');
   const [addingJournal, setAddingJournal] = useState(false);
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = useCallback(async () => {
     try {
       const res = await api.get('/deeptalk/questions');
       setQuestions(res.data.data ?? []);
@@ -120,9 +120,9 @@ const DeepTalk: React.FC = () => {
     } finally {
       setQuestionsLoading(false);
     }
-  };
+  }, [toast]);
 
-  const fetchJournal = async () => {
+  const fetchJournal = useCallback(async () => {
     try {
       const res = await api.get('/deeptalk/journal');
       setJournalEntries(res.data.data ?? []);
@@ -131,12 +131,12 @@ const DeepTalk: React.FC = () => {
     } finally {
       setJournalLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     fetchQuestions();
     fetchJournal();
-  }, []);
+  }, [fetchJournal, fetchQuestions]);
 
   const handleAiGenerate = async () => {
     setAiLoading(true);
@@ -242,6 +242,9 @@ const DeepTalk: React.FC = () => {
   const answeredQuestions = useMemo(() => questions.filter(question => isQuestionComplete(question)), [questions]);
   const visibleQuestions = activeTab === 'pending' ? pendingQuestions : answeredQuestions;
   const unansweredCount = pendingQuestions.filter(question => !hasAnswered(question, role)).length;
+  const answeredEmptyAction = pendingQuestions.length > 0
+    ? { label: 'Mở các câu đang mở', onClick: () => setActiveTab('pending'), variant: 'secondary' as const }
+    : { label: 'Thêm câu hỏi đầu tiên', onClick: () => setShowAddQuestion(true) };
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -251,11 +254,11 @@ const DeepTalk: React.FC = () => {
           <MessageCircleHeart size={24} className="text-primary" />
           <h1 className="text-2xl font-black text-gray-800">Trò chuyện sâu</h1>
         </div>
-        <p className="text-sm text-gray-500">Nhìn là biết ai đã trả lời, ai còn đang chờ, và nhật ký riêng là của ai.</p>
+        <p className="text-sm text-gray-500">Nhìn là biết ai đã trả lời, ai còn một phần đang mở, và nhật ký riêng là của ai.</p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
           <PersonBadge role={role} prefix="Bạn đang tiếp tục với vai trò" />
           <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${unansweredCount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
-            {unansweredCount > 0 ? `Bạn còn ${unansweredCount} câu đang chờ` : 'Phần của bạn hiện không còn câu nào đang chờ'}
+            {unansweredCount > 0 ? `${ROLE_NAME[role]} còn ${unansweredCount} câu đang mở` : `${ROLE_NAME[role]} đang tạm khép các câu đang mở`}
           </span>
         </div>
       </div>
@@ -266,7 +269,7 @@ const DeepTalk: React.FC = () => {
           onClick={() => setActiveTab('pending')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'pending' ? 'bg-white text-primary shadow-sm' : 'text-gray-400'}`}
         >
-          💬 Đang chờ
+          💬 Đang mở
           {pendingQuestions.length > 0 && (
             <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[18px] text-center">
               {pendingQuestions.length}
@@ -320,14 +323,21 @@ const DeepTalk: React.FC = () => {
           {questionsLoading ? (
             <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={28} /></div>
           ) : visibleQuestions.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-400 font-medium">
-                {activeTab === 'pending' ? 'Không có câu hỏi nào đang chờ cả hai.' : 'Chưa có câu hỏi nào cả hai đã hoàn thành.'}
-              </p>
-              <p className="text-gray-300 text-sm mt-1">
-                {activeTab === 'pending' ? 'Có thể để AI gợi ý hoặc tự thêm một câu hỏi dịu dàng.' : 'Khi cả hai đều trả lời, câu hỏi sẽ nằm ở đây để xem lại.'}
-              </p>
-            </div>
+            activeTab === 'pending' ? (
+              <ContextualEmptyState
+                icon={<MessageCircleHeart size={18} />}
+                title="Hiện chưa có câu nào đang mở cho cả hai"
+                description="Deep Talk giữ những câu cần thời gian để Ni và Được nhìn là biết phía nào đã trả lời và phía nào còn một phần ở phía trước."
+                action={{ label: 'Thêm câu hỏi đầu tiên', onClick: () => setShowAddQuestion(true) }}
+              />
+            ) : (
+              <ContextualEmptyState
+                icon={<Sparkles size={18} />}
+                title="Chưa có câu nào được cả hai giữ trọn"
+                description="Khi cả Ni và Được đều có câu trả lời hoặc đã nói ngoài đời, câu hỏi sẽ ở lại đây để hai người nhìn lại nhịp đã đi qua."
+                action={answeredEmptyAction}
+              />
+            )
           ) : (
             <div className="flex flex-col gap-3">
               <AnimatePresence>
@@ -391,10 +401,12 @@ const DeepTalk: React.FC = () => {
           {journalLoading ? (
             <div className="flex justify-center py-16"><Loader2 className="animate-spin text-primary" size={28} /></div>
           ) : journalEntries.length === 0 ? (
-            <div className="text-center py-16">
-              <p className="text-gray-400 font-medium">Chưa có nhật ký nào.</p>
-              <p className="text-gray-300 text-sm mt-1">Chia sẻ cảm xúc của bạn đi! 📔</p>
-            </div>
+            <ContextualEmptyState
+              icon={<Send size={18} />}
+              title="Chưa có dòng nào được giữ lại sau các cuộc trò chuyện"
+              description="Nhật ký này dành cho những điều Ni hoặc Được muốn ghi thêm sau khi nghĩ tiếp, để cảm xúc không chỉ nằm trong một câu trả lời ngắn."
+              action={{ label: 'Viết một dòng đầu tiên', onClick: () => setShowAddJournal(true) }}
+            />
           ) : (
             <div className="flex flex-col gap-3">
               <AnimatePresence>

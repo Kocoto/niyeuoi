@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/api';
+import ContextualEmptyState from '../components/ContextualEmptyState';
 import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_CORNER_LABEL, ROLE_NAME, isRole, type Role } from '../constants/roles';
@@ -645,12 +646,12 @@ const Home: React.FC = () => {
         recentLabel: latestActivity ? latestActivity.label : `Chưa có cập nhật riêng gần đây từ ${ROLE_NAME[currentRole]}.`,
         recentMeta: latestActivity ? latestActivity.meta : 'Khi có mood, Deep Talk, kỷ niệm, kế hoạch, challenge hoặc voucher mới, phần này sẽ hiện đúng phía của người đó.',
         waitingLabel: pendingCount > 0
-          ? `${pendingCount} câu hỏi vẫn đang chờ phần của ${ROLE_NAME[currentRole]}.`
+          ? `${pendingCount} câu hỏi đang mở cho ${ROLE_NAME[currentRole]}.`
           : hasOwnCheckIn
             ? `Phía ${ROLE_NAME[currentRole]} đang khá yên cho hôm nay.`
-            : `${ROLE_NAME[currentRole]} vẫn chưa check-in hôm nay.`,
+            : `Nếu ${ROLE_NAME[currentRole]} muốn để lại một nhịp cho hôm nay, chỗ này đang giữ sẵn.`,
         actionTo: !hasOwnCheckIn ? '/mood' : pendingCount > 0 ? '/deeptalk' : latestActivity?.to ?? '/mood',
-        actionLabel: !hasOwnCheckIn ? 'Ghi cảm xúc ngay' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ',
+        actionLabel: !hasOwnCheckIn ? 'Ghi một nhịp ngắn' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ',
       };
     })
   ), [
@@ -672,8 +673,8 @@ const Home: React.FC = () => {
       if (!checkedInToday[currentRole]) {
         items.push({
           key: `mood-${currentRole}`,
-          title: `${ROLE_NAME[currentRole]} chưa check-in hôm nay`,
-          detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu hôm nay phía này đang thế nào.',
+          title: `${ROLE_NAME[currentRole]} chưa để lại nhịp hôm nay`,
+          detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu phía này đang thế nào mà không cần nhắc dồn dập.',
           to: '/mood',
         });
       }
@@ -684,7 +685,7 @@ const Home: React.FC = () => {
       if (!pendingQuestion) continue;
       items.push({
         key: `question-${currentRole}`,
-        title: `${pendingQuestionsByRole[currentRole].length} câu hỏi đang chờ phần của ${ROLE_NAME[currentRole]}`,
+        title: `${pendingQuestionsByRole[currentRole].length} câu hỏi đang mở cho ${ROLE_NAME[currentRole]}`,
         detail: pendingQuestion.content,
         to: '/deeptalk',
       });
@@ -704,7 +705,7 @@ const Home: React.FC = () => {
       items.push({
         key: `coupon-${waitingCouponForCurrentRole._id}`,
         title: giver
-          ? `${ROLE_NAME[giver]} đã để sẵn một voucher cho ${ROLE_NAME[role]}`
+          ? `${ROLE_NAME[giver]} để sẵn một voucher cho ${ROLE_NAME[role]}`
           : 'Có một voucher đang nằm yên chờ bạn mở',
         detail: waitingCouponForCurrentRole.description || waitingCouponForCurrentRole.title,
         to: '/coupons',
@@ -721,8 +722,8 @@ const Home: React.FC = () => {
     if (!checkedInToday[role]) {
       return {
         to: '/mood',
-        title: `Ghi cảm xúc của ${ROLE_NAME[role]} cho hôm nay`,
-        detail: 'Home đang giữ sẵn chỗ cho check-in của bạn để nhịp hôm nay không bị trôi qua mơ hồ.',
+        title: `Đặt một nhịp ngắn cho hôm nay của ${ROLE_NAME[role]}`,
+        detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu hôm nay phía bạn đang thế nào.',
         button: 'Ghi cảm xúc',
         icon: <Sparkles size={18} />,
       };
@@ -731,7 +732,7 @@ const Home: React.FC = () => {
     if (myPendingQuestion) {
       return {
         to: '/deeptalk',
-        title: `Tiếp tục câu hỏi đang chờ ${ROLE_NAME[role]}`,
+        title: `Tiếp tục câu hỏi đang mở cho ${ROLE_NAME[role]}`,
         detail: myPendingQuestion.content,
         button: 'Tiếp tục Deep Talk',
         icon: <MessageCircleHeart size={18} />,
@@ -743,7 +744,7 @@ const Home: React.FC = () => {
       return {
         to: '/coupons',
         title: giver
-          ? `Có một voucher từ ${ROLE_NAME[giver]} đang chờ ${ROLE_NAME[role]}`
+          ? `Mở voucher ${ROLE_NAME[giver]} để dành cho ${ROLE_NAME[role]}`
           : 'Có một voucher đang đợi bạn mở ra',
         detail: waitingCouponForCurrentRole.description || waitingCouponForCurrentRole.title,
         button: 'Mở ví voucher',
@@ -980,9 +981,14 @@ const Home: React.FC = () => {
             <p className="section-label">Điều đang chờ giữa hai người</p>
             <h2 className="mt-2 text-2xl font-black text-ink">Những chỗ còn dang dở</h2>
             {sharedPendingItems.length === 0 ? (
-              <div className="mt-5 rounded-[1.5rem] bg-[#fcf7fa] p-4 text-sm leading-6 text-soft">
-                Hôm nay chưa có gì quá gấp. Giao diện vẫn giữ hai phía tách riêng để khi có điều mới, bạn nhìn vào là biết nó thuộc về ai.
-              </div>
+              <ContextualEmptyState
+                layout="inline"
+                className="mt-5"
+                icon={<MessageCircleHeart size={18} />}
+                title="Hiện chưa có điều gì cần kéo hai người đi ngay"
+                description="Khu này chỉ giữ những việc đáng nhắc thật: check-in còn bỏ ngỏ, câu Deep Talk đang mở, ngày sắp tới, hoặc voucher đang chờ đúng người."
+                action={{ label: nextStep.button, to: nextStep.to, variant: 'secondary' }}
+              />
             ) : (
               <div className="mt-5 space-y-3">
                 {sharedPendingItems.map(item => (
@@ -1021,9 +1027,13 @@ const Home: React.FC = () => {
         </div>
 
         {recentFeed.length === 0 ? (
-          <div className="rounded-[1.5rem] bg-[#fcf7fa] p-4 text-sm leading-6 text-soft">
-            Luồng này dành để thấy mood, Deep Talk, kỷ niệm, ngày đã ghim, challenge và voucher vừa được chạm tới. Nếu hôm nay còn trống, hãy bắt đầu bằng một check-in hoặc lưu lại một kỷ niệm nhỏ để Home có nhịp rõ hơn.
-          </div>
+          <ContextualEmptyState
+            layout="inline"
+            icon={<NotebookPen size={18} />}
+            title="Hôm nay luồng này vẫn còn trống"
+            description="Feed này dùng để thấy ai vừa chạm vào mood, Deep Talk, kỷ niệm, ngày ghim, challenge, hoặc voucher. Khi chưa có gì mới, bạn có thể bắt đầu bằng bước tiếp theo đang được Home giữ sẵn."
+            action={{ label: nextStep.button, to: nextStep.to, variant: 'secondary' }}
+          />
         ) : (
           <div className="grid gap-3 md:grid-cols-2">
             {recentFeed.map(item => (

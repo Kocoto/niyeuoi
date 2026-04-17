@@ -311,7 +311,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### B6 - Global filter theo người
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - hỗ trợ `Tất cả` / `Ni` / `Được` ở các màn có nhiều nội dung cá nhân
 - Reference Sections:
@@ -330,34 +330,90 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### B7 - Navigation / app shell refinement
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - tối ưu `Thêm`, recently used destinations, và cross-links giữa các màn
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `2. Home / Dashboard`
+    - `12. Navigation / IA`
+    - `13. Shared UI System`
+    - `32. Wireflow navigation / app shell`
+- In scope:
+  - xác định lại vai trò của `Thêm` để đỡ cảm giác app bị dàn trải
+  - cân nhắc recently used destinations và cross-links thật sự giúp flow đi tiếp
+  - giữ đúng nhịp dùng hàng ngày, không mở rộng sang reward / smart suggestions
 
 ### B8 - Empty states / reminder UX
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - biến empty state thành lời mời bắt đầu đúng ngữ cảnh, reminder nhẹ và có giá trị
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `13. Shared UI System`
+    - `34. Wireflow notification / reminder UX`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - xác định các empty state đang quá trống hoặc chưa giúp người dùng bắt đầu bước tiếp theo
+  - tinh chỉnh reminder theo hướng nhẹ, hữu ích, không biến thành nhắc nhở gây áp lực
+  - giữ scope trong UX copy + CTA + trạng thái chờ, không kéo sang redesign navigation hay reward logic
+
+### C1 - Map privacy
+
+- Status: `done`
+- Mục tiêu:
+  - tách rõ map chung và private tracking mode, với guardrail riêng tư rõ ràng
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `7. Map / Bản đồ`
+    - `17. Data / Personalization`
+    - `22. Wireflow map privacy`
+    - `37. Wireflow auth / role switching`
+- In scope:
+  - xác định lại đâu là bản đồ chung, đâu là private tracking chỉ mở khi đúng điều kiện
+  - thiết kế gating cho BF private mode, timeout tự tắt, và wording không làm tính năng này trở thành mặc định
+  - giữ dữ liệu chia sẻ vị trí hiện có an toàn, không kéo sang voucher / reward / smart suggestions
+
+### C2a - Voucher type foundation
+
+- Status: `active`
+- Mục tiêu:
+  - tách rõ 3 loại voucher trong model và IA trước khi đụng sâu vào create/redeem flow
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `11. Coupons / Voucher`
+    - `17. Data / Personalization`
+    - `21. Wireflow voucher`
+- In scope:
+  - xác định semantics cho voucher đích danh / nhanh tay / dùng chung
+  - chuẩn hóa field và cách hiển thị để biết ai tặng, ai nhận, ai đang giữ, và loại voucher là gì
+  - giữ backward-compatible cho voucher cũ, chưa mở rộng sang reward / trigger hoặc orchestration liên màn
+
+### C2b - Voucher create / redeem flow refinement
+
+- Status: `pending`
+- Mục tiêu:
+  - làm composer, detail, và redeem flow khớp với 3 loại voucher mới mà không thiên vị `Ni` hay `Được`
 
 ## Current Active Slice
 
-- ID: `B6`
+- ID: `C2a`
 - Status: `active`
-- Tên: `Global filter theo người`
+- Tên: `Voucher type foundation`
 - Việc phải làm ngay:
-  1. Đọc đúng `1.1`, `6`, `8`, `9`, `10`, `13`, và `31` trong `UI_UX_IDEAS.md`.
-  2. Xác định màn nào thật sự cần `Tất cả` / `Ni` / `Được`, và màn nào nên giữ grouping hiện có.
-  3. Thiết kế filter sao cho vẫn rõ `Ni` và `Được`, không kéo UI về một luồng chung mơ hồ.
-  4. Không mở rộng sang `B7+`, không đụng app shell refinement hay empty-state overhaul trong lượt này.
+  1. Đọc đúng `11`, `17`, và `21` trong `UI_UX_IDEAS.md`.
+  2. Xác định dữ liệu voucher hiện tại đang thiếu nghĩa ở đâu: loại, người nhận, người giữ, tính surprise, và khả năng dùng chung.
+  3. Chốt lớp nền model + serialization + list IA trước, để lượt sau mới đi vào create/redeem flow mà không phải đập lại semantics.
+  4. Không mở rộng sang `C2b+`, không kéo reward / trigger / smart suggestion vào lượt này.
 - Không được làm trong slice này:
-  - map privacy redesign
-  - navigation / app shell refinement
-  - empty state overhaul diện rộng
-  - reward / trigger / voucher / smart suggestions
+  - reward / trigger orchestration
+  - memory resurfacing hoặc smart suggestions
+  - rewrite toàn bộ UI voucher detail/composer nếu lớp semantics bên dưới chưa chốt xong
 - Done checklist:
-  - filter hỗ trợ xem theo `Tất cả` / `Ni` / `Được` ở đúng màn cần thiết
-  - filter không phá grouping và copy hiện có của từng màn
+  - 3 loại voucher có semantics rõ và không mâu thuẫn nhau
+  - dữ liệu cũ vẫn đọc được an toàn và có fallback hợp lý
+  - list/card/badge chính đã đủ để người dùng hiểu loại voucher mà không cần đoán
   - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
@@ -377,55 +433,54 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `B5 - Activity feed`
+- `C1 - Map privacy`
 
 ### Current status
 
-- `B5` đã hoàn tất và `B6 - Global filter theo người` đã được chuyển sang active.
-- Kết quả chốt cho `B5`:
-  - `frontend/src/pages/Home.tsx` giờ lấy thêm `events`, `challenges`, và `coupons` cùng với `moods`, `deeptalk`, `memories` để Home có một luồng `Vừa rồi` sống hơn nhưng vẫn ngắn gọn
-  - feed `Vừa rồi` đã nói rõ ai vừa làm gì, deep-link đúng màn, và có fallback trung tính cho record cũ thiếu metadata thay vì làm vỡ Home
-  - `Điều đang chờ giữa hai người` được thêm reminder dịu cho ngày sắp tới và voucher đang chờ, nhưng vẫn ưu tiên mood/deep talk và không biến Home thành dashboard KPI
-  - `Một bước tiếp theo` giờ có thể dẫn sang voucher hoặc event khi phù hợp, sau khi đã ưu tiên các việc có tính nhịp hàng ngày như mood và Deep Talk
-  - empty state của feed đã đổi sang ngôn ngữ giải thích khu vực này dùng để làm gì và người dùng nên bắt đầu từ đâu
-- Chưa chạy browser/manual smoke cho `B5`; xác nhận hiện có đang ở mức build + eslint file vừa sửa
+- `C1` đã hoàn tất. Vì `C2 - voucher system redesign` nguyên bản quá rộng cho một lượt, nó đã được tách thành `C2a - Voucher type foundation` và `C2b - Voucher create / redeem flow refinement`, trong đó `C2a` được chuyển sang active.
+- Kết quả chốt cho `C1`:
+  - `frontend/src/pages/LoveMap.tsx` giờ tách rõ map chung và private mode: map mặc định chỉ hiển thị địa điểm chung, không còn marker vị trí thật, nút `Tìm Ni`, hay wording lộ tracking trên giao diện chung
+  - BF chỉ có thể mở private mode qua một entry trung tính, sau đó phải nhập lại PIN BF; private mode có indicator riêng, countdown tự tắt, và khi đóng sẽ quay về map chung sạch dấu vết
+  - `backend/src/routes/locationRoutes.ts` giờ chặn ghi vị trí cho đúng vai `Ni`, chặn đọc vị trí cho đúng vai `Được`, và buộc phải có private access token sống ngắn mới lấy được vị trí hiện tại
+  - thêm `backend/src/utils/privateAccessToken.ts` để private mode không chỉ là khóa UI mà có guardrail backend riêng với thời hạn ngắn
+- Chưa chạy browser/manual smoke cho `C1`; xác nhận hiện có đang ở mức build frontend + backend và eslint file frontend vừa sửa
 
 ### Files touched in latest session
 
-- `frontend/src/pages/Home.tsx`
+- `frontend/src/pages/LoveMap.tsx`
+- `backend/src/routes/locationRoutes.ts`
+- `backend/src/utils/privateAccessToken.ts`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
 
+- Đã chạy `npm run build` trong `backend`.
+- Kết quả: pass.
 - Đã chạy `npm run build` trong `frontend`.
 - Kết quả: pass.
-- Đã chạy `npx eslint src/pages/Home.tsx` trong `frontend`.
+- Đã chạy `npx eslint src/pages/LoveMap.tsx` trong `frontend`.
 - Kết quả: pass.
 - Ghi chú:
   - frontend build vẫn có cảnh báo chunk size của Vite, nhưng không fail build
-  - chưa có browser smoke riêng cho `B5`
+  - chưa có browser smoke riêng cho `C1`
 
 ### Known blockers
 
-- Không có blocker mở cho `B5`.
+- Không có blocker mở cho `C1`.
 - Lượt tiếp theo vẫn cần giữ guardrail:
-  - không kéo `B6` sang navigation/app shell refinement hoặc empty-state overhaul diện rộng
-  - không thêm filter ở mọi màn nếu grouping hiện có đã đủ rõ
-  - không phá dữ liệu cũ hay làm mờ ranh giới `Ni` / `Được` chỉ để có filter thống nhất
+  - không kéo `C2a` sang reward / trigger hay smart suggestion
+  - không thiên vị voucher về một phía mặc định chỉ vì hiện tại flow cũ đơn giản hơn
+  - không phá dữ liệu voucher cũ chỉ để ép đủ semantics mới ngay trong một lượt
 
 ### Next concrete step
 
-- Bắt đầu `B6 - Global filter theo người`.
+- Bắt đầu `C2a - Voucher type foundation`.
 - Đọc đúng các section:
-  - `1.1 Identity system cho Ni và Được`
-  - `6. Places / Địa điểm`
-  - `8. Wishlist`
-  - `9. Events`
-  - `10. Challenges`
-  - `13. Shared UI System`
-  - `31. Wireflow shared identity system`
+  - `11. Coupons / Voucher`
+  - `17. Data / Personalization`
+  - `21. Wireflow voucher`
 - Ưu tiên đọc trước:
-  - `frontend/src/pages/Places.tsx`
-  - `frontend/src/pages/Wishlist.tsx`
-  - `frontend/src/pages/Events.tsx`
-  - `frontend/src/pages/Challenges.tsx`
+  - `frontend/src/pages/Coupons.tsx`
+  - `backend/src/models/Coupon.ts`
+  - `backend/src/controllers/couponController.ts`
+  - `backend/src/services/couponService.ts`
