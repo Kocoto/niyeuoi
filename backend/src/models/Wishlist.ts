@@ -10,6 +10,7 @@ export interface IWishlist extends Document {
     status: 'Đang đợi' | 'Đã mua' | 'Đã đi';
     note: string;
     createdBy?: AuthRole;
+    owner?: AuthRole;
 }
 
 const wishlistSchema: Schema = new Schema({
@@ -41,6 +42,10 @@ const wishlistSchema: Schema = new Schema({
         trim: true
     },
     createdBy: {
+        type: String,
+        enum: ['boyfriend', 'girlfriend']
+    },
+    owner: {
         type: String,
         enum: ['boyfriend', 'girlfriend']
     }

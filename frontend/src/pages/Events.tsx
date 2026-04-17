@@ -1,168 +1,612 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import api from '../api/api';
-import { Calendar, Plus, Loader2, PartyPopper, X, Trash2, Pencil } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Calendar,
+  CalendarClock,
+  Clock3,
+  HeartHandshake,
+  Loader2,
+  Pencil,
+  Plus,
+  Sparkles,
+  Trash2,
+  X,
+  type LucideIcon,
+} from 'lucide-react';
+import PersonBadge from '../components/PersonBadge';
+import { ROLE_NAME, isRole, type Role } from '../constants/roles';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
+
+type EventType = 'birthday' | 'anniversary' | 'date_plan' | 'special_plan';
+type EventTarget = Role | 'both';
+type SectionKey = 'important' | 'upcoming' | 'past';
 
 interface IEvent {
   _id: string;
   title: string;
   date: string;
   description: string;
+  createdBy?: Role;
+  eventType?: EventType;
+  forWhom?: EventTarget;
 }
+
+type EventFormState = {
+  title: string;
+  date: string;
+  description: string;
+  eventType: EventType;
+  forWhom: EventTarget;
+};
+
+type EventCard = {
+  event: IEvent;
+  date: Date;
+  daysLeft: number;
+  type: EventType | null;
+  target: EventTarget | null;
+  creator: Role | null;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})/;
+
+const TYPE_META: Record<EventType, { label: string; hint: string; tone: string; icon: LucideIcon }> = {
+  birthday: { label: 'Sinh nhật', hint: 'Ngày nghiêng rõ về một người.', tone: 'bg-amber-50 text-amber-700 ring-amber-200/80', icon: Sparkles },
+  anniversary: { label: 'Ngày quen nhau', hint: 'Một cột mốc chung của cả hai.', tone: 'bg-rose-50 text-rose-700 ring-rose-200/80', icon: HeartHandshake },
+  date_plan: { label: 'Hẹn đi chơi', hint: 'Buổi hẹn đã được chốt lại.', tone: 'bg-sky-50 text-sky-700 ring-sky-200/80', icon: CalendarClock },
+  special_plan: { label: 'Việc đặc biệt', hint: 'Một dịp riêng cần nhớ rõ.', tone: 'bg-violet-50 text-violet-700 ring-violet-200/80', icon: Calendar },
+};
+
+const SECTION_META: Record<
+  SectionKey,
+  {
+    title: string;
+    description: string;
+    emptyTitle: string;
+    emptyBody: string;
+    cta: string;
+    tone: string;
+    icon: LucideIcon;
+    defaults: Partial<EventFormState>;
+  }
+> = {
+  important: {
+    title: 'Ngày quan trọng',
+    description: 'Sinh nhật và các ngày chung cần được nhớ kỹ.',
+    emptyTitle: 'Chưa có ngày nổi bật nào được ghim lại',
+    emptyBody: 'Hãy bắt đầu bằng sinh nhật hoặc ngày quen nhau để app biết ngày nào cần được giữ thật rõ.',
+    cta: 'Thêm ngày quan trọng',
+    tone: 'bg-rose-50 text-rose-700 ring-rose-200/80',
+    icon: Sparkles,
+    defaults: { eventType: 'birthday', forWhom: 'both' },
+  },
+  upcoming: {
+    title: 'Sắp tới',
+    description: 'Những dịp vẫn đang ở phía trước để tuần này không bị mơ hồ.',
+    emptyTitle: 'Chưa có lịch hẹn nào đang tới',
+    emptyBody: 'Nếu hai bạn vừa chốt một buổi đi chơi hoặc một dịp sắp tới, lưu vào đây để không phải nhắc lại từ đầu.',
+    cta: 'Lên lịch một ngày mới',
+    tone: 'bg-sky-50 text-sky-700 ring-sky-200/80',
+    icon: CalendarClock,
+    defaults: { eventType: 'date_plan', forWhom: 'both' },
+  },
+  past: {
+    title: 'Đã qua',
+    description: 'Những ngày đã đi qua nhưng vẫn còn ý nghĩa khi nhìn lại.',
+    emptyTitle: 'Chưa có ngày nào nằm ở phía đã qua',
+    emptyBody: 'Khi vài dịp đầu tiên được lưu lại, phần này sẽ giúp hai bạn nhìn rõ những ngày mình đã đi cùng nhau.',
+    cta: 'Ghi lại một ngày đã qua',
+    tone: 'bg-slate-100 text-slate-700 ring-slate-200',
+    icon: Clock3,
+    defaults: { eventType: 'special_plan', forWhom: 'both' },
+  },
+};
+
+const isEventType = (value: unknown): value is EventType =>
+  value === 'birthday' || value === 'anniversary' || value === 'date_plan' || value === 'special_plan';
+
+const isEventTarget = (value: unknown): value is EventTarget =>
+  value === 'boyfriend' || value === 'girlfriend' || value === 'both';
+
+const parseEventDate = (value: string) => {
+  const match = DATE_ONLY.exec(value);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
+const startOfDay = (date: Date) => {
+  const next = new Date(date);
+  next.setHours(0, 0, 0, 0);
+  return next;
+};
+
+const getDaysLeft = (value: string) =>
+  Math.round((startOfDay(parseEventDate(value)).getTime() - startOfDay(new Date()).getTime()) / DAY_MS);
+
+const formatEventDate = (value: string) =>
+  parseEventDate(value).toLocaleDateString('vi-VN', {
+    weekday: 'short',
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+
+const formatInputDate = (value: string) => {
+  const date = parseEventDate(value);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
+const createInitialForm = (defaults: Partial<EventFormState> = {}): EventFormState => ({
+  title: '',
+  date: '',
+  description: '',
+  eventType: 'special_plan',
+  forWhom: 'both',
+  ...defaults,
+});
+
+const getCountdownTone = (daysLeft: number) => {
+  if (daysLeft === 0) return 'bg-emerald-50 text-emerald-700 ring-emerald-200';
+  if (daysLeft > 0) return 'bg-rose-50 text-rose-700 ring-rose-200';
+  return 'bg-slate-100 text-slate-600 ring-slate-200';
+};
+
+const getFallbackMeaning = (item: EventCard) => {
+  const targetLabel = item.target === 'both' ? 'cả hai' : item.target ? ROLE_NAME[item.target] : 'một người trong hai bạn';
+
+  switch (item.type) {
+    case 'birthday':
+      return item.target && item.target !== 'both'
+        ? `Đây là sinh nhật của ${ROLE_NAME[item.target]}, nên phía còn lại có thể chủ động chuẩn bị tốt hơn.`
+        : 'Một ngày sinh nhật quan trọng cần được nhớ rõ để không lỡ mất nhịp quan tâm.';
+    case 'anniversary':
+      return 'Đây là ngày chung của cả hai, đáng được giữ lại như một cột mốc để nhìn về cùng một phía.';
+    case 'date_plan':
+      return item.target === 'both'
+        ? 'Buổi hẹn này đã được chốt lại để khi gần tới là cả hai đều biết mình đang hướng về đâu.'
+        : `Một dịp đã được ghim lại để dành sự chú ý cho ${targetLabel}.`;
+    case 'special_plan':
+      return `Một ngày đặc biệt dành cho ${targetLabel}, đáng được lưu lại kèm lý do ngắn gọn.`;
+    default:
+      return 'Một record cũ vẫn được giữ an toàn ở đây, dù chưa rõ loại ngày hay người liên quan.';
+  }
+};
+
+const getCountdownCopy = (item: EventCard) => {
+  const targetLabel = item.target && item.target !== 'both' ? ROLE_NAME[item.target] : null;
+  const days = Math.abs(item.daysLeft);
+
+  if (item.daysLeft < 0) {
+    switch (item.type) {
+      case 'birthday':
+        return targetLabel ? `Sinh nhật của ${targetLabel} đã qua ${days} ngày.` : `Ngày sinh nhật này đã qua ${days} ngày.`;
+      case 'anniversary':
+        return `Ngày quen nhau đã đi qua ${days} ngày.`;
+      case 'date_plan':
+        return `Buổi hẹn này đã qua ${days} ngày.`;
+      case 'special_plan':
+        return targetLabel ? `Ngày đặc biệt của ${targetLabel} đã qua ${days} ngày.` : `Ngày đặc biệt này đã qua ${days} ngày.`;
+      default:
+        return `Ngày này đã qua ${days} ngày.`;
+    }
+  }
+
+  if (item.daysLeft === 0) {
+    switch (item.type) {
+      case 'birthday':
+        return targetLabel ? `Hôm nay là sinh nhật của ${targetLabel}.` : 'Hôm nay là một ngày sinh nhật quan trọng.';
+      case 'anniversary':
+        return 'Hôm nay là ngày quen nhau của hai bạn.';
+      case 'date_plan':
+        return item.target === 'both' ? 'Hôm nay là buổi mình hẹn.' : `Hôm nay là ngày dành cho ${targetLabel ?? 'người ấy'}.`;
+      case 'special_plan':
+        return targetLabel ? `Hôm nay là ngày đặc biệt của ${targetLabel}.` : 'Hôm nay là một ngày đặc biệt đáng chú ý.';
+      default:
+        return 'Hôm nay là ngày đã được đánh dấu từ trước.';
+    }
+  }
+
+  switch (item.type) {
+    case 'birthday':
+      return targetLabel ? `Còn ${item.daysLeft} ngày tới sinh nhật của ${targetLabel}.` : `Còn ${item.daysLeft} ngày tới một ngày sinh nhật quan trọng.`;
+    case 'anniversary':
+      return `Còn ${item.daysLeft} ngày tới ngày quen nhau.`;
+    case 'date_plan':
+      return item.target === 'both'
+        ? `Còn ${item.daysLeft} ngày tới buổi mình hẹn.`
+        : `Còn ${item.daysLeft} ngày tới dịp dành cho ${targetLabel ?? 'người ấy'}.`;
+    case 'special_plan':
+      return targetLabel ? `Còn ${item.daysLeft} ngày tới ngày đặc biệt của ${targetLabel}.` : `Còn ${item.daysLeft} ngày tới một dịp đặc biệt.`;
+    default:
+      return `Còn ${item.daysLeft} ngày tới ngày này.`;
+  }
+};
 
 const Events: React.FC = () => {
   const [events, setEvents] = useState<IEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const { role } = useAuth();
-  const { toast, confirm } = useUI();
-  
   const [showModal, setShowModal] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState<EventFormState>(createInitialForm());
 
-  const initialForm = {
-    title: '',
-    date: '',
-    description: ''
-  };
+  const { role } = useAuth();
+  const { toast, confirm } = useUI();
 
-  const [formData, setFormData] = useState(initialForm);
-
-  useEffect(() => {
-    fetchEvents();
+  const resetForm = useCallback((defaults: Partial<EventFormState> = {}) => {
+    setFormData(createInitialForm(defaults));
+    setIsEditing(false);
+    setEditingId(null);
   }, []);
 
-  const fetchEvents = async () => {
+  const openCreateModal = (defaults: Partial<EventFormState> = {}) => {
+    resetForm(defaults);
+    setShowModal(true);
+  };
+
+  const closeModal = () => {
+    setShowModal(false);
+    resetForm();
+  };
+
+  const fetchEvents = useCallback(async () => {
     try {
       const res = await api.get('/events');
-      setEvents(res.data.data.sort((a: IEvent, b: IEvent) => new Date(a.date).getTime() - new Date(b.date).getTime()));
-    } catch (err) {
+      const data: IEvent[] = res.data.data ?? [];
+      data.sort((a, b) => parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime());
+      setEvents(data);
+    } catch {
       console.error('Lỗi khi tải sự kiện');
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   const handleEdit = (event: IEvent) => {
-    setFormData({
+    resetForm({
       title: event.title,
-      date: new Date(event.date).toISOString().split('T')[0],
-      description: event.description || ''
+      date: formatInputDate(event.date),
+      description: event.description || '',
+      eventType: isEventType(event.eventType) ? event.eventType : 'special_plan',
+      forWhom: isEventTarget(event.forWhom) ? event.forWhom : 'both',
     });
     setEditingId(event._id);
     setIsEditing(true);
     setShowModal(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    const payload = { ...formData, description: formData.description.trim() };
     try {
       if (isEditing && editingId) {
-        await api.put(`/events/${editingId}`, formData);
+        await api.put(`/events/${editingId}`, payload);
       } else {
-        await api.post('/events', formData);
+        await api.post('/events', payload);
       }
-      setShowModal(false);
-      setIsEditing(false);
-      setEditingId(null);
-      setFormData(initialForm);
+      closeModal();
       await fetchEvents();
-    } catch (err) {
-      toast('Lỗi khi lưu sự kiện!', 'error');
+    } catch {
+      toast('Lỗi khi lưu ngày này!', 'error');
     }
   };
 
   const deleteEvent = async (id: string) => {
-    if (!await confirm('Xóa sự kiện này nhé?')) return;
+    if (!await confirm('Xóa ngày này nhé?')) return;
     try {
       await api.delete(`/events/${id}`);
       await fetchEvents();
-    } catch (err) {
-      toast('Không xóa được!', 'error');
+    } catch {
+      toast('Không xóa được ngày này!', 'error');
     }
   };
 
-  const calculateDaysLeft = (dateStr: string) => {
-    const targetDate = new Date(dateStr);
-    const today = new Date();
-    targetDate.setHours(0, 0, 0, 0);
-    today.setHours(0, 0, 0, 0);
-    const diff = targetDate.getTime() - today.getTime();
-    return Math.ceil(diff / (1000 * 60 * 60 * 24));
+  const cards: EventCard[] = events.map((event) => ({
+    event,
+    date: parseEventDate(event.date),
+    daysLeft: getDaysLeft(event.date),
+    type: isEventType(event.eventType) ? event.eventType : null,
+    target: isEventTarget(event.forWhom) ? event.forWhom : null,
+    creator: isRole(event.createdBy) ? event.createdBy : null,
+  }));
+
+  const important = cards.filter((item) => item.daysLeft >= 0 && (item.type === 'birthday' || item.type === 'anniversary'));
+  const importantIds = new Set(important.map((item) => item.event._id));
+  const upcoming = cards.filter((item) => item.daysLeft >= 0 && !importantIds.has(item.event._id));
+  const past = [...cards.filter((item) => item.daysLeft < 0)].sort((a, b) => b.date.getTime() - a.date.getTime());
+  const sections: Record<SectionKey, EventCard[]> = { important, upcoming, past };
+  const closestUpcoming = cards.find((item) => item.daysLeft >= 0) ?? null;
+
+  const renderTarget = (target: EventTarget | null) => {
+    if (target === 'both') {
+      return (
+        <span className="inline-flex items-center gap-2 rounded-full bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700 ring-1 ring-violet-200/80">
+          <HeartHandshake size={12} />
+          Dành cho cả hai
+        </span>
+      );
+    }
+
+    if (target) {
+      return <PersonBadge role={target} prefix="Dành cho" showIcon={false} />;
+    }
+
+    return (
+      <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+        Chưa rõ dành cho ai
+      </span>
+    );
+  };
+
+  const renderCard = (item: EventCard) => {
+    const meta = item.type ? TYPE_META[item.type] : null;
+    const TypeIcon = meta?.icon ?? Sparkles;
+    const countdownText = item.daysLeft === 0 ? 'Hôm nay' : item.daysLeft > 0 ? `${item.daysLeft} ngày nữa` : `${Math.abs(item.daysLeft)} ngày trước`;
+
+    return (
+      <motion.article
+        key={item.event._id}
+        layout
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="rounded-[1.75rem] border border-white/70 bg-white/90 p-4 shadow-[0_24px_80px_-40px_rgba(15,23,42,0.35)] ring-1 ring-slate-100 backdrop-blur md:p-5"
+      >
+        <div className="flex items-start gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap gap-2">
+              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${getCountdownTone(item.daysLeft)}`}>
+                <Calendar size={12} />
+                {countdownText}
+              </span>
+              <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${meta ? meta.tone : 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
+                <TypeIcon size={12} />
+                {meta ? meta.label : 'Record cũ'}
+              </span>
+            </div>
+            <h3 className="mt-3 text-xl font-black tracking-tight text-slate-900">{item.event.title}</h3>
+            <p className="mt-1 text-sm font-semibold leading-6 text-slate-700">{getCountdownCopy(item)}</p>
+          </div>
+
+          <div className="flex shrink-0 gap-1">
+            <button onClick={() => handleEdit(item.event)} className="rounded-2xl p-2.5 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Chỉnh sự kiện">
+              <Pencil size={17} />
+            </button>
+            <button onClick={() => deleteEvent(item.event._id)} className="rounded-2xl p-2.5 text-slate-400 transition hover:bg-rose-50 hover:text-rose-600" aria-label="Xóa sự kiện">
+              <Trash2 size={17} />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-4 flex flex-wrap gap-2">
+          <span className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 ring-1 ring-slate-200">
+            <CalendarClock size={12} />
+            {formatEventDate(item.event.date)}
+          </span>
+          {item.creator ? (
+            <PersonBadge role={item.creator} prefix="Tạo bởi" showIcon={false} />
+          ) : (
+            <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
+              Record cũ chưa rõ ai tạo
+            </span>
+          )}
+          {renderTarget(item.target)}
+        </div>
+
+        <p className="mt-4 text-sm leading-6 text-slate-600">{item.event.description?.trim() || getFallbackMeaning(item)}</p>
+      </motion.article>
+    );
+  };
+
+  const renderEmpty = (sectionKey: SectionKey) => {
+    const meta = SECTION_META[sectionKey];
+
+    return (
+      <div className="rounded-[1.75rem] border border-dashed border-slate-200 bg-white/75 p-5 shadow-sm">
+        <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${meta.tone}`}>
+          <meta.icon size={12} />
+          {meta.title}
+        </div>
+        <h3 className="mt-4 text-lg font-black tracking-tight text-slate-900">{meta.emptyTitle}</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-600">{meta.emptyBody}</p>
+        <button onClick={() => openCreateModal(meta.defaults)} className="mt-4 inline-flex items-center gap-2 rounded-full bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
+          <Plus size={15} />
+          {meta.cta}
+        </button>
+      </div>
+    );
+  };
+
+  const renderSection = (sectionKey: SectionKey) => {
+    const meta = SECTION_META[sectionKey];
+    const Icon = meta.icon;
+    const items = sections[sectionKey];
+
+    return (
+      <motion.section key={sectionKey} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.24 }} className="space-y-4">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <h2 className="flex items-center gap-2 text-2xl font-black tracking-tight text-slate-900">
+              <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ring-1 ${meta.tone}`}>
+                <Icon size={18} />
+              </span>
+              {meta.title}
+            </h2>
+            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">{meta.description}</p>
+          </div>
+          <button onClick={() => openCreateModal(meta.defaults)} className="hidden shrink-0 items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition hover:-translate-y-0.5 hover:border-slate-300 hover:text-slate-900 md:inline-flex">
+            <Plus size={15} />
+            {meta.cta}
+          </button>
+        </div>
+        {items.length === 0 ? renderEmpty(sectionKey) : <div className="space-y-3">{items.map((item) => renderCard(item))}</div>}
+      </motion.section>
+    );
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Sự kiện & Cột mốc</h1>
-          <p className="page-subtitle">Đừng để lỡ những ngày quan trọng của đôi ta... 🌹</p>
+    <div className="mx-auto max-w-5xl px-4 py-6 pb-24 md:py-8 md:pb-8">
+      <motion.section initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="overflow-hidden rounded-[2rem] border border-rose-100 bg-gradient-to-br from-rose-50 via-white to-sky-50 p-5 shadow-[0_30px_100px_-50px_rgba(244,114,182,0.45)] md:p-8">
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="max-w-2xl">
+              <span className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1.5 text-xs font-black uppercase tracking-[0.24em] text-rose-600 ring-1 ring-rose-100">
+                <Calendar size={12} />
+                Events
+              </span>
+              <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900 md:text-[2.75rem]">Những ngày cần được nhớ rõ</h1>
+              <p className="mt-3 text-sm leading-7 text-slate-600 md:text-[15px]">
+                Đây không chỉ là một list ngày tháng. Màn này giúp biết ngày nào sắp tới, ngày đó dành cho ai, và vì sao nó đáng để giữ lại giữa nhịp sống hằng ngày của hai bạn.
+              </p>
+            </div>
+            <button onClick={() => openCreateModal()} className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
+              <Plus size={16} />
+              Thêm một ngày mới
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <PersonBadge role={role} prefix="Đang xem với vai" variant="solid" />
+            <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-white/70">
+              {closestUpcoming ? <CalendarClock size={15} className="text-rose-500" /> : <Clock3 size={15} className="text-slate-400" />}
+              {closestUpcoming ? getCountdownCopy(closestUpcoming) : 'Chưa có ngày nào sắp tới được lưu lại.'}
+            </div>
+          </div>
+
+          <div className="grid gap-3 md:grid-cols-3">
+            {(['important', 'upcoming', 'past'] as SectionKey[]).map((sectionKey) => {
+              const meta = SECTION_META[sectionKey];
+              const count = sections[sectionKey].length;
+              return (
+                <div key={sectionKey} className="rounded-[1.5rem] border border-white/70 bg-white/80 p-4 shadow-sm ring-1 ring-white/70">
+                  <div className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${meta.tone}`}>
+                    <meta.icon size={12} />
+                    {meta.title}
+                  </div>
+                  <div className="mt-3 text-3xl font-black tracking-tight text-slate-900">{count}</div>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">
+                    {sectionKey === 'important' && (count > 0 ? 'Những ngày nổi bật cần nhớ kỹ.' : 'Chưa có ngày nổi bật nào được ghim.')}
+                    {sectionKey === 'upcoming' && (count > 0 ? 'Những dịp vẫn đang ở phía trước.' : 'Phần sắp tới vẫn đang để trống.')}
+                    {sectionKey === 'past' && (count > 0 ? 'Những ngày đã đi qua nhưng chưa biến mất.' : 'Phần nhìn lại sẽ hiện khi có dữ liệu.')}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
         </div>
-        <button
-          onClick={() => { setIsEditing(false); setFormData(initialForm); setShowModal(true); }}
-          className="btn-add"
-        >
-          <Plus size={20} />
-        </button>
+      </motion.section>
+
+      <div className="mt-8 space-y-10">
+        {loading ? (
+          <div className="flex justify-center py-24"><Loader2 className="animate-spin text-rose-400" size={40} /></div>
+        ) : events.length === 0 ? (
+          <section className="rounded-[2rem] border border-dashed border-rose-200 bg-white/85 p-6 text-center shadow-sm md:p-8">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-rose-50 text-rose-500 ring-1 ring-rose-200"><Calendar size={24} /></div>
+            <h2 className="mt-4 text-2xl font-black tracking-tight text-slate-900">Chưa có ngày nào được ghim lại</h2>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+              Events là nơi giữ sinh nhật, ngày quen nhau, buổi hẹn, và các dịp đặc biệt để nhìn vào là biết ngày đó thuộc về ai và vì sao nó đáng nhớ. Hiện tại phần này còn trống, nên bước đầu tiên là lưu một ngày thật sự có nghĩa.
+            </p>
+            <button onClick={() => openCreateModal({ eventType: 'anniversary', forWhom: 'both' })} className="mt-5 inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
+              <Plus size={16} />
+              Tạo ngày đầu tiên
+            </button>
+          </section>
+        ) : (
+          <>
+            {renderSection('important')}
+            {renderSection('upcoming')}
+            {renderSection('past')}
+          </>
+        )}
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20"><Loader2 className="animate-spin text-primary" size={40} /></div>
-      ) : events.length === 0 ? (
-        <div className="empty-state">
-          <Calendar className="text-pink-200 mx-auto mb-3" size={36} />
-          <p className="text-gray-400 font-medium">Chưa có sự kiện nào.</p>
-          <p className="text-gray-300 text-sm mt-1">Hãy lên lịch những ngày đặc biệt của hai bạn! 🌹</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {events.map((event) => {
-            const daysLeft = calculateDaysLeft(event.date);
-            return (
-              <motion.div key={event._id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="bg-white p-4 md:p-6 rounded-3xl shadow-sm border border-pink-50 flex items-center gap-3 md:gap-6 relative group">
-                <div className={`w-20 h-20 rounded-2xl flex flex-col items-center justify-center text-white font-bold ${daysLeft < 0 ? 'bg-gray-300' : 'bg-primary shadow-lg shadow-pink-100'}`}>
-                  {daysLeft === 0 ? <PartyPopper size={32} /> : (
-                    <>
-                      <span className="text-2xl leading-none">{Math.abs(daysLeft)}</span>
-                      <span className="text-[10px] uppercase">{daysLeft > 0 ? 'Ngày nữa' : 'Ngày trước'}</span>
-                    </>
-                  )}
-                </div>
-                <div className="flex-1">
-                  <h3 className="text-xl font-bold text-gray-800 mb-1">{event.title}</h3>
-                  <p className="text-gray-500 text-sm flex items-center gap-2"><Calendar size={14} className="text-primary" /> {new Date(event.date).toLocaleDateString('vi-VN')}</p>
-                  <p className="text-gray-400 text-xs mt-2 line-clamp-1">{event.description}</p>
-                </div>
-                {role === 'boyfriend' && (
-                  <div className="flex gap-1 md:opacity-0 md:group-hover:opacity-100 transition-all ml-auto shrink-0">
-                    <button onClick={() => handleEdit(event)} className="p-2.5 text-gray-400 hover:text-primary transition-all rounded-xl"><Pencil size={18} /></button>
-                    <button onClick={() => deleteEvent(event._id)} className="p-2.5 text-gray-400 hover:text-red-400 transition-all rounded-xl"><Trash2 size={18} /></button>
-                  </div>
-                )}
-              </motion.div>
-            );
-          })}
-        </div>
-      )}
-
-      {/* Modal Thêm/Sửa Sự Kiện */}
       <AnimatePresence>
         {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-800 font-romantic">{isEditing ? 'Sửa lịch sự kiện 📅' : 'Lên lịch sự kiện 📅'}</h2>
-                <button onClick={() => setShowModal(false)}><X /></button>
+          <div className="fixed inset-0 z-[100] flex items-end justify-center md:items-center md:p-4">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={closeModal} className="absolute inset-0 bg-slate-900/45 backdrop-blur-sm" />
+            <motion.div initial={{ opacity: 0, y: 28, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: 28, scale: 0.98 }} className="relative z-[101] w-full max-w-xl rounded-t-[2rem] bg-white p-5 shadow-2xl md:rounded-[2rem] md:p-7">
+              <div className="flex items-start justify-between gap-4">
+                <div className="min-w-0">
+                  <span className="inline-flex items-center gap-2 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-rose-600 ring-1 ring-rose-200">
+                    <CalendarClock size={12} />
+                    {isEditing ? 'Chỉnh ngày' : 'Ngày mới'}
+                  </span>
+                  <h2 className="mt-3 text-2xl font-black tracking-tight text-slate-900">{isEditing ? 'Bổ sung ngữ nghĩa cho ngày này' : 'Lưu một ngày để lần sau nhìn là hiểu ngay'}</h2>
+                  <p className="mt-2 text-sm leading-6 text-slate-600">Chọn loại, chọn người liên quan, rồi viết ngắn vì sao ngày này quan trọng.</p>
+                </div>
+                <button onClick={closeModal} className="rounded-2xl p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700" aria-label="Đóng">
+                  <X size={20} />
+                </button>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input required className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:bg-white border-2 border-transparent focus:border-primary transition-all text-sm" placeholder="Tên sự kiện..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-                <input type="date" required className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
-                <textarea className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" placeholder="Mô tả ngắn gọn..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-                <button type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg mt-2 transition-all active:scale-95">
-                  {isEditing ? 'Cập nhật sự kiện ❤️' : 'Lưu sự kiện ❤️'}
+
+              <div className="mt-4">
+                <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai' : 'Bạn đang ghi với vai'} />
+              </div>
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Tên ngày này</label>
+                  <input required value={formData.title} onChange={(e) => setFormData((current) => ({ ...current, title: e.target.value }))} placeholder="Ví dụ: Sinh nhật Ni, đi xem phim cùng nhau..." className="w-full rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100" />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Ngày diễn ra</label>
+                  <input type="date" required value={formData.date} onChange={(e) => setFormData((current) => ({ ...current, date: e.target.value }))} className="w-full rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm outline-none transition focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100" />
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700">Loại ngày</label>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {(Object.entries(TYPE_META) as [EventType, (typeof TYPE_META)[EventType]][]).map(([type, meta]) => {
+                      const Icon = meta.icon;
+                      const active = formData.eventType === type;
+                      return (
+                        <button key={type} type="button" onClick={() => setFormData((current) => ({ ...current, eventType: type }))} className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${active ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'}`}>
+                          <span className="flex items-center gap-2 text-sm font-black"><Icon size={16} />{meta.label}</span>
+                          <span className={`mt-2 block text-sm leading-6 ${active ? 'text-white/80' : 'text-slate-500'}`}>{meta.hint}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-sm font-bold text-slate-700">Ngày này dành cho ai</label>
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    {(['girlfriend', 'boyfriend', 'both'] as EventTarget[]).map((target) => {
+                      const active = formData.forWhom === target;
+                      return (
+                        <button key={target} type="button" onClick={() => setFormData((current) => ({ ...current, forWhom: target }))} className={`rounded-[1.25rem] border px-4 py-4 text-left transition ${active ? 'border-slate-900 bg-slate-900 text-white shadow-lg shadow-slate-200' : 'border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300 hover:bg-white'}`}>
+                          <span className="block text-sm font-black">{target === 'both' ? 'Cả hai' : ROLE_NAME[target]}</span>
+                          <span className={`mt-2 block text-sm leading-6 ${active ? 'text-white/80' : 'text-slate-500'}`}>
+                            {target === 'both' ? 'Dùng cho ngày chung như ngày quen nhau hoặc buổi hẹn của cả hai.' : `Dùng khi ngày này nghiêng rõ về ${ROLE_NAME[target]}.`}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-bold text-slate-700">Ý nghĩa ngày này</label>
+                  <textarea rows={4} value={formData.description} onChange={(e) => setFormData((current) => ({ ...current, description: e.target.value }))} placeholder="Ví dụ: ngày này quan trọng vì mình đã hẹn từ lâu, hoặc vì đây là sinh nhật của Ni..." className="w-full rounded-[1.25rem] border border-slate-200 bg-slate-50 px-4 py-3.5 text-sm leading-6 outline-none transition focus:border-rose-300 focus:bg-white focus:ring-2 focus:ring-rose-100" />
+                </div>
+
+                <button type="submit" className="inline-flex w-full items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3.5 text-sm font-bold text-white transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
+                  <CalendarClock size={16} />
+                  {isEditing ? 'Cập nhật ngày này' : 'Lưu ngày này'}
                 </button>
               </form>
             </motion.div>

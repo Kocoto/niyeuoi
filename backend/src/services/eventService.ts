@@ -1,6 +1,57 @@
-import Event, { IEvent } from '../models/Event';
+import Event, {
+    EVENT_TARGET_VALUES,
+    EVENT_TYPE_VALUES,
+    IEvent,
+    type EventTarget,
+    type EventType
+} from '../models/Event';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
+
+const EVENT_TYPE_LABEL: Record<EventType, string> = {
+    birthday: 'Sinh nhật',
+    anniversary: 'Ngày quen nhau',
+    date_plan: 'Hẹn đi chơi',
+    special_plan: 'Việc đặc biệt'
+};
+
+const EVENT_TARGET_LABEL: Record<EventTarget, string> = {
+    girlfriend: 'Ni',
+    boyfriend: 'Được',
+    both: 'cả hai'
+};
+
+const isEventType = (value: unknown): value is EventType =>
+    typeof value === 'string' && EVENT_TYPE_VALUES.includes(value as EventType);
+
+const isEventTarget = (value: unknown): value is EventTarget =>
+    typeof value === 'string' && EVENT_TARGET_VALUES.includes(value as EventTarget);
+
+const normalizeEventPayload = (data: Partial<IEvent>) => {
+    const payload: Partial<IEvent> = { ...data };
+
+    if (!isEventType(payload.eventType)) {
+        delete payload.eventType;
+    }
+
+    if (!isEventTarget(payload.forWhom)) {
+        delete payload.forWhom;
+    }
+
+    if (typeof payload.description === 'string') {
+        payload.description = payload.description.trim();
+    }
+
+    return payload;
+};
+
+const buildEventNotificationMessage = (event: IEvent) => {
+    const eventType = isEventType(event.eventType) ? EVENT_TYPE_LABEL[event.eventType] : 'Ngày quan trọng';
+    const target = isEventTarget(event.forWhom) ? EVENT_TARGET_LABEL[event.forWhom] : 'chưa rõ dành cho ai';
+    const note = event.description || 'Giữ lại ngày này để lần tới nhìn vào là biết vì sao nó quan trọng.';
+
+    return `Sự kiện: **${event.title}**\nLoại: ${eventType}\nDành cho: ${target}\nNgày diễn ra: ${new Date(event.date).toLocaleDateString('vi-VN')}\n<i>"${note}"</i>`;
+};
 
 class EventService {
     async getAllEvents() {
@@ -22,15 +73,22 @@ class EventService {
     }
 
     async createEvent(data: Partial<IEvent>) {
-        logger.info('Event', 'Tạo sự kiện mới', { title: data.title, date: data.date });
+        const payload = normalizeEventPayload(data);
+        logger.info('Event', 'Tạo sự kiện mới', {
+            title: payload.title,
+            date: payload.date,
+            eventType: payload.eventType,
+            forWhom: payload.forWhom,
+            createdBy: payload.createdBy
+        });
         try {
-            const event = await Event.create(data);
+            const event = await Event.create(payload);
             logger.success('Event', 'Tạo sự kiện thành công', { id: event._id, title: event.title });
 
             logger.info('Event', 'Gửi thông báo Discord...');
             await notificationService.sendDiscord(
-                '📅 Cột mốc quan trọng sắp tới!',
-                `Sự kiện: **${event.title}**\nNgày diễn ra: ${new Date(event.date).toLocaleDateString('vi-VN')}\n<i>"${event.description || 'Chuẩn bị tinh thần thôi!'}"</i>`,
+                '📅 Một ngày cần nhớ vừa được lưu lại',
+                buildEventNotificationMessage(event),
                 1752220
             );
             logger.success('Event', 'Đã gửi thông báo Discord');
@@ -49,7 +107,8 @@ class EventService {
 
     async updateEvent(id: string, data: Partial<IEvent>) {
         logger.info('Event', 'Cập nhật sự kiện', { id, fields: Object.keys(data) });
-        const event = await Event.findByIdAndUpdate(id, data, {
+        const payload = normalizeEventPayload(data);
+        const event = await Event.findByIdAndUpdate(id, payload, {
             new: true,
             runValidators: true
         });
@@ -57,7 +116,12 @@ class EventService {
             logger.warn('Event', 'Không tìm thấy sự kiện để cập nhật', { id });
             throw new Error('NOT_FOUND');
         }
-        logger.success('Event', 'Cập nhật sự kiện thành công', { title: event.title, date: event.date });
+        logger.success('Event', 'Cập nhật sự kiện thành công', {
+            title: event.title,
+            date: event.date,
+            eventType: event.eventType,
+            forWhom: event.forWhom
+        });
         return event;
     }
 

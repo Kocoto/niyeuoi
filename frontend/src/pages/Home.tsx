@@ -10,6 +10,7 @@ import {
   Sparkles,
   SunMedium,
   Sunset,
+  Ticket,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/api';
@@ -42,10 +43,44 @@ type DeepTalkQuestion = {
   answers: Record<Role, { text?: string; isInPerson?: boolean; answeredAt?: string }>;
 };
 
+type EventItem = {
+  _id: string;
+  title: string;
+  date: string;
+  description: string;
+  createdAt?: string;
+  createdBy?: Role;
+  eventType?: 'birthday' | 'anniversary' | 'date_plan' | 'special_plan';
+  forWhom?: Role | 'both';
+};
+
+type Challenge = {
+  _id: string;
+  title: string;
+  description: string;
+  isCompleted: boolean;
+  createdAt?: string;
+  createdBy?: Role;
+  forWhom?: Role | 'both';
+};
+
+type Coupon = {
+  _id: string;
+  title: string;
+  description: string;
+  isUsed: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+  createdBy?: Role;
+};
+
 type DashboardState = {
   memories: Memory[];
   moods: Mood[];
   questions: DeepTalkQuestion[];
+  events: EventItem[];
+  challenges: Challenge[];
+  coupons: Coupon[];
 };
 
 type RoleSummary = {
@@ -86,6 +121,7 @@ type Daypart = {
 
 const ROLE_ORDER: Role[] = ['girlfriend', 'boyfriend'];
 const START_DATE = new Date(2026, 1, 7, 20, 46, 0);
+const DATE_ONLY = /^(\d{4})-(\d{2})-(\d{2})/;
 
 const roleCopy: Record<Role, { eyebrow: string; title: string; subtitle: string; accent: string }> = {
   girlfriend: {
@@ -139,6 +175,10 @@ function isToday(dateStr?: string) {
   );
 }
 
+function getOppositeRole(currentRole: Role) {
+  return currentRole === 'girlfriend' ? 'boyfriend' : 'girlfriend';
+}
+
 function hasAnswered(answer?: DeepTalkQuestion['answers'][Role]) {
   return !!answer?.isInPerson || !!answer?.text;
 }
@@ -183,6 +223,71 @@ function getDaypart(): Daypart {
     note: 'Home nên giúp hai người tiếp tục câu chuyện đang dở, không phải nhìn một bảng số liệu.',
     icon: <MoonStar size={16} />,
   };
+}
+
+function parseDateOnly(value?: string) {
+  if (!value) return null;
+  const match = DATE_ONLY.exec(value);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12);
+  }
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function getDaysUntil(value?: string) {
+  const date = parseDateOnly(value);
+  if (!date) return null;
+  const today = new Date();
+  const target = new Date(date);
+  today.setHours(0, 0, 0, 0);
+  target.setHours(0, 0, 0, 0);
+  return Math.round((target.getTime() - today.getTime()) / 86400000);
+}
+
+function resolveTarget(value?: Role | 'both') {
+  if (value === 'both' || isRole(value)) return value;
+  return null;
+}
+
+function getTargetLabel(value?: Role | 'both') {
+  const target = resolveTarget(value);
+  if (target === 'both') return 'cả hai';
+  return target ? ROLE_NAME[target] : 'một phía chưa rõ';
+}
+
+function getEventReminderCopy(event: EventItem) {
+  const daysUntil = getDaysUntil(event.date);
+  const targetLabel = getTargetLabel(event.forWhom);
+
+  if (daysUntil === null) {
+    return `Một ngày dành cho ${targetLabel} đã được giữ lại.`;
+  }
+
+  if (daysUntil === 0) {
+    return `Hôm nay là dịp dành cho ${targetLabel}.`;
+  }
+
+  if (daysUntil === 1) {
+    return `Chỉ còn 1 ngày nữa tới dịp dành cho ${targetLabel}.`;
+  }
+
+  if (daysUntil > 1) {
+    return `Còn ${daysUntil} ngày nữa tới dịp dành cho ${targetLabel}.`;
+  }
+
+  return `Dịp này dành cho ${targetLabel} đã qua ${Math.abs(daysUntil)} ngày.`;
+}
+
+function getChallengeDirectionLabel(challenge: Challenge) {
+  const creator = resolveRole(challenge.createdBy);
+  const target = resolveTarget(challenge.forWhom);
+
+  if (target === 'both') return 'Cùng nhau';
+  if (creator && target) return `${ROLE_NAME[creator]} dành cho ${ROLE_NAME[target]}`;
+  if (target) return `Dành cho ${ROLE_NAME[target]}`;
+  if (creator) return `Khởi xướng bởi ${ROLE_NAME[creator]}`;
+  return 'Một challenge cũ chưa rõ hướng';
 }
 
 const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading: boolean }> = ({ summary, currentRole, loading }) => {
@@ -261,7 +366,14 @@ const FeedRow: React.FC<{ item: FeedItem }> = ({ item }) => (
 
 const Home: React.FC = () => {
   const { role } = useAuth();
-  const [data, setData] = useState<DashboardState>({ memories: [], moods: [], questions: [] });
+  const [data, setData] = useState<DashboardState>({
+    memories: [],
+    moods: [],
+    questions: [],
+    events: [],
+    challenges: [],
+    coupons: [],
+  });
   const [loading, setLoading] = useState(true);
   const [daysTogether, setDaysTogether] = useState(getElapsedDays);
 
@@ -277,14 +389,20 @@ const Home: React.FC = () => {
       api.get('/memories'),
       api.get('/moods'),
       api.get('/deeptalk/questions'),
+      api.get('/events'),
+      api.get('/challenges'),
+      api.get('/coupons'),
     ])
-      .then(([memoryResult, moodResult, questionResult]) => {
+      .then(([memoryResult, moodResult, questionResult, eventResult, challengeResult, couponResult]) => {
         if (!mounted) return;
 
         setData({
           memories: memoryResult.status === 'fulfilled' ? memoryResult.value.data.data ?? [] : [],
           moods: moodResult.status === 'fulfilled' ? moodResult.value.data.data ?? [] : [],
           questions: questionResult.status === 'fulfilled' ? questionResult.value.data.data ?? [] : [],
+          events: eventResult.status === 'fulfilled' ? eventResult.value.data.data ?? [] : [],
+          challenges: challengeResult.status === 'fulfilled' ? challengeResult.value.data.data ?? [] : [],
+          coupons: couponResult.status === 'fulfilled' ? couponResult.value.data.data ?? [] : [],
         });
       })
       .finally(() => {
@@ -350,6 +468,56 @@ const Home: React.FC = () => {
     return grouped;
   }, [data.questions]);
 
+  const latestEventByRole = useMemo<Record<Role, EventItem | undefined>>(() => ({
+    girlfriend: pickLatestByTimestamp(
+      data.events.filter(item => resolveRole(item.createdBy) === 'girlfriend'),
+      item => item.createdAt,
+    ),
+    boyfriend: pickLatestByTimestamp(
+      data.events.filter(item => resolveRole(item.createdBy) === 'boyfriend'),
+      item => item.createdAt,
+    ),
+  }), [data.events]);
+
+  const latestChallengeByRole = useMemo<Record<Role, Challenge | undefined>>(() => ({
+    girlfriend: pickLatestByTimestamp(
+      data.challenges.filter(item => resolveRole(item.createdBy) === 'girlfriend'),
+      item => item.createdAt,
+    ),
+    boyfriend: pickLatestByTimestamp(
+      data.challenges.filter(item => resolveRole(item.createdBy) === 'boyfriend'),
+      item => item.createdAt,
+    ),
+  }), [data.challenges]);
+
+  const latestCouponGiftByRole = useMemo<Record<Role, Coupon | undefined>>(() => ({
+    girlfriend: pickLatestByTimestamp(
+      data.coupons.filter(item => resolveRole(item.createdBy) === 'girlfriend'),
+      item => item.createdAt,
+    ),
+    boyfriend: pickLatestByTimestamp(
+      data.coupons.filter(item => resolveRole(item.createdBy) === 'boyfriend'),
+      item => item.createdAt,
+    ),
+  }), [data.coupons]);
+
+  const latestCouponUseByRole = useMemo<Record<Role, Coupon | undefined>>(() => ({
+    girlfriend: pickLatestByTimestamp(
+      data.coupons.filter((item) => {
+        const giver = resolveRole(item.createdBy);
+        return item.isUsed && giver ? getOppositeRole(giver) === 'girlfriend' : false;
+      }),
+      item => item.updatedAt ?? item.createdAt,
+    ),
+    boyfriend: pickLatestByTimestamp(
+      data.coupons.filter((item) => {
+        const giver = resolveRole(item.createdBy);
+        return item.isUsed && giver ? getOppositeRole(giver) === 'boyfriend' : false;
+      }),
+      item => item.updatedAt ?? item.createdAt,
+    ),
+  }), [data.coupons]);
+
   const pendingQuestionsByRole = useMemo<Record<Role, DeepTalkQuestion[]>>(() => ({
     girlfriend: data.questions.filter(question => !hasAnswered(question.answers?.girlfriend)),
     boyfriend: data.questions.filter(question => !hasAnswered(question.answers?.boyfriend)),
@@ -365,11 +533,35 @@ const Home: React.FC = () => {
     [data.questions],
   );
 
+  const nextUpcomingEvent = useMemo(() => {
+    const upcoming = data.events
+      .map(event => ({ event, daysUntil: getDaysUntil(event.date) }))
+      .filter((item): item is { event: EventItem; daysUntil: number } => item.daysUntil !== null && item.daysUntil >= 0)
+      .sort((left, right) => left.daysUntil - right.daysUntil);
+
+    return upcoming[0] ?? null;
+  }, [data.events]);
+
+  const waitingCouponForCurrentRole = useMemo(
+    () => pickLatestByTimestamp(
+      data.coupons.filter((coupon) => {
+        const giver = resolveRole(coupon.createdBy);
+        return !coupon.isUsed && giver ? getOppositeRole(giver) === role : false;
+      }),
+      coupon => coupon.createdAt,
+    ),
+    [data.coupons, role],
+  );
+
   const roleSummaries = useMemo<RoleSummary[]>(() => (
     ROLE_ORDER.map(currentRole => {
       const latestMood = moodsByRole[currentRole];
       const latestMemory = memoriesByRole[currentRole];
       const latestAnswer = latestAnswerByRole[currentRole];
+      const latestEvent = latestEventByRole[currentRole];
+      const latestChallenge = latestChallengeByRole[currentRole];
+      const latestGift = latestCouponGiftByRole[currentRole];
+      const latestUsedVoucher = latestCouponUseByRole[currentRole];
       const pendingCount = pendingQuestionsByRole[currentRole].length;
 
       const activityCandidates: Array<{ timestamp?: string; label: string; meta: string; to: string }> = [];
@@ -401,6 +593,44 @@ const Home: React.FC = () => {
         });
       }
 
+      if (latestEvent) {
+        activityCandidates.push({
+          timestamp: latestEvent.createdAt,
+          label: `Vừa ghim ngày "${latestEvent.title}"`,
+          meta: getEventReminderCopy(latestEvent),
+          to: '/events',
+        });
+      }
+
+      if (latestChallenge) {
+        activityCandidates.push({
+          timestamp: latestChallenge.createdAt,
+          label: `Vừa mở challenge "${latestChallenge.title}"`,
+          meta: getChallengeDirectionLabel(latestChallenge),
+          to: '/challenges',
+        });
+      }
+
+      if (latestGift) {
+        const recipient = getOppositeRole(currentRole);
+        activityCandidates.push({
+          timestamp: latestGift.createdAt,
+          label: `Vừa để lại voucher "${latestGift.title}"`,
+          meta: `Dành cho ${ROLE_NAME[recipient]}`,
+          to: '/coupons',
+        });
+      }
+
+      if (latestUsedVoucher) {
+        const giver = resolveRole(latestUsedVoucher.createdBy);
+        activityCandidates.push({
+          timestamp: latestUsedVoucher.updatedAt ?? latestUsedVoucher.createdAt,
+          label: `Vừa dùng voucher "${latestUsedVoucher.title}"`,
+          meta: giver ? `Tấm vé từ ${ROLE_NAME[giver]}` : 'Một voucher vừa được dùng',
+          to: '/coupons',
+        });
+      }
+
       const latestActivity = pickLatestByTimestamp(activityCandidates, candidate => candidate.timestamp);
       const hasOwnCheckIn = checkedInToday[currentRole];
 
@@ -413,17 +643,27 @@ const Home: React.FC = () => {
           ? `${hasOwnCheckIn ? 'Đã có nhịp hôm nay' : 'Lần gần nhất'} · ${formatRelative(latestMood.createdAt)}${latestMood.note ? ` · ${latestMood.note}` : ''}`
           : `Home vẫn giữ chỗ cho nhịp của ${ROLE_NAME[currentRole]} kể cả khi hôm nay chưa có dữ liệu.`,
         recentLabel: latestActivity ? latestActivity.label : `Chưa có cập nhật riêng gần đây từ ${ROLE_NAME[currentRole]}.`,
-        recentMeta: latestActivity ? latestActivity.meta : 'Khi có mood, Deep Talk hoặc kỷ niệm mới, phần này sẽ hiện đúng phía của người đó.',
+        recentMeta: latestActivity ? latestActivity.meta : 'Khi có mood, Deep Talk, kỷ niệm, kế hoạch, challenge hoặc voucher mới, phần này sẽ hiện đúng phía của người đó.',
         waitingLabel: pendingCount > 0
           ? `${pendingCount} câu hỏi vẫn đang chờ phần của ${ROLE_NAME[currentRole]}.`
           : hasOwnCheckIn
             ? `Phía ${ROLE_NAME[currentRole]} đang khá yên cho hôm nay.`
             : `${ROLE_NAME[currentRole]} vẫn chưa check-in hôm nay.`,
         actionTo: !hasOwnCheckIn ? '/mood' : pendingCount > 0 ? '/deeptalk' : latestActivity?.to ?? '/mood',
-        actionLabel: !hasOwnCheckIn ? 'Ghi cảm xúc ngay' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Xem thêm',
+        actionLabel: !hasOwnCheckIn ? 'Ghi cảm xúc ngay' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ',
       };
     })
-  ), [checkedInToday, latestAnswerByRole, memoriesByRole, moodsByRole, pendingQuestionsByRole]);
+  ), [
+    checkedInToday,
+    latestAnswerByRole,
+    latestChallengeByRole,
+    latestCouponGiftByRole,
+    latestCouponUseByRole,
+    latestEventByRole,
+    memoriesByRole,
+    moodsByRole,
+    pendingQuestionsByRole,
+  ]);
 
   const sharedPendingItems = useMemo<SharedPendingItem[]>(() => {
     const items: SharedPendingItem[] = [];
@@ -450,8 +690,29 @@ const Home: React.FC = () => {
       });
     }
 
+    if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 7) {
+      items.push({
+        key: `event-${nextUpcomingEvent.event._id}`,
+        title: `"${nextUpcomingEvent.event.title}" đang tới gần`,
+        detail: getEventReminderCopy(nextUpcomingEvent.event),
+        to: '/events',
+      });
+    }
+
+    if (waitingCouponForCurrentRole) {
+      const giver = resolveRole(waitingCouponForCurrentRole.createdBy);
+      items.push({
+        key: `coupon-${waitingCouponForCurrentRole._id}`,
+        title: giver
+          ? `${ROLE_NAME[giver]} đã để sẵn một voucher cho ${ROLE_NAME[role]}`
+          : 'Có một voucher đang nằm yên chờ bạn mở',
+        detail: waitingCouponForCurrentRole.description || waitingCouponForCurrentRole.title,
+        to: '/coupons',
+      });
+    }
+
     return items.slice(0, 4);
-  }, [checkedInToday, pendingQuestionsByRole]);
+  }, [checkedInToday, nextUpcomingEvent, pendingQuestionsByRole, role, waitingCouponForCurrentRole]);
 
   const nextStep = useMemo(() => {
     const myPendingQuestion = pendingQuestionsByRole[role][0];
@@ -477,6 +738,29 @@ const Home: React.FC = () => {
       };
     }
 
+    if (waitingCouponForCurrentRole) {
+      const giver = resolveRole(waitingCouponForCurrentRole.createdBy);
+      return {
+        to: '/coupons',
+        title: giver
+          ? `Có một voucher từ ${ROLE_NAME[giver]} đang chờ ${ROLE_NAME[role]}`
+          : 'Có một voucher đang đợi bạn mở ra',
+        detail: waitingCouponForCurrentRole.description || waitingCouponForCurrentRole.title,
+        button: 'Mở ví voucher',
+        icon: <Ticket size={18} />,
+      };
+    }
+
+    if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 5) {
+      return {
+        to: '/events',
+        title: `Chuẩn bị cho "${nextUpcomingEvent.event.title}"`,
+        detail: getEventReminderCopy(nextUpcomingEvent.event),
+        button: 'Xem ngày đã ghim',
+        icon: <CalendarDays size={18} />,
+      };
+    }
+
     if (!myLatestMemory) {
       return {
         to: '/timeline',
@@ -494,84 +778,133 @@ const Home: React.FC = () => {
       button: 'Mở timeline',
       icon: <CalendarDays size={18} />,
     };
-  }, [checkedInToday, memoriesByRole, pendingQuestionsByRole, role]);
+  }, [checkedInToday, memoriesByRole, nextUpcomingEvent, pendingQuestionsByRole, role, waitingCouponForCurrentRole]);
 
-  const pulseItems = useMemo(() => [
-    checkedInToday.girlfriend && moodsByRole.girlfriend
-      ? `Ni đang ${moodsByRole.girlfriend.mood.toLowerCase()}`
-      : 'Ni chưa check-in',
-    checkedInToday.boyfriend && moodsByRole.boyfriend
-      ? `Được đang ${moodsByRole.boyfriend.mood.toLowerCase()}`
-      : 'Được chưa check-in',
-    incompleteQuestionCount > 0
-      ? `${incompleteQuestionCount} câu hỏi đang chờ`
-      : 'Deep Talk đang khá yên',
-  ], [checkedInToday, incompleteQuestionCount, moodsByRole]);
+  const pulseItems = useMemo(() => {
+    const items = [
+      checkedInToday.girlfriend && moodsByRole.girlfriend
+        ? `Ni đang ${moodsByRole.girlfriend.mood.toLowerCase()}`
+        : 'Ni chưa check-in',
+      checkedInToday.boyfriend && moodsByRole.boyfriend
+        ? `Được đang ${moodsByRole.boyfriend.mood.toLowerCase()}`
+        : 'Được chưa check-in',
+      incompleteQuestionCount > 0
+        ? `${incompleteQuestionCount} câu hỏi đang chờ`
+        : 'Deep Talk đang khá yên',
+    ];
+
+    if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 7) {
+      items.push(
+        nextUpcomingEvent.daysUntil === 0
+          ? `"${nextUpcomingEvent.event.title}" là hôm nay`
+          : `"${nextUpcomingEvent.event.title}" còn ${nextUpcomingEvent.daysUntil} ngày`,
+      );
+    } else if (waitingCouponForCurrentRole) {
+      items.push('Có một voucher đang chờ được mở');
+    }
+
+    return items;
+  }, [checkedInToday, incompleteQuestionCount, moodsByRole, nextUpcomingEvent, waitingCouponForCurrentRole]);
 
   const recentFeed = useMemo<FeedItem[]>(() => {
-    const latestMood = data.moods[0];
-    const moodOwner = resolveRole(latestMood?.createdBy);
-
-    const latestMemory = data.memories[0];
-    const memoryOwner = resolveRole(latestMemory?.createdBy);
-
-    const latestAnsweredByAnyone = pickLatestByTimestamp(
-      data.questions.flatMap(question =>
+    const items: FeedItem[] = [
+      ...data.moods.map<FeedItem>((mood) => {
+        const owner = resolveRole(mood.createdBy);
+        return {
+          key: `mood-${mood.createdAt ?? mood.mood}`,
+          role: owner,
+          title: owner ? `${ROLE_NAME[owner]} vừa ghi ${mood.mood.toLowerCase()}` : 'Một check-in vừa được giữ lại',
+          detail: mood.note ? mood.note : 'Mood mới sẽ hiện đúng phía của người ghi thay vì dồn vào một luồng chung.',
+          meta: `${formatRelative(mood.createdAt)} · Cảm xúc`,
+          to: '/mood',
+          timestamp: mood.createdAt,
+        };
+      }),
+      ...data.questions.flatMap(question =>
         ROLE_ORDER
           .filter(currentRole => !!question.answers?.[currentRole]?.answeredAt)
-          .map(currentRole => ({
-            question,
+          .map<FeedItem>((currentRole) => ({
+            key: `answer-${question._id}-${currentRole}-${question.answers[currentRole]?.answeredAt ?? 'legacy'}`,
             role: currentRole,
-            answer: question.answers[currentRole],
+            title: question.answers[currentRole]?.isInPerson
+              ? `${ROLE_NAME[currentRole]} vừa đánh dấu đã nói ngoài đời`
+              : `${ROLE_NAME[currentRole]} vừa trả lời một câu hỏi`,
+            detail: question.content,
+            meta: `${formatRelative(question.answers[currentRole]?.answeredAt)} · Deep Talk`,
+            to: '/deeptalk',
+            timestamp: question.answers[currentRole]?.answeredAt,
           })),
       ),
-      item => item.answer.answeredAt,
-    );
+      ...data.memories.map<FeedItem>((memory) => {
+        const owner = resolveRole(memory.createdBy);
+        return {
+          key: `memory-${memory.createdAt ?? memory._id}`,
+          role: owner,
+          title: owner ? `${ROLE_NAME[owner]} vừa lưu một kỷ niệm` : 'Một kỷ niệm cũ vẫn đang được giữ ở đây',
+          detail: memory.title,
+          meta: `${formatRelative(memory.createdAt ?? memory.date)} · Timeline`,
+          to: '/timeline',
+          timestamp: memory.createdAt ?? memory.date,
+        };
+      }),
+      ...data.events.map<FeedItem>((event) => {
+        const creator = resolveRole(event.createdBy);
+        return {
+          key: `event-${event._id}`,
+          role: creator,
+          title: creator ? `${ROLE_NAME[creator]} vừa ghim ngày "${event.title}"` : 'Một ngày quan trọng vừa được ghim lại',
+          detail: getEventReminderCopy(event),
+          meta: `${formatRelative(event.createdAt)} · Sự kiện`,
+          to: '/events',
+          timestamp: event.createdAt,
+        };
+      }),
+      ...data.challenges.map<FeedItem>((challenge) => {
+        const creator = resolveRole(challenge.createdBy);
+        return {
+          key: `challenge-${challenge._id}`,
+          role: creator,
+          title: creator ? `${ROLE_NAME[creator]} vừa mở challenge "${challenge.title}"` : 'Một challenge vừa được giữ lại',
+          detail: getChallengeDirectionLabel(challenge),
+          meta: `${formatRelative(challenge.createdAt)} · Challenge`,
+          to: '/challenges',
+          timestamp: challenge.createdAt,
+        };
+      }),
+      ...data.coupons.map<FeedItem>((coupon) => {
+        const giver = resolveRole(coupon.createdBy);
+        const receiver = giver ? getOppositeRole(giver) : null;
+        const usedTimestamp = coupon.updatedAt ?? coupon.createdAt;
 
-    const items: FeedItem[] = [];
+        if (coupon.isUsed) {
+          return {
+            key: `coupon-used-${coupon._id}`,
+            role: receiver,
+            title: receiver ? `${ROLE_NAME[receiver]} vừa dùng voucher "${coupon.title}"` : 'Một voucher vừa được dùng',
+            detail: giver ? `Tấm vé từ ${ROLE_NAME[giver]}` : coupon.description || 'Một lời hứa vừa được chạm tới.',
+            meta: `${formatRelative(usedTimestamp)} · Voucher`,
+            to: '/coupons',
+            timestamp: usedTimestamp,
+          };
+        }
 
-    if (latestMood) {
-      items.push({
-        key: `mood-${latestMood.createdAt ?? latestMood.mood}`,
-        role: moodOwner,
-        title: moodOwner ? `${ROLE_NAME[moodOwner]} vừa ghi ${latestMood.mood.toLowerCase()}` : 'Một check-in vừa được giữ lại',
-        detail: latestMood.note ? latestMood.note : 'Mood mới sẽ hiện đúng phía của người ghi thay vì dồn vào một luồng chung.',
-        meta: `${formatRelative(latestMood.createdAt)} · Cảm xúc`,
-        to: '/mood',
-        timestamp: latestMood.createdAt,
-      });
-    }
-
-    if (latestAnsweredByAnyone) {
-      items.push({
-        key: `answer-${latestAnsweredByAnyone.answer.answeredAt ?? latestAnsweredByAnyone.question._id}`,
-        role: latestAnsweredByAnyone.role,
-        title: latestAnsweredByAnyone.answer.isInPerson
-          ? `${ROLE_NAME[latestAnsweredByAnyone.role]} vừa đánh dấu đã nói ngoài đời`
-          : `${ROLE_NAME[latestAnsweredByAnyone.role]} vừa trả lời một câu hỏi`,
-        detail: latestAnsweredByAnyone.question.content,
-        meta: `${formatRelative(latestAnsweredByAnyone.answer.answeredAt)} · Deep Talk`,
-        to: '/deeptalk',
-        timestamp: latestAnsweredByAnyone.answer.answeredAt,
-      });
-    }
-
-    if (latestMemory) {
-      items.push({
-        key: `memory-${latestMemory.createdAt ?? latestMemory._id}`,
-        role: memoryOwner,
-        title: memoryOwner ? `${ROLE_NAME[memoryOwner]} vừa lưu một kỷ niệm` : 'Một kỷ niệm cũ vẫn đang được giữ ở đây',
-        detail: latestMemory.title,
-        meta: `${formatRelative(latestMemory.createdAt ?? latestMemory.date)} · Timeline`,
-        to: '/timeline',
-        timestamp: latestMemory.createdAt ?? latestMemory.date,
-      });
-    }
+        return {
+          key: `coupon-${coupon._id}`,
+          role: giver,
+          title: giver ? `${ROLE_NAME[giver]} vừa để lại voucher "${coupon.title}"` : 'Một voucher mới vừa được để lại',
+          detail: receiver ? `Dành cho ${ROLE_NAME[receiver]}` : coupon.description || 'Một đặc quyền nhỏ đang chờ đúng người.',
+          meta: `${formatRelative(coupon.createdAt)} · Voucher`,
+          to: '/coupons',
+          timestamp: coupon.createdAt,
+        };
+      }),
+    ];
 
     return items
+      .filter(item => !!item.timestamp)
       .sort((left, right) => new Date(right.timestamp ?? 0).getTime() - new Date(left.timestamp ?? 0).getTime())
-      .slice(0, 4);
-  }, [data.memories, data.moods, data.questions]);
+      .slice(0, 6);
+  }, [data.challenges, data.coupons, data.events, data.memories, data.moods, data.questions]);
 
   return (
     <div className="page-container space-y-5 md:space-y-6">
@@ -681,17 +1014,15 @@ const Home: React.FC = () => {
       <section className="surface-card p-5 md:p-6">
         <div className="mb-4 flex items-end justify-between gap-3">
           <div>
-            <p className="section-label">Gần đây</p>
-            <h2 className="mt-2 text-2xl font-black text-ink">Một luồng ngắn để thấy app vẫn đang sống</h2>
+            <p className="section-label">Vừa rồi</p>
+            <h2 className="mt-2 text-2xl font-black text-ink">Một luồng ngắn để biết ai vừa chạm vào điều gì</h2>
           </div>
-          <Link to="/timeline" className="text-sm font-bold text-primary">
-            Xem thêm
-          </Link>
+          <span className="text-xs font-bold uppercase tracking-[0.18em] text-soft">Chạm để mở đúng chỗ</span>
         </div>
 
         {recentFeed.length === 0 ? (
           <div className="rounded-[1.5rem] bg-[#fcf7fa] p-4 text-sm leading-6 text-soft">
-            Khi có mood, câu trả lời Deep Talk hoặc một kỷ niệm mới, Home sẽ kéo chúng về đây dưới dạng luồng ngắn thay vì ép mọi thứ thành shortcut khô khan.
+            Luồng này dành để thấy mood, Deep Talk, kỷ niệm, ngày đã ghim, challenge và voucher vừa được chạm tới. Nếu hôm nay còn trống, hãy bắt đầu bằng một check-in hoặc lưu lại một kỷ niệm nhỏ để Home có nhịp rõ hơn.
           </div>
         ) : (
           <div className="grid gap-3 md:grid-cols-2">

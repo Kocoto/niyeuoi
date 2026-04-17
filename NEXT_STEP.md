@@ -249,7 +249,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### B2 - Wishlist redesign
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - tách rõ `Ni muốn`, `Được muốn`, `Đang chuẩn bị`
 - Reference Sections:
@@ -264,27 +264,69 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### B3 - Events redesign
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - làm rõ ai tạo, ngày đó dành cho ai, và ý nghĩa của ngày
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `9. Events`
+    - `29. Wireflow Events`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - tách event theo ngữ nghĩa rõ hơn thay vì list ngày tháng phẳng
+  - làm rõ ai tạo và ngày đó dành cho ai
+  - giữ đúng tinh thần riêng tư, mobile-first, không lẫn sang activity feed
 
 ### B4 - Challenges redesign
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - bớt cảm giác game nhiệm vụ, tăng nghĩa “cùng nhau” hoặc “dành cho nhau”
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `10. Challenges`
+    - `30. Wireflow Challenges`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - tách challenge theo ngữ nghĩa `cùng nhau`, `Ni dành cho Được`, `Được dành cho Ni`
+  - giảm cảm giác task list / gamification chung chung
+  - giữ đúng tinh thần riêng tư, mobile-first, không lẫn sang activity feed hay reward
 
 ### B5 - Activity feed
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - tạo luồng `vừa rồi` để Home có nhịp sống hàng ngày rõ hơn
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.3 Activity feed của cặp đôi`
+    - `2. Home / Dashboard`
+    - `33. Wireflow activity feed`
+    - `34. Wireflow notification / reminder UX`
+    - `36. Wireflow empty states / zero states`
+- In scope:
+  - tạo luồng `vừa rồi` rõ ai vừa ghi gì, ai vừa làm gì, điều gì đang chờ
+  - làm Home có nhịp quay lại hằng ngày rõ hơn mà không biến thành dashboard KPI
+  - giữ đúng tinh thần riêng tư, mobile-first, không lẫn sang global filter hay navigation refinement
 
 ### B6 - Global filter theo người
 
-- Status: `pending`
+- Status: `active`
 - Mục tiêu:
   - hỗ trợ `Tất cả` / `Ni` / `Được` ở các màn có nhiều nội dung cá nhân
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.1 Identity system cho Ni và Được`
+    - `6. Places / Địa điểm`
+    - `8. Wishlist`
+    - `9. Events`
+    - `10. Challenges`
+    - `13. Shared UI System`
+    - `31. Wireflow shared identity system`
+- In scope:
+  - xác định nơi thật sự cần `Tất cả` / `Ni` / `Được` thay vì thêm filter đại trà
+  - dùng chung ngôn ngữ và badge từ Phase A để filter không làm mờ vai trò
+  - giữ backward-compatible và không phá các grouping vừa hoàn tất ở Places / Wishlist / Events / Challenges
 
 ### B7 - Navigation / app shell refinement
 
@@ -300,22 +342,22 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Active Slice
 
-- ID: `B2`
+- ID: `B6`
 - Status: `active`
-- Tên: `Wishlist redesign`
+- Tên: `Global filter theo người`
 - Việc phải làm ngay:
-  1. Đọc đúng `8`, `28`, và nếu cần empty state thì `36` trong `UI_UX_IDEAS.md`.
-  2. Tách rõ wishlist theo `Ni muốn`, `Được muốn`, `Đang chuẩn bị`.
-  3. Giữ rõ ai muốn gì, không gộp hai người vào một luồng wishlist mơ hồ.
-  4. Không mở rộng sang `B3+`, không đụng global filter hay activity feed trong lượt này.
+  1. Đọc đúng `1.1`, `6`, `8`, `9`, `10`, `13`, và `31` trong `UI_UX_IDEAS.md`.
+  2. Xác định màn nào thật sự cần `Tất cả` / `Ni` / `Được`, và màn nào nên giữ grouping hiện có.
+  3. Thiết kế filter sao cho vẫn rõ `Ni` và `Được`, không kéo UI về một luồng chung mơ hồ.
+  4. Không mở rộng sang `B7+`, không đụng app shell refinement hay empty-state overhaul trong lượt này.
 - Không được làm trong slice này:
   - map privacy redesign
-  - global filter theo người
-  - events / challenges / activity feed
+  - navigation / app shell refinement
+  - empty state overhaul diện rộng
   - reward / trigger / voucher / smart suggestions
 - Done checklist:
-  - wishlist tách nhóm rõ và dễ hiểu trên mobile
-  - copy/empty state phản ánh đúng tinh thần sản phẩm
+  - filter hỗ trợ xem theo `Tất cả` / `Ni` / `Được` ở đúng màn cần thiết
+  - filter không phá grouping và copy hiện có của từng màn
   - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
@@ -335,57 +377,55 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `B1 - Places redesign`
+- `B5 - Activity feed`
 
 ### Current status
 
-- `B1` đã hoàn tất và `B2 - Wishlist redesign` đã được chuyển sang active.
-- Kết quả chốt cho `B1`:
-  - `Place` có thêm field trạng thái theo kiểu backward-compatible để giữ được `Muốn đi` / `Lần tới nên thử` / `Đã đi` mà không phá dữ liệu cũ
-  - `frontend/src/pages/Places.tsx` đã được sắp lại IA thành ba nhóm rõ ràng, có quick decision, empty state đúng ngữ cảnh, và wording không còn giống list CRUD phẳng
-  - role `Ni` / `Được` được giữ rõ ở Places qua `PersonBadge`; record cũ thiếu metadata vẫn render bằng wording trung tính thay vì gán bừa
-  - flow add/edit/mark visited vẫn hoạt động trên contract mới; `isVisited` cũ vẫn được dùng để map an toàn khi record chưa có field trạng thái mới
-- Chưa chạy browser/manual smoke cho `B1` trong phiên này; xác nhận hiện có đang ở mức build + eslint file vừa sửa
+- `B5` đã hoàn tất và `B6 - Global filter theo người` đã được chuyển sang active.
+- Kết quả chốt cho `B5`:
+  - `frontend/src/pages/Home.tsx` giờ lấy thêm `events`, `challenges`, và `coupons` cùng với `moods`, `deeptalk`, `memories` để Home có một luồng `Vừa rồi` sống hơn nhưng vẫn ngắn gọn
+  - feed `Vừa rồi` đã nói rõ ai vừa làm gì, deep-link đúng màn, và có fallback trung tính cho record cũ thiếu metadata thay vì làm vỡ Home
+  - `Điều đang chờ giữa hai người` được thêm reminder dịu cho ngày sắp tới và voucher đang chờ, nhưng vẫn ưu tiên mood/deep talk và không biến Home thành dashboard KPI
+  - `Một bước tiếp theo` giờ có thể dẫn sang voucher hoặc event khi phù hợp, sau khi đã ưu tiên các việc có tính nhịp hàng ngày như mood và Deep Talk
+  - empty state của feed đã đổi sang ngôn ngữ giải thích khu vực này dùng để làm gì và người dùng nên bắt đầu từ đâu
+- Chưa chạy browser/manual smoke cho `B5`; xác nhận hiện có đang ở mức build + eslint file vừa sửa
 
 ### Files touched in latest session
 
-- `backend/src/models/Place.ts`
-- `backend/src/services/placeService.ts`
-- `frontend/src/pages/Places.tsx`
+- `frontend/src/pages/Home.tsx`
 - `NEXT_STEP.md`
-- Các file còn đang modified từ slice trước trong worktree:
-  - `backend/src/controllers/deepTalkController.ts`
-  - `backend/src/controllers/moodController.ts`
-  - `frontend/src/pages/Timeline.tsx`
 
 ### Tests run in latest session
 
 - Đã chạy `npm run build` trong `frontend`.
 - Kết quả: pass.
-- Đã chạy `npx eslint src/pages/Places.tsx` trong `frontend`.
-- Kết quả: pass.
-- Đã chạy `npm run build` trong `backend`.
+- Đã chạy `npx eslint src/pages/Home.tsx` trong `frontend`.
 - Kết quả: pass.
 - Ghi chú:
   - frontend build vẫn có cảnh báo chunk size của Vite, nhưng không fail build
-  - chưa có browser smoke riêng cho `B1`
+  - chưa có browser smoke riêng cho `B5`
 
 ### Known blockers
 
-- Không có blocker mở cho `B1`.
+- Không có blocker mở cho `B5`.
 - Lượt tiếp theo vẫn cần giữ guardrail:
-  - không kéo `B2` sang global filter theo người
-  - không gộp `Ni` và `Được` thành một wishlist chung mơ hồ
-  - không phá dữ liệu cũ chỉ để ép schema theo UI mới
+  - không kéo `B6` sang navigation/app shell refinement hoặc empty-state overhaul diện rộng
+  - không thêm filter ở mọi màn nếu grouping hiện có đã đủ rõ
+  - không phá dữ liệu cũ hay làm mờ ranh giới `Ni` / `Được` chỉ để có filter thống nhất
 
 ### Next concrete step
 
-- Bắt đầu `B2 - Wishlist redesign`.
+- Bắt đầu `B6 - Global filter theo người`.
 - Đọc đúng các section:
+  - `1.1 Identity system cho Ni và Được`
+  - `6. Places / Địa điểm`
   - `8. Wishlist`
-  - `28. Wireflow Wishlist`
-  - nếu cần empty state thì `36. Wireflow empty states / zero states`
+  - `9. Events`
+  - `10. Challenges`
+  - `13. Shared UI System`
+  - `31. Wireflow shared identity system`
 - Ưu tiên đọc trước:
+  - `frontend/src/pages/Places.tsx`
   - `frontend/src/pages/Wishlist.tsx`
-  - `backend/src/models/Wishlist.ts`
-  - `backend/src/services/wishlistService.ts`
+  - `frontend/src/pages/Events.tsx`
+  - `frontend/src/pages/Challenges.tsx`

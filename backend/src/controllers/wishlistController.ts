@@ -1,11 +1,11 @@
 import { Request, Response } from 'express';
 import type { IWishlist } from '../models/Wishlist';
 import wishlistService from '../services/wishlistService';
-import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
+import { getRequestAuthRole, resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
 export const getWishlist = async (req: Request, res: Response) => {
     try {
-        const wishes = await wishlistService.getAllWishes();
+        const wishes = await wishlistService.getAllWishes(getRequestAuthRole(req));
         res.status(200).json({ success: true, count: wishes.length, data: wishes });
     } catch (err: any) {
         res.status(500).json({ success: false, error: 'Lỗi máy chủ khi lấy danh sách wishlist' });
@@ -14,7 +14,7 @@ export const getWishlist = async (req: Request, res: Response) => {
 
 export const getWishlistItem = async (req: Request, res: Response) => {
     try {
-        const wish = await wishlistService.getWishById(req.params.id as string);
+        const wish = await wishlistService.getWishById(req.params.id as string, getRequestAuthRole(req));
         res.status(200).json({ success: true, data: wish });
     } catch (err: any) {
         if (err.message === 'NOT_FOUND') {

@@ -1,25 +1,92 @@
-import Challenge, { IChallenge } from '../models/Challenge';
+import Challenge, { CHALLENGE_TARGET_VALUES, IChallenge, type ChallengeTarget } from '../models/Challenge';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
+import type { AuthRole } from '../utils/authToken';
+
+const ROLE_LABEL: Record<AuthRole, string> = {
+    boyfriend: 'Được',
+    girlfriend: 'Ni'
+};
+
+const CHALLENGE_TARGET_LABEL: Record<ChallengeTarget, string> = {
+    boyfriend: 'Được',
+    girlfriend: 'Ni',
+    both: 'cả hai'
+};
+
+const isAuthRole = (value: unknown): value is AuthRole =>
+    value === 'boyfriend' || value === 'girlfriend';
+
+const isChallengeTarget = (value: unknown): value is ChallengeTarget =>
+    typeof value === 'string' && CHALLENGE_TARGET_VALUES.includes(value as ChallengeTarget);
+
+const normalizeChallengePayload = (data: Partial<IChallenge>) => {
+    const payload: Partial<IChallenge> = { ...data };
+
+    if (typeof payload.description === 'string') {
+        payload.description = payload.description.trim();
+    }
+
+    if (!isChallengeTarget(payload.forWhom)) {
+        delete payload.forWhom;
+    }
+
+    if (typeof payload.points === 'number' && Number.isFinite(payload.points)) {
+        payload.points = Math.max(0, payload.points);
+    }
+
+    return payload;
+};
+
+const getChallengeDirectionLabel = (challenge: Pick<IChallenge, 'createdBy' | 'forWhom'>) => {
+    if (challenge.forWhom === 'both') {
+        return 'Cùng nhau';
+    }
+
+    if (isAuthRole(challenge.createdBy) && isChallengeTarget(challenge.forWhom)) {
+        return `${ROLE_LABEL[challenge.createdBy]} dành cho ${CHALLENGE_TARGET_LABEL[challenge.forWhom]}`;
+    }
+
+    if (isChallengeTarget(challenge.forWhom)) {
+        return `Dành cho ${CHALLENGE_TARGET_LABEL[challenge.forWhom]}`;
+    }
+
+    if (isAuthRole(challenge.createdBy)) {
+        return `Khởi xướng bởi ${ROLE_LABEL[challenge.createdBy]}`;
+    }
+
+    return 'Đang giữ từ trước';
+};
+
+const buildChallengeNotificationMessage = (challenge: IChallenge) =>
+    `Challenge: **${challenge.title}**\nHướng: ${getChallengeDirectionLabel(challenge)}\nĐộ khó: ${challenge.difficulty}\nNhịp thưởng: ${challenge.points}\n<i>"${challenge.description || 'Giữ lại để cả hai có thêm một điều đáng làm cùng nhau.'}"</i>`;
 
 class ChallengeService {
     async getAllChallenges() {
-        logger.info('Challenge', 'Lấy danh sách thử thách');
+        logger.info('Challenge', 'Lấy danh sách challenge');
         const challenges = await Challenge.find().sort({ createdAt: -1 });
-        logger.success('Challenge', `Trả về ${challenges.length} thử thách`);
+        logger.success('Challenge', `Trả về ${challenges.length} challenge`);
         return challenges;
     }
 
     async createChallenge(data: Partial<IChallenge>) {
-        logger.info('Challenge', 'Tạo thử thách mới', { title: data.title, difficulty: data.difficulty, points: data.points });
+        const payload = normalizeChallengePayload(data);
+        logger.info('Challenge', 'Tạo challenge mới', {
+            title: payload.title,
+            difficulty: payload.difficulty,
+            points: payload.points,
+            createdBy: payload.createdBy,
+            forWhom: payload.forWhom
+        });
+
         try {
-            const challenge = await Challenge.create(data);
-            logger.success('Challenge', 'Tạo thử thách thành công', { id: challenge._id, title: challenge.title });
+            const challenge = await Challenge.create(payload);
+            logger.success('Challenge', 'Tạo challenge thành công', { id: challenge._id, title: challenge.title });
 
             logger.info('Challenge', 'Gửi thông báo Discord...');
             await notificationService.sendDiscord(
-                '🔥 Thử thách Tình yêu mới!',
-                `Nhiệm vụ: **${challenge.title}**\nĐộ khó: ${challenge.difficulty}\nĐiểm thưởng: **${challenge.points} ✨**\nCùng nhau thực hiện nhé!`,
+                '💞 Có một challenge mới cho hai bạn',
+                buildChallengeNotificationMessage(challenge),
                 15105570
             );
             logger.success('Challenge', 'Đã gửi thông báo Discord');
@@ -28,29 +95,44 @@ class ChallengeService {
         } catch (error: any) {
             if (error.name === 'ValidationError') {
                 const messages = Object.values(error.errors).map((val: any) => val.message);
-                logger.error('Challenge', 'Lỗi validation khi tạo thử thách', messages);
+                logger.error('Challenge', 'Lỗi validation khi tạo challenge', messages);
                 throw new Error(`VALIDATION_ERROR: ${messages.join(', ')}`);
             }
-            logger.error('Challenge', 'Lỗi khi tạo thử thách', error);
+
+            logger.error('Challenge', 'Lỗi khi tạo challenge', error);
             throw error;
         }
     }
 
     async updateChallenge(id: string, data: Partial<IChallenge>) {
-        logger.info('Challenge', 'Cập nhật thử thách', { id, fields: Object.keys(data) });
+        logger.info('Challenge', 'Cập nhật challenge', { id, fields: Object.keys(data) });
         const oldChallenge = await Challenge.findById(id);
-        const challenge = await Challenge.findByIdAndUpdate(id, data, { new: true });
+        const payload = normalizeChallengePayload(data);
+        const challenge = await Challenge.findByIdAndUpdate(id, payload, {
+            new: true,
+            runValidators: true
+        });
+
         if (!challenge) {
-            logger.warn('Challenge', 'Không tìm thấy thử thách để cập nhật', { id });
+            logger.warn('Challenge', 'Không tìm thấy challenge để cập nhật', { id });
             throw new Error('NOT_FOUND');
         }
-        logger.success('Challenge', 'Cập nhật thành công', { title: challenge.title, isCompleted: challenge.isCompleted });
+
+        logger.success('Challenge', 'Cập nhật challenge thành công', {
+            title: challenge.title,
+            isCompleted: challenge.isCompleted,
+            createdBy: challenge.createdBy,
+            forWhom: challenge.forWhom
+        });
 
         if (!oldChallenge?.isCompleted && challenge.isCompleted) {
-            logger.info('Challenge', `Thử thách "${challenge.title}" vừa hoàn thành! +${challenge.points} điểm. Gửi thông báo...`);
+            logger.info('Challenge', 'Challenge vừa được hoàn thành, gửi thông báo Discord...', {
+                title: challenge.title,
+                points: challenge.points
+            });
             await notificationService.sendDiscord(
-                '🏆 Thử thách đã hoàn thành!',
-                `Chúc mừng hai bạn đã vượt qua thử thách: **${challenge.title}**\nCộng ngay **${challenge.points} điểm** vào quỹ hạnh phúc! 🎉`,
+                '🌿 Một challenge vừa được khép lại',
+                `Challenge **${challenge.title}** đã hoàn thành.\nHướng: ${getChallengeDirectionLabel(challenge)}\nNhịp thưởng: ${challenge.points}\n🎉`,
                 3066993
             );
             logger.success('Challenge', 'Đã gửi thông báo Discord hoàn thành');
@@ -60,14 +142,15 @@ class ChallengeService {
     }
 
     async deleteChallenge(id: string) {
-        logger.info('Challenge', 'Xóa thử thách', { id });
+        logger.info('Challenge', 'Xóa challenge', { id });
         const challenge = await Challenge.findById(id);
         if (!challenge) {
-            logger.warn('Challenge', 'Không tìm thấy thử thách để xóa', { id });
+            logger.warn('Challenge', 'Không tìm thấy challenge để xóa', { id });
             throw new Error('NOT_FOUND');
         }
+
         await challenge.deleteOne();
-        logger.success('Challenge', 'Đã xóa thử thách', { title: challenge.title });
+        logger.success('Challenge', 'Đã xóa challenge', { title: challenge.title });
         return true;
     }
 }
