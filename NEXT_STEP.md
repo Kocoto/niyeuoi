@@ -1,4 +1,4 @@
-# NEXT STEP
+﻿# NEXT STEP
 
 ## Cách dùng file này
 
@@ -62,14 +62,13 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Phase
 
-- Đang ở: `Đợt B - nhịp sử dụng hằng ngày và kết nối các màn`
+- Đang ở: `Đợt C - riêng tư, reward, và cá nhân hóa sâu`
 - Mục tiêu của đợt này:
-  - khiến app có lý do quay lại thường xuyên hơn
-  - làm các màn bắt đầu liên kết với nhau thay vì đứng riêng lẻ
-  - chuyển từ cảm giác “nhiều tính năng” sang một trải nghiệm có nhịp dùng hàng ngày
+  - hoàn thiện các luồng nhạy cảm mà vẫn giữ cảm giác ấm và riêng tư
+  - thêm lớp reward/personalization đủ nhẹ để app có nhịp quay lại tự nhiên hơn
+  - giữ rõ `Ni` và `Được`, không biến app thành game hay dashboard KPI
 
 ## Current Phase Breakdown
-
 ### A0 - Repo handoff system
 
 - Status: `done`
@@ -377,7 +376,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C2a - Voucher type foundation
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - tách rõ 3 loại voucher trong model và IA trước khi đụng sâu vào create/redeem flow
 - Reference Sections:
@@ -392,33 +391,124 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C2b - Voucher create / redeem flow refinement
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - làm composer, detail, và redeem flow khớp với 3 loại voucher mới mà không thiên vị `Ni` hay `Được`
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `11. Coupons / Voucher`
+    - `17. Data / Personalization`
+    - `21. Wireflow voucher`
+- In scope:
+  - tinh chỉnh composer theo đúng semantics mới: loại voucher, người nhận, và ngôn ngữ theo từng loại
+  - làm rõ CTA `Nhận` / `Dùng` / trạng thái đã ở phía bên kia trong detail và card mà không quay lại luồng cũ mơ hồ
+  - cân lại các trạng thái active sau khi claim/redeem để flow không còn cảm giác CRUD phẳng
+- Out of scope:
+  - reward / trigger orchestration
+  - scheduler weekly/monthly hoàn chỉnh
+  - memory resurfacing hoặc smart suggestions
+- Likely files:
+  - `frontend/src/pages/Coupons.tsx`
+  - `backend/src/controllers/couponController.ts`
+  - `backend/src/services/couponService.ts`
+  - `backend/src/services/aiService.ts` nếu cần đổi prompt/copy cho đúng loại voucher
+- Done when:
+  - tạo voucher không còn mặc định rơi về một luồng duy nhất
+  - claim/redeem/detail flow khớp với 3 loại voucher mới
+  - trạng thái sau khi nhận hoặc dùng không còn gây hiểu nhầm ai đang giữ voucher
+
+### C3a - Reward trigger foundation
+
+- Status: `done`
+- Mục tiêu:
+  - chốt contract trigger/reward tối thiểu trước khi nối reward vào nhiều màn
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `11. Coupons / Voucher`
+    - `17. Data / Personalization`
+    - `38. Wireflow reward / trigger system`
+- In scope:
+  - xác định trigger nào thực sự mở reward nhẹ từ challenge / deep talk / mood / event mà không thành game hóa
+  - chốt reward payload tối thiểu và cách lưu/đánh dấu để các màn sau không phải tự suy luận khác nhau
+  - giữ tương thích với voucher system vừa chốt, chưa kéo sang UI surface lớn
+- Out of scope:
+  - Home/remainder surface hoàn chỉnh
+  - scheduler weekly/monthly hoàn chỉnh
+  - smart suggestions hoặc memory resurfacing
+- Likely files:
+  - `backend/src/services/challengeService.ts`
+  - `backend/src/controllers/deepTalkController.ts`
+  - `backend/src/services/couponService.ts`
+  - `backend/src/services/schedulerService.ts`
+  - một service/helper reward mới ở backend nếu cần
+- Done when:
+  - trigger/reward contract đủ rõ để màn khác không tự mở reward theo logic riêng
+  - có đường đi backend tối thiểu cho reward nhẹ mà không phá dữ liệu cũ
+  - chưa cần UI lớn vẫn kiểm chứng được hướng tích hợp
+
+### C3b - Reward emitters on key flows
+
+- Status: `active`
+- Mục tiêu:
+  - nối reward foundation vào đúng vài flow quan trọng trước, thay vì rải đều toàn app
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `4. Deep Talk`
+    - `10. Challenges`
+    - `17. Data / Personalization`
+    - `38. Wireflow reward / trigger system`
+- In scope:
+  - gắn emitter vào vài trigger có ý nghĩa thật, ưu tiên challenge hoàn thành và cả hai cùng trả lời Deep Talk
+  - dùng chung `rewardService` và contract đã chốt ở `C3a`, không tạo logic reward riêng trong từng controller/service
+  - chặn duplicate reward ở mức đủ an toàn cho retry và update thường gặp
+- Out of scope:
+  - reward surface lớn ở Home
+  - scheduler weekly/monthly hoàn chỉnh
+  - memory resurfacing và smart suggestion
+- Likely files:
+  - `backend/src/services/challengeService.ts`
+  - `backend/src/services/deepTalkService.ts`
+  - `backend/src/services/moodService.ts`
+  - `backend/src/services/rewardService.ts`
+  - `backend/src/models/Reward.ts`
+- Done when:
+  - challenge/deep talk emit reward qua cùng foundation
+  - duplicate reward được chặn ở mức đủ an toàn cho retry/update
+  - `GET /api/rewards` đọc ra đúng record mới mở mà không cần UI tự tính lại
+
+### C3c - Reward surfaces / handoff UX
+
+- Status: `pending`
+- Mục tiêu:
+  - đưa reward đã mở ra Home hoặc chỗ liên quan với copy nhẹ và đúng ngữ cảnh
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `2. Home / Dashboard`
+    - `13. Shared UI System`
+    - `34. Wireflow notification / reminder UX`
+    - `38. Wireflow reward / trigger system`
 
 ## Current Active Slice
 
-- ID: `C2a`
+- ID: `C3b`
 - Status: `active`
-- Tên: `Voucher type foundation`
+- Tên: `Reward emitters on key flows`
 - Việc phải làm ngay:
-  1. Đọc đúng `11`, `17`, và `21` trong `UI_UX_IDEAS.md`.
-  2. Xác định dữ liệu voucher hiện tại đang thiếu nghĩa ở đâu: loại, người nhận, người giữ, tính surprise, và khả năng dùng chung.
-  3. Chốt lớp nền model + serialization + list IA trước, để lượt sau mới đi vào create/redeem flow mà không phải đập lại semantics.
-  4. Không mở rộng sang `C2b+`, không kéo reward / trigger / smart suggestion vào lượt này.
+  1. Đọc đúng `4`, `10`, `17`, và `38` trong `UI_UX_IDEAS.md`.
+  2. Nối `rewardService` vào vài trigger có ý nghĩa thật trước, ưu tiên challenge hoàn thành và cả hai cùng trả lời Deep Talk.
+  3. Giữ mọi emitter dùng cùng dedupe/status/source contract đã chốt ở `C3a`.
+  4. Chưa mở rộng sang reward surface lớn ở Home hay scheduler weekly/monthly hoàn chỉnh.
 - Không được làm trong slice này:
-  - reward / trigger orchestration
-  - memory resurfacing hoặc smart suggestions
-  - rewrite toàn bộ UI voucher detail/composer nếu lớp semantics bên dưới chưa chốt xong
+  - reward UI hoàn chỉnh trên nhiều màn
+  - scheduler weekly/monthly hoàn chỉnh
+  - smart suggestions hoặc memory resurfacing
 - Done checklist:
-  - 3 loại voucher có semantics rõ và không mâu thuẫn nhau
-  - dữ liệu cũ vẫn đọc được an toàn và có fallback hợp lý
-  - list/card/badge chính đã đủ để người dùng hiểu loại voucher mà không cần đoán
+  - challenge/deep talk emit reward qua cùng foundation
+  - dedupe đủ an toàn để tránh duplicate reward do retry/update
   - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
 ## Quy tắc cập nhật trước khi dừng
-
 - Nếu chưa xong slice:
   - giữ nguyên `Current Active Slice`
   - cập nhật `Session Handoff`
@@ -433,54 +523,52 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C1 - Map privacy`
+- `C3a - Reward trigger foundation`
 
 ### Current status
 
-- `C1` đã hoàn tất. Vì `C2 - voucher system redesign` nguyên bản quá rộng cho một lượt, nó đã được tách thành `C2a - Voucher type foundation` và `C2b - Voucher create / redeem flow refinement`, trong đó `C2a` được chuyển sang active.
-- Kết quả chốt cho `C1`:
-  - `frontend/src/pages/LoveMap.tsx` giờ tách rõ map chung và private mode: map mặc định chỉ hiển thị địa điểm chung, không còn marker vị trí thật, nút `Tìm Ni`, hay wording lộ tracking trên giao diện chung
-  - BF chỉ có thể mở private mode qua một entry trung tính, sau đó phải nhập lại PIN BF; private mode có indicator riêng, countdown tự tắt, và khi đóng sẽ quay về map chung sạch dấu vết
-  - `backend/src/routes/locationRoutes.ts` giờ chặn ghi vị trí cho đúng vai `Ni`, chặn đọc vị trí cho đúng vai `Được`, và buộc phải có private access token sống ngắn mới lấy được vị trí hiện tại
-  - thêm `backend/src/utils/privateAccessToken.ts` để private mode không chỉ là khóa UI mà có guardrail backend riêng với thời hạn ngắn
-- Chưa chạy browser/manual smoke cho `C1`; xác nhận hiện có đang ở mức build frontend + backend và eslint file frontend vừa sửa
+- `C3a` đã hoàn tất và `C3b` được chuyển sang `active`.
+- Kết quả chốt cho `C3a`:
+  - thêm `backend/src/models/Reward.ts` để lưu chung trigger type, reward kind, status, source/ref, `surfaceHint`, `forWhom`, `dedupeKey`, và các mốc `openedAt/resolvedAt`
+  - thêm `backend/src/services/rewardService.ts` với rule contract cho từng trigger (`challenge_completed`, `deeptalk_paired`, `mood_weekly_sync`, `event_completed`), normalize payload, dedupe active reward, list theo `status/surface/forWhom`, và update status dùng chung
+  - thêm `backend/src/controllers/rewardController.ts` + `backend/src/routes/rewardRoutes.ts`, đồng thời mount `/api/rewards` trong `backend/src/server.ts` để slice sau có read path/backend surface ổn định
+  - lượt này chưa nối emitter vào challenge/deep talk/mood/event; phần đó được giữ đúng scope cho `C3b`
 
 ### Files touched in latest session
 
-- `frontend/src/pages/LoveMap.tsx`
-- `backend/src/routes/locationRoutes.ts`
-- `backend/src/utils/privateAccessToken.ts`
+- `backend/src/models/Reward.ts`
+- `backend/src/services/rewardService.ts`
+- `backend/src/controllers/rewardController.ts`
+- `backend/src/routes/rewardRoutes.ts`
+- `backend/src/server.ts`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
 
 - Đã chạy `npm run build` trong `backend`.
 - Kết quả: pass.
-- Đã chạy `npm run build` trong `frontend`.
-- Kết quả: pass.
-- Đã chạy `npx eslint src/pages/LoveMap.tsx` trong `frontend`.
-- Kết quả: pass.
 - Ghi chú:
-  - frontend build vẫn có cảnh báo chunk size của Vite, nhưng không fail build
-  - chưa có browser smoke riêng cho `C1`
+  - lượt này chỉ chạm backend + handoff doc nên chưa chạy frontend build
+  - chưa có runtime/browser smoke cho `C3a`; mới xác nhận ở mức compile pass
 
 ### Known blockers
 
-- Không có blocker mở cho `C1`.
-- Lượt tiếp theo vẫn cần giữ guardrail:
-  - không kéo `C2a` sang reward / trigger hay smart suggestion
-  - không thiên vị voucher về một phía mặc định chỉ vì hiện tại flow cũ đơn giản hơn
-  - không phá dữ liệu voucher cũ chỉ để ép đủ semantics mới ngay trong một lượt
+- Không có blocker lớn cho `C3a`.
+- Cần giữ guardrail ở `C3b`:
+  - chỉ nối emitter vào vài flow có ý nghĩa thật, không rải reward khắp app
+  - không để challenge/deep talk tự dựng payload reward riêng lệch khỏi `rewardService`
+  - không kéo `C3b` sang Home surface, scheduler hoàn chỉnh, hay smart suggestion
 
 ### Next concrete step
 
-- Bắt đầu `C2a - Voucher type foundation`.
+- Bắt đầu `C3b - Reward emitters on key flows`.
 - Đọc đúng các section:
-  - `11. Coupons / Voucher`
+  - `4. Deep Talk`
+  - `10. Challenges`
   - `17. Data / Personalization`
-  - `21. Wireflow voucher`
+  - `38. Wireflow reward / trigger system`
 - Ưu tiên đọc trước:
-  - `frontend/src/pages/Coupons.tsx`
-  - `backend/src/models/Coupon.ts`
-  - `backend/src/controllers/couponController.ts`
-  - `backend/src/services/couponService.ts`
+  - `backend/src/services/challengeService.ts`
+  - `backend/src/services/deepTalkService.ts`
+  - `backend/src/services/rewardService.ts`
+  - `backend/src/models/Reward.ts`

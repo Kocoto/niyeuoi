@@ -1,11 +1,31 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import api from '../api/api';
-import { Ticket, CheckCircle, Loader2, Plus, X, Trash2, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  CheckCircle2,
+  Clock3,
+  Gift,
+  Loader2,
+  Plus,
+  Sparkles,
+  Ticket,
+  Trash2,
+  Users,
+  X,
+  Zap,
+} from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import ContextualEmptyState from '../components/ContextualEmptyState';
+import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
-import { ROLE_NAME } from '../constants/roles';
+import { ROLE_NAME, isRole, type Role } from '../constants/roles';
+
+type CouponType = 'personal' | 'claimable' | 'shared';
+type CouponParty = Role | 'both';
+type CouponCreator = Role | 'system';
+type CouponBucket = 'waiting' | 'owned' | 'given' | 'used';
+type ResolvedCouponType = CouponType | 'legacy';
 
 interface ICoupon {
   _id: string;
@@ -13,22 +33,596 @@ interface ICoupon {
   description: string;
   isUsed: boolean;
   isAiGenerated?: boolean;
-  createdBy: 'boyfriend' | 'girlfriend';
+  createdBy?: CouponCreator;
+  couponType?: CouponType;
+  receiverRole?: CouponParty;
+  holderRole?: CouponParty;
+  claimEndsAt?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
-const ROLE_LABEL = ROLE_NAME;
+type CouponViewModel = ICoupon & {
+  creator: CouponCreator | null;
+  resolvedType: ResolvedCouponType;
+  resolvedReceiver: CouponParty | null;
+  resolvedHolder: CouponParty | null;
+  bucket: CouponBucket;
+  typeLabel: string;
+  typeTone: string;
+  directionLine: string;
+  statusLabel: string;
+  statusTone: string;
+  metaLine: string;
+  isLegacy: boolean;
+  isClaimExpired: boolean;
+  claimWindowLabel: string | null;
+  primaryAction: 'claim' | 'redeem' | null;
+  primaryActionLabel: string | null;
+  inactiveLabel: string;
+};
+
+const BUCKET_ORDER: CouponBucket[] = ['waiting', 'owned', 'given', 'used'];
+
+const BUCKET_META: Record<CouponBucket, { label: string; description: string }> = {
+  waiting: {
+    label: 'Chờ nhận',
+    description: 'Những tấm vé chưa có người giữ rõ ràng, chủ yếu là kiểu nhanh tay hoặc lượt cũ còn đang treo.',
+  },
+  owned: {
+    label: 'Đã có',
+    description: 'Những tấm vé đang ở phía bạn, gồm cả tấm vé chung mà hai người có thể dùng cùng nhau.',
+  },
+  given: {
+    label: 'Đã tặng',
+    description: 'Những tấm vé hiện đang nằm phía bên kia hoặc được bạn mở ra cho người kia.',
+  },
+  used: {
+    label: 'Đã dùng',
+    description: 'Những tấm vé đã khép lại, để nhìn lại nhịp quan tâm đã đi qua.',
+  },
+};
+
+const TYPE_META: Record<ResolvedCouponType, { label: string; tone: string; icon: React.ReactNode }> = {
+  personal: {
+    label: 'Đích danh',
+    tone: 'bg-rose-50 text-rose-700 ring-rose-200/80',
+    icon: <Gift size={13} />,
+  },
+  claimable: {
+    label: 'Nhanh tay',
+    tone: 'bg-amber-50 text-amber-700 ring-amber-200/80',
+    icon: <Zap size={13} />,
+  },
+  shared: {
+    label: 'Dùng chung',
+    tone: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80',
+    icon: <Users size={13} />,
+  },
+  legacy: {
+    label: 'Lượt cũ',
+    tone: 'bg-slate-100 text-slate-600 ring-slate-200/80',
+    icon: <Clock3 size={13} />,
+  },
+};
+
+const COMPOSER_TYPE_OPTIONS: Array<{ value: CouponType; label: string; description: string }> = [
+  {
+    value: 'personal',
+    label: 'Đích danh',
+    description: 'Một tấm vé dành rõ cho Ni hoặc Được.',
+  },
+  {
+    value: 'claimable',
+    label: 'Nhanh tay',
+    description: 'Ai nhận trước thì giữ, hợp với tấm vé vui và ngắn hạn.',
+  },
+  {
+    value: 'shared',
+    label: 'Dùng chung',
+    description: 'Một lời hẹn mà cả hai đều có thể cùng mở ra.',
+  },
+];
+
+const CLAIM_WINDOW_OPTIONS: Array<{ value: number; label: string; description: string }> = [
+  {
+    value: 12,
+    label: 'Tối nay',
+    description: 'Một nhịp vui ngắn, hợp cho vé nhanh tay mở ra và dùng sớm.',
+  },
+  {
+    value: 72,
+    label: '3 ngày',
+    description: 'Giữ vừa đủ lâu để cả hai kịp thấy mà không kéo thành trò tranh phần.',
+  },
+  {
+    value: 168,
+    label: '1 tuần',
+    description: 'Vẫn là playful, nhưng cho một khoảng thở dài hơn trong tuần này.',
+  },
+];
+
+const PILL_STYLE = {
+  created: 'bg-white/85 text-slate-600 ring-slate-200/80',
+  shared: 'bg-emerald-50 text-emerald-700 ring-emerald-200/80',
+  system: 'bg-violet-50 text-violet-700 ring-violet-200/80',
+};
+
+function getOppositeRole(role: Role): Role {
+  return role === 'boyfriend' ? 'girlfriend' : 'boyfriend';
+}
+
+function formatRelative(value?: string) {
+  if (!value) return 'gần đây';
+
+  const diff = Date.now() - new Date(value).getTime();
+  const minutes = Math.floor(diff / 60000);
+  const hours = Math.floor(diff / 3600000);
+  const days = Math.floor(diff / 86400000);
+
+  if (minutes < 1) return 'vừa xong';
+  if (minutes < 60) return `${minutes} phút trước`;
+  if (hours < 24) return `${hours} giờ trước`;
+  if (days === 1) return 'hôm qua';
+  if (days < 7) return `${days} ngày trước`;
+
+  return new Date(value).toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+  });
+}
+
+function formatClaimWindow(value?: string) {
+  if (!value) return null;
+
+  const diffMs = new Date(value).getTime() - Date.now();
+  if (diffMs <= 0) return 'Hết hạn nhận';
+
+  const minutes = Math.ceil(diffMs / 60000);
+  const hours = Math.ceil(diffMs / 3600000);
+  const days = Math.ceil(diffMs / 86400000);
+
+  if (minutes < 60) return `Còn ${minutes} phút để nhận`;
+  if (hours < 24) return `Còn ${hours} giờ để nhận`;
+  return `Còn ${days} ngày để nhận`;
+}
+
+function isClaimExpired(value?: string) {
+  if (!value) return false;
+  return new Date(value).getTime() <= Date.now();
+}
+
+function readApiError(error: unknown, fallback: string) {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: { data?: { error?: unknown } } }).response?.data?.error === 'string'
+  ) {
+    return (error as { response?: { data?: { error?: string } } }).response?.data?.error ?? fallback;
+  }
+
+  return fallback;
+}
+
+function resolveCreator(value?: CouponCreator) {
+  if (value === 'system' || isRole(value)) {
+    return value;
+  }
+
+  return null;
+}
+
+function resolveCouponType(coupon: ICoupon): ResolvedCouponType {
+  if (coupon.couponType === 'personal' || coupon.couponType === 'claimable' || coupon.couponType === 'shared') {
+    return coupon.couponType;
+  }
+
+  if (coupon.receiverRole === 'both' || coupon.holderRole === 'both') {
+    return 'shared';
+  }
+
+  if (isRole(coupon.receiverRole) || isRole(coupon.holderRole)) {
+    return 'personal';
+  }
+
+  return 'legacy';
+}
+
+function resolveReceiver(coupon: ICoupon, resolvedType: ResolvedCouponType, creator: CouponCreator | null): CouponParty | null {
+  if (coupon.receiverRole === 'both' || isRole(coupon.receiverRole)) {
+    return coupon.receiverRole;
+  }
+
+  if (resolvedType === 'shared') {
+    return 'both';
+  }
+
+  if (resolvedType === 'personal' && isRole(coupon.holderRole)) {
+    return coupon.holderRole;
+  }
+
+  if (resolvedType === 'legacy' && isRole(creator)) {
+    return getOppositeRole(creator);
+  }
+
+  return null;
+}
+
+function resolveHolder(coupon: ICoupon, resolvedType: ResolvedCouponType, receiver: CouponParty | null, creator: CouponCreator | null): CouponParty | null {
+  if (coupon.holderRole === 'both' || isRole(coupon.holderRole)) {
+    return coupon.holderRole;
+  }
+
+  if (resolvedType === 'shared') {
+    return 'both';
+  }
+
+  if (resolvedType === 'personal' && receiver) {
+    return receiver;
+  }
+
+  if (resolvedType === 'legacy' && isRole(creator)) {
+    return getOppositeRole(creator);
+  }
+
+  return null;
+}
+
+function getBucket(coupon: ICoupon, role: Role, creator: CouponCreator | null, resolvedType: ResolvedCouponType, receiver: CouponParty | null, holder: CouponParty | null): CouponBucket {
+  if (coupon.isUsed) {
+    return 'used';
+  }
+
+  if (resolvedType === 'claimable' && !holder) {
+    return 'waiting';
+  }
+
+  if (resolvedType === 'shared') {
+    return 'owned';
+  }
+
+  if (holder === role) {
+    return 'owned';
+  }
+
+  if (resolvedType === 'personal' && receiver === role) {
+    return 'owned';
+  }
+
+  if (resolvedType === 'legacy') {
+    return creator === role ? 'given' : 'owned';
+  }
+
+  return 'given';
+}
+
+function getDirectionLine(coupon: ICoupon, creator: CouponCreator | null, resolvedType: ResolvedCouponType, receiver: CouponParty | null, holder: CouponParty | null) {
+  if (resolvedType === 'shared') {
+    if (creator === 'system') {
+      return 'Hệ thống vừa mở ra một tấm vé cho cả hai.';
+    }
+
+    if (isRole(creator)) {
+      return `${ROLE_NAME[creator]} mở một tấm vé chung để cả hai cùng dùng.`;
+    }
+
+    return 'Tấm vé chung này đang giữ chỗ cho cả hai.';
+  }
+
+  if (resolvedType === 'claimable') {
+    if (isRole(holder)) {
+      return `${ROLE_NAME[holder]} đã nhận tấm vé này và đang giữ nó.`;
+    }
+
+    const claimWindow = formatClaimWindow(coupon.claimEndsAt);
+    return claimWindow
+      ? `Ai nhận trước sẽ giữ tấm vé này. ${claimWindow}.`
+      : 'Ai nhận trước sẽ giữ tấm vé này.';
+  }
+
+  if (resolvedType === 'personal') {
+    if (isRole(creator) && isRole(receiver)) {
+      return `${ROLE_NAME[creator]} tặng riêng tấm vé này cho ${ROLE_NAME[receiver].toLowerCase()}.`;
+    }
+
+    if (isRole(receiver)) {
+      return `Tấm vé này đang dành riêng cho ${ROLE_NAME[receiver].toLowerCase()}.`;
+    }
+
+    return 'Tấm vé riêng này chưa ghi đủ người nhận.';
+  }
+
+  if (isRole(creator)) {
+    return `Lượt cũ từ ${ROLE_NAME[creator]} chưa ghi rõ loại hay người giữ.`;
+  }
+
+  if (creator === 'system') {
+    return 'Một voucher cũ từ hệ thống chưa ghi đủ loại hay người giữ.';
+  }
+
+  return 'Voucher cũ này vẫn được giữ lại, nhưng chưa đủ metadata để gọi rõ loại.';
+}
+
+function getStatusLabel(coupon: ICoupon, resolvedType: ResolvedCouponType, receiver: CouponParty | null, holder: CouponParty | null) {
+  if (coupon.isUsed) {
+    return 'Đã dùng';
+  }
+
+  if (resolvedType === 'claimable' && !holder) {
+    return formatClaimWindow(coupon.claimEndsAt) ?? 'Đang chờ nhận';
+  }
+
+  if (resolvedType === 'shared') {
+    return 'Cả hai đều dùng được';
+  }
+
+  if (holder === 'both') {
+    return 'Cả hai đang giữ';
+  }
+
+  if (isRole(holder)) {
+    return `${ROLE_NAME[holder]} đang giữ`;
+  }
+
+  if (isRole(receiver)) {
+    return `Dành cho ${ROLE_NAME[receiver]}`;
+  }
+
+  return 'Dữ liệu cũ';
+}
+
+function getStatusTone(coupon: ICoupon, resolvedType: ResolvedCouponType, holder: CouponParty | null) {
+  if (coupon.isUsed) {
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200/80';
+  }
+
+  if (resolvedType === 'claimable' && !holder) {
+    return isClaimExpired(coupon.claimEndsAt)
+      ? 'bg-slate-100 text-slate-600 ring-slate-200/80'
+      : 'bg-amber-50 text-amber-700 ring-amber-200/80';
+  }
+
+  if (resolvedType === 'shared') {
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200/80';
+  }
+
+  if (holder === 'both') {
+    return 'bg-emerald-50 text-emerald-700 ring-emerald-200/80';
+  }
+
+  if (isRole(holder)) {
+    return holder === 'girlfriend'
+      ? 'bg-pink-50 text-pink-700 ring-pink-200/80'
+      : 'bg-sky-50 text-sky-700 ring-sky-200/80';
+  }
+
+  return 'bg-slate-100 text-slate-600 ring-slate-200/80';
+}
+
+function getInactiveLabel(
+  coupon: ICoupon,
+  role: Role,
+  creator: CouponCreator | null,
+  resolvedType: ResolvedCouponType,
+  receiver: CouponParty | null,
+  holder: CouponParty | null,
+) {
+  if (coupon.isUsed) {
+    return 'Đã khép lại';
+  }
+
+  if (resolvedType === 'claimable') {
+    if (!holder) {
+      return isClaimExpired(coupon.claimEndsAt) ? 'Đã hết hạn nhận' : 'Đang chờ ai nhận trước';
+    }
+
+    if (holder === role) {
+      return 'Đang nằm phía bạn';
+    }
+
+    if (isRole(holder)) {
+      return `Đang ở phía ${ROLE_NAME[holder]}`;
+    }
+  }
+
+  if (resolvedType === 'shared') {
+    return 'Cả hai đều có thể dùng';
+  }
+
+  if (holder === role || receiver === role) {
+    return 'Đang nằm phía bạn';
+  }
+
+  if (isRole(holder)) {
+    return `Đang ở phía ${ROLE_NAME[holder]}`;
+  }
+
+  if (isRole(receiver)) {
+    return `Đang ở phía ${ROLE_NAME[receiver]}`;
+  }
+
+  if (creator === role) {
+    return 'Bạn là người mở tấm vé này';
+  }
+
+  return 'Giữ lại từ lượt cũ';
+}
+
+function buildCouponView(coupon: ICoupon, role: Role): CouponViewModel {
+  const creator = resolveCreator(coupon.createdBy);
+  const resolvedType = resolveCouponType(coupon);
+  const resolvedReceiver = resolveReceiver(coupon, resolvedType, creator);
+  const resolvedHolder = resolveHolder(coupon, resolvedType, resolvedReceiver, creator);
+  const bucket = getBucket(coupon, role, creator, resolvedType, resolvedReceiver, resolvedHolder);
+  const claimWindowLabel = formatClaimWindow(coupon.claimEndsAt);
+  const claimExpired = resolvedType === 'claimable' && !resolvedHolder && isClaimExpired(coupon.claimEndsAt);
+  const primaryAction =
+    !coupon.isUsed && resolvedType === 'claimable' && !resolvedHolder && !claimExpired
+      ? 'claim'
+      : !coupon.isUsed &&
+          (resolvedType === 'shared' ||
+            resolvedHolder === role ||
+            (resolvedType === 'personal' && resolvedReceiver === role) ||
+            (resolvedType === 'legacy' && creator !== role))
+        ? 'redeem'
+        : null;
+
+  const metaParts = [
+    `LOVE-${coupon._id.slice(-4).toUpperCase()}`,
+    creator === 'system' ? 'Hệ thống mở' : isRole(creator) ? `${ROLE_NAME[creator]} tạo` : 'Lượt cũ',
+    formatRelative(coupon.updatedAt ?? coupon.createdAt),
+  ];
+
+  return {
+    ...coupon,
+    creator,
+    resolvedType,
+    resolvedReceiver,
+    resolvedHolder,
+    bucket,
+    typeLabel: TYPE_META[resolvedType].label,
+    typeTone: TYPE_META[resolvedType].tone,
+    directionLine: getDirectionLine(coupon, creator, resolvedType, resolvedReceiver, resolvedHolder),
+    statusLabel: getStatusLabel(coupon, resolvedType, resolvedReceiver, resolvedHolder),
+    statusTone: getStatusTone(coupon, resolvedType, resolvedHolder),
+    metaLine: metaParts.join(' · '),
+    isLegacy: resolvedType === 'legacy',
+    isClaimExpired: claimExpired,
+    claimWindowLabel,
+    primaryAction,
+    primaryActionLabel:
+      primaryAction === 'claim'
+        ? 'Nhận tấm vé này'
+        : primaryAction === 'redeem'
+          ? resolvedType === 'shared'
+            ? 'Đánh dấu cả hai đã dùng'
+            : 'Đánh dấu đã dùng'
+          : null,
+    inactiveLabel: getInactiveLabel(coupon, role, creator, resolvedType, resolvedReceiver, resolvedHolder),
+  };
+}
+
+const InfoPill: React.FC<{ label: string; className: string; icon?: React.ReactNode }> = ({ label, className, icon }) => (
+  <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-[11px] font-bold ring-1 ${className}`}>
+    {icon}
+    <span>{label}</span>
+  </span>
+);
+
+function renderContextBadges(coupon: CouponViewModel) {
+  const badges: React.ReactNode[] = [];
+
+  if (isRole(coupon.creator)) {
+    badges.push(
+      <PersonBadge
+        key={`creator-${coupon._id}`}
+        role={coupon.creator}
+        prefix="Mở bởi"
+        variant="soft"
+        className="!px-3 !py-1.5 !text-[11px]"
+      />,
+    );
+  } else if (coupon.creator === 'system') {
+    badges.push(
+      <InfoPill
+        key={`creator-system-${coupon._id}`}
+        label="Hệ thống mở"
+        className={PILL_STYLE.system}
+        icon={<Sparkles size={12} />}
+      />,
+    );
+  }
+
+  if (coupon.resolvedType === 'shared') {
+    badges.push(
+      <InfoPill
+        key={`shared-${coupon._id}`}
+        label="Cả hai cùng giữ"
+        className={PILL_STYLE.shared}
+        icon={<Users size={12} />}
+      />,
+    );
+    return badges;
+  }
+
+  if (coupon.resolvedType === 'claimable' && !coupon.resolvedHolder) {
+    badges.push(
+      <InfoPill
+        key={`waiting-${coupon._id}`}
+        label="Chưa có người giữ"
+        className="bg-amber-50 text-amber-700 ring-amber-200/80"
+        icon={<Zap size={12} />}
+      />,
+    );
+    return badges;
+  }
+
+  if (coupon.resolvedType === 'claimable' && isRole(coupon.resolvedHolder)) {
+    badges.push(
+      <PersonBadge
+        key={`claim-holder-${coupon._id}`}
+        role={coupon.resolvedHolder}
+        prefix="Đang giữ"
+        variant="soft"
+        className="!px-3 !py-1.5 !text-[11px]"
+      />,
+    );
+
+    return badges;
+  }
+
+  if (isRole(coupon.resolvedReceiver)) {
+    badges.push(
+      <PersonBadge
+        key={`receiver-${coupon._id}`}
+        role={coupon.resolvedReceiver}
+        prefix="Dành cho"
+        variant="soft"
+        className="!px-3 !py-1.5 !text-[11px]"
+      />,
+    );
+  }
+
+  if (isRole(coupon.resolvedHolder) && coupon.resolvedHolder !== coupon.resolvedReceiver) {
+    badges.push(
+      <PersonBadge
+        key={`holder-${coupon._id}`}
+        role={coupon.resolvedHolder}
+        prefix="Đang giữ"
+        variant="soft"
+        className="!px-3 !py-1.5 !text-[11px]"
+      />,
+    );
+  }
+
+  return badges;
+}
 
 const Coupons: React.FC = () => {
   const [coupons, setCoupons] = useState<ICoupon[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showModal, setShowModal] = useState(false);
+  const [detailCoupon, setDetailCoupon] = useState<CouponViewModel | null>(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [activeBucket, setActiveBucket] = useState<CouponBucket>('owned');
+  const [formData, setFormData] = useState<{
+    title: string;
+    description: string;
+    couponType: CouponType;
+    receiverRole: Role;
+    claimWindowHours: number;
+  }>({
+    title: '',
+    description: '',
+    couponType: 'personal',
+    receiverRole: 'girlfriend',
+    claimWindowHours: 72,
+  });
+
   const { role } = useAuth();
   const { toast, confirm } = useUI();
-
-  const [showModal, setShowModal] = useState(false);
-  const [detailCoupon, setDetailCoupon] = useState<ICoupon | null>(null);
-  const [aiLoading, setAiLoading] = useState(false);
-  const [activeTab, setActiveTab] = useState<'mine' | 'theirs'>('theirs');
-  const [formData, setFormData] = useState({ title: '', description: '' });
+  const oppositeRole = getOppositeRole(role);
 
   const fetchCoupons = useCallback(async () => {
     try {
@@ -45,25 +639,125 @@ const Coupons: React.FC = () => {
     fetchCoupons();
   }, [fetchCoupons]);
 
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      receiverRole: current.receiverRole === role ? oppositeRole : current.receiverRole,
+    }));
+  }, [role, oppositeRole]);
+
+  const couponViews = coupons.map((coupon) => buildCouponView(coupon, role));
+  const groupedCoupons: Record<CouponBucket, CouponViewModel[]> = {
+    waiting: couponViews.filter((coupon) => coupon.bucket === 'waiting'),
+    owned: couponViews.filter((coupon) => coupon.bucket === 'owned'),
+    given: couponViews.filter((coupon) => coupon.bucket === 'given'),
+    used: couponViews.filter((coupon) => coupon.bucket === 'used'),
+  };
+  const activeCoupons = groupedCoupons[activeBucket];
+
+  const resetComposer = () => {
+    setFormData({
+      title: '',
+      description: '',
+      couponType: 'personal',
+      receiverRole: oppositeRole,
+      claimWindowHours: 72,
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const payload: Record<string, unknown> = {
+      title: formData.title,
+      description: formData.description,
+      couponType: formData.couponType,
+    };
+
+    if (formData.couponType === 'personal') {
+      payload.receiverRole = formData.receiverRole;
+      payload.holderRole = formData.receiverRole;
+    }
+
+    if (formData.couponType === 'shared') {
+      payload.receiverRole = 'both';
+      payload.holderRole = 'both';
+    }
+
+    if (formData.couponType === 'claimable') {
+      payload.claimEndsAt = new Date(Date.now() + formData.claimWindowHours * 60 * 60 * 1000).toISOString();
+    }
+
     try {
-      await api.post('/coupons', { ...formData, createdBy: role });
+      await api.post('/coupons', payload);
       setShowModal(false);
-      setFormData({ title: '', description: '' });
+      resetComposer();
+      setActiveBucket(
+        formData.couponType === 'claimable'
+          ? 'waiting'
+          : formData.couponType === 'shared'
+            ? 'owned'
+            : formData.receiverRole === role
+              ? 'owned'
+              : 'given',
+      );
       await fetchCoupons();
-    } catch {
-      toast('Lỗi khi tặng voucher!', 'error');
+      toast('Tấm vé mới đã vào đúng nhóm của nó rồi.', 'success');
+    } catch (error) {
+      toast(readApiError(error, 'Lúc này chưa tạo được voucher, thử lại sau nhé.'), 'error');
     }
   };
 
-  const redeemCoupon = async (id: string) => {
-    if (!await confirm('Bạn có chắc muốn sử dụng tấm vé này không? 💕')) return;
+  const claimCoupon = async (coupon: CouponViewModel) => {
+    const confirmed = await confirm('Nhận tấm vé này về phía bạn nhé?');
+    if (!confirmed) return;
+
     try {
-      await api.put(`/coupons/${id}`, { isUsed: true });
+      await api.put(`/coupons/${coupon._id}`, { holderRole: role, receiverRole: role });
+      setDetailCoupon(null);
+      setActiveBucket('owned');
       await fetchCoupons();
-    } catch {
-      toast('Không thể sử dụng voucher lúc này!', 'error');
+      toast('Tấm vé này giờ đang nằm phía bạn.', 'success');
+    } catch (error) {
+      toast(readApiError(error, 'Chưa nhận được tấm vé này lúc này.'), 'error');
+    }
+  };
+
+  const redeemCoupon = async (coupon: CouponViewModel) => {
+    const confirmed = await confirm('Bạn muốn đánh dấu tấm vé này là đã dùng chứ?');
+    if (!confirmed) return;
+
+    const payload: Record<string, unknown> = { isUsed: true };
+
+    if (coupon.resolvedType === 'shared') {
+      payload.holderRole = 'both';
+    } else if (coupon.resolvedType === 'claimable') {
+      payload.holderRole = role;
+      payload.receiverRole = role;
+    } else if (coupon.resolvedType === 'personal' && isRole(coupon.resolvedReceiver)) {
+      payload.holderRole = coupon.resolvedReceiver;
+      payload.receiverRole = coupon.resolvedReceiver;
+    }
+
+    try {
+      await api.put(`/coupons/${coupon._id}`, payload);
+      setDetailCoupon(null);
+      setActiveBucket('used');
+      await fetchCoupons();
+      toast('Tấm vé này đã được khép lại rồi.', 'success');
+    } catch (error) {
+      toast(readApiError(error, 'Chưa thể cập nhật trạng thái voucher lúc này.'), 'error');
+    }
+  };
+
+  const handlePrimaryAction = async (coupon: CouponViewModel) => {
+    if (coupon.primaryAction === 'claim') {
+      await claimCoupon(coupon);
+      return;
+    }
+
+    if (coupon.primaryAction === 'redeem') {
+      await redeemCoupon(coupon);
     }
   };
 
@@ -71,237 +765,552 @@ const Coupons: React.FC = () => {
     setAiLoading(true);
     try {
       await api.post('/coupons/generate');
+      setActiveBucket('owned');
       await fetchCoupons();
-      toast('AI vừa tạo voucher mới! 🎉', 'success');
+      toast('AI vừa mở một tấm vé chung mới.', 'success');
     } catch {
-      toast('AI đang bận, thử lại sau nhé!', 'error');
+      toast('AI đang bận, thử lại sau nhé.', 'error');
     } finally {
       setAiLoading(false);
     }
   };
 
   const deleteCoupon = async (id: string) => {
-    if (!await confirm('Thu hồi tấm vé này nhé?')) return;
+    const confirmed = await confirm('Thu hồi tấm vé này nhé?');
+    if (!confirmed) return;
+
     try {
       await api.delete(`/coupons/${id}`);
+      setDetailCoupon(null);
       await fetchCoupons();
     } catch {
-      toast('Không xóa được!', 'error');
+      toast('Chưa xóa được tấm vé này.', 'error');
     }
   };
 
-  // "Tôi nhận" = người khác tặng mình; "Tôi tặng" = mình tặng người khác
-  const theirCoupons = coupons.filter(c => c.createdBy !== role);
-  const myCoupons = coupons.filter(c => c.createdBy === role);
-  const displayList = activeTab === 'theirs' ? theirCoupons : myCoupons;
+  const emptyState = (() => {
+    if (activeBucket === 'waiting') {
+      return groupedCoupons.owned.length > 0
+        ? {
+            title: 'Chưa có tấm vé nào đang chờ nhận',
+            description: 'Những vé nhanh tay hoặc lượt cũ còn treo sẽ hiện ở đây để cả hai nhìn ra ngay đâu là điều còn dang dở.',
+            action: {
+              label: 'Xem những tấm vé đang ở phía bạn',
+              onClick: () => setActiveBucket('owned'),
+              variant: 'secondary' as const,
+            },
+          }
+        : {
+            title: 'Chỗ này đang chờ một lời rủ vui',
+            description: 'Bạn có thể mở một vé nhanh tay để ai chạm trước thì giữ, hoặc mở vé chung cho cả hai khỏi phải đoán.',
+            action: {
+              label: 'Tạo một tấm vé mới',
+              onClick: () => setShowModal(true),
+            },
+          };
+    }
 
-  const oppositeRole = role === 'boyfriend' ? 'girlfriend' : 'boyfriend';
-  const emptyState =
-    activeTab === 'theirs'
-      ? {
-          title: `Ví của ${ROLE_LABEL[role]} đang yên`,
-          description: `Khi ${ROLE_LABEL[oppositeRole]} để dành một đặc quyền cho ${ROLE_LABEL[role]}, tấm vé sẽ nằm rõ ở đây thay vì trôi mất trong lời nói thoáng qua.`,
-          action:
-            myCoupons.length > 0
-              ? { label: 'Xem những voucher bạn đã tặng', onClick: () => setActiveTab('mine'), variant: 'secondary' as const }
-              : { label: `Tạo voucher cho ${ROLE_LABEL[oppositeRole]}`, onClick: () => setShowModal(true) },
-        }
-      : {
-          title: `${ROLE_LABEL[role]} chưa để dành voucher nào cho ${ROLE_LABEL[oppositeRole]}`,
-          description: `Một voucher có thể là lời hẹn nhỏ, một đặc quyền, hoặc điều muốn làm cho ${ROLE_LABEL[oppositeRole]}. Ví này giữ chúng thật rõ để không phải nhớ bằng miệng.`,
-          action: { label: 'Tạo voucher đầu tiên', onClick: () => setShowModal(true) },
-        };
+    if (activeBucket === 'owned') {
+      return {
+        title: `Phía ${ROLE_NAME[role]} chưa giữ tấm vé nào`,
+        description: 'Khi có một vé đích danh dành cho bạn, một vé chung, hoặc một vé nhanh tay bạn đã nhận, chúng sẽ nằm gọn ở đây.',
+        action: groupedCoupons.waiting.length > 0
+          ? {
+              label: 'Xem chỗ đang chờ nhận',
+              onClick: () => setActiveBucket('waiting'),
+              variant: 'secondary' as const,
+            }
+          : {
+              label: 'Mở một vé chung mới',
+              onClick: () => setShowModal(true),
+            },
+      };
+    }
+
+    if (activeBucket === 'given') {
+      return {
+        title: `Chưa có tấm vé nào đang ở phía ${ROLE_NAME[oppositeRole]}`,
+        description: `Những tấm vé bạn mở cho ${ROLE_NAME[oppositeRole]}, hoặc các tấm vé hiện đang nằm bên kia, sẽ được gom lại ở đây để không lẫn vào phần của bạn.`,
+        action: {
+          label: `Tạo vé cho ${ROLE_NAME[oppositeRole]}`,
+          onClick: () => {
+            setFormData((current) => ({ ...current, couponType: 'personal', receiverRole: oppositeRole }));
+            setShowModal(true);
+          },
+        },
+      };
+    }
+
+    return {
+      title: 'Chưa có tấm vé nào được khép lại',
+      description: 'Khi một tấm vé đã dùng xong, nó sẽ ở đây để hai người nhìn lại nhịp quan tâm đã trôi qua mà không mất dấu.',
+      action: groupedCoupons.owned.length > 0
+        ? {
+            label: 'Quay lại phần đang có',
+            onClick: () => setActiveBucket('owned'),
+            variant: 'secondary' as const,
+          }
+        : undefined,
+    };
+  })();
+
+  const selectedClaimWindow = CLAIM_WINDOW_OPTIONS.find((option) => option.value === formData.claimWindowHours) ?? CLAIM_WINDOW_OPTIONS[1];
+  const composerHint =
+    formData.couponType === 'personal'
+      ? `Tấm vé này sẽ đi thẳng sang phía ${ROLE_NAME[formData.receiverRole]} ngay khi tạo.`
+      : formData.couponType === 'claimable'
+        ? `Tấm vé này sẽ nằm ở nhóm Chờ nhận trong ${selectedClaimWindow.label.toLowerCase()} để ai chạm trước thì giữ.`
+        : 'Tấm vé này sẽ hiện như một lời hẹn chung mà cả hai đều có thể dùng.';
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8 pb-24 md:pb-8">
-      <div className="page-header">
-        <div>
-          <h1 className="page-title">Ví Voucher Tình yêu</h1>
-          <p className="page-subtitle">Những đặc quyền Ni và Được để dành cho nhau, giữ rõ ai tặng ai nhận để nhịp quan tâm không bị trôi.</p>
+    <div className="mx-auto max-w-5xl px-4 py-8 pb-24 md:pb-8">
+      <div className="page-header items-start">
+        <div className="min-w-0 flex-1">
+          <p className="section-label">Vé yêu thương</p>
+          <h1 className="page-title mt-2">Ví voucher rõ ai mở, ai giữ, ai cùng dùng</h1>
+          <p className="page-subtitle">
+            Phần này tách rõ vé đích danh, vé nhanh tay và vé dùng chung để Ni và Được không phải đoán tấm vé nào đang ở phía ai.
+          </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex shrink-0 gap-2">
           <button
+            type="button"
             onClick={handleAiGenerate}
             disabled={aiLoading}
-            className="flex items-center gap-1.5 bg-purple-50 text-purple-600 hover:bg-purple-100 font-bold text-xs px-3 py-2 rounded-xl transition-all disabled:opacity-60"
+            className="btn-secondary shrink-0"
           >
-            {aiLoading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
-            AI sinh
+            {aiLoading ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
+            AI mở vé chung
           </button>
-          <button onClick={() => setShowModal(true)} className="btn-add">
-            <Plus size={20} />
+          <button type="button" onClick={() => setShowModal(true)} className="btn-primary shrink-0 px-4">
+            <Plus size={16} />
+            Tạo vé
           </button>
         </div>
       </div>
 
-      {loading ? (
-        <div className="flex justify-center py-20">
-          <Loader2 className="animate-spin text-primary" size={40} />
-        </div>
-      ) : (
-        <>
-          {/* Tabs */}
-          <div className="flex bg-gray-100 rounded-2xl p-1 gap-1 mb-6">
-            <button
-              onClick={() => setActiveTab('theirs')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'theirs' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-            >
-              🎁 {ROLE_LABEL[oppositeRole]} tặng tôi
-              {theirCoupons.filter(c => !c.isUsed).length > 0 && (
-                <span className="bg-primary text-white text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                  {theirCoupons.filter(c => !c.isUsed).length}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={() => setActiveTab('mine')}
-              className={`flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-bold transition-all ${activeTab === 'mine' ? 'bg-white text-gray-800 shadow-sm' : 'text-gray-400'}`}
-            >
-              💌 Tôi đã tặng
-              {myCoupons.filter(c => !c.isUsed).length > 0 && (
-                <span className="bg-pink-200 text-pink-700 text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
-                  {myCoupons.filter(c => !c.isUsed).length}
-                </span>
-              )}
-            </button>
+      <section className="surface-card p-4 md:p-5">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <div>
+            <p className="section-label">Nhóm chính</p>
+            <h2 className="mt-2 text-2xl font-black text-ink">{BUCKET_META[activeBucket].label}</h2>
+            <p className="mt-2 text-sm leading-6 text-soft">{BUCKET_META[activeBucket].description}</p>
           </div>
+          <PersonBadge role={role} prefix="Đang là" variant="soft" className="shrink-0" />
+        </div>
 
-          {displayList.length === 0 ? (
-            <ContextualEmptyState
-              icon={<Ticket size={18} />}
-              title={emptyState.title}
-              description={emptyState.description}
-              action={emptyState.action}
-            />
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {displayList.map((coupon) => (
-                <motion.div
-                  key={coupon._id}
-                  whileTap={{ scale: 0.98 }}
-                  onClick={() => setDetailCoupon(coupon)}
-                  className={`relative overflow-hidden flex bg-white rounded-2xl shadow-sm border-2 transition-all group cursor-pointer ${coupon.isUsed ? 'grayscale opacity-60 border-gray-100' : 'border-pink-100 hover:border-primary'}`}
-                >
-                  <div className={`w-20 flex flex-col items-center justify-center border-r-2 border-dashed gap-1 ${coupon.isUsed ? 'bg-gray-50 text-gray-400 border-gray-100' : 'bg-pink-50 text-primary border-pink-100'}`}>
-                    <Ticket size={28} />
-                    <span className="text-[9px] font-bold text-center leading-tight px-1">
-                      {ROLE_LABEL[coupon.createdBy]}
-                    </span>
+        <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+          {BUCKET_ORDER.map((bucket) => (
+            <button
+              key={bucket}
+              type="button"
+              onClick={() => setActiveBucket(bucket)}
+              className={`rounded-[1.2rem] border px-4 py-3 text-left transition-all ${
+                activeBucket === bucket
+                  ? 'border-rose-200 bg-rose-50 shadow-sm'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-sm font-black text-ink">{BUCKET_META[bucket].label}</span>
+                <span className="rounded-full bg-white px-2 py-1 text-[11px] font-black text-soft ring-1 ring-black/5">
+                  {groupedCoupons[bucket].length}
+                </span>
+              </div>
+              <p className="mt-2 text-xs leading-5 text-soft">
+                {bucket === 'waiting'
+                  ? 'Chưa có người giữ'
+                  : bucket === 'owned'
+                    ? 'Đang nằm phía bạn'
+                    : bucket === 'given'
+                      ? 'Đang ở phía bên kia'
+                      : 'Đã khép lại'}
+              </p>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <div className="mt-6">
+        {loading ? (
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin text-primary" size={40} />
+          </div>
+        ) : activeCoupons.length === 0 ? (
+          <ContextualEmptyState
+            icon={<Ticket size={18} />}
+            title={emptyState.title}
+            description={emptyState.description}
+            action={emptyState.action}
+          />
+        ) : (
+          <div className="space-y-4">
+            {activeCoupons.map((coupon) => (
+              <motion.article
+                key={coupon._id}
+                whileTap={{ scale: 0.99 }}
+                onClick={() => setDetailCoupon(coupon)}
+                className={`surface-card overflow-hidden p-4 transition-all md:p-5 ${
+                  coupon.isUsed ? 'opacity-75' : 'cursor-pointer hover:-translate-y-0.5 hover:shadow-[0_20px_40px_rgba(15,23,42,0.08)]'
+                }`}
+              >
+                <div className="flex items-start gap-4">
+                  <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-[1.4rem] ${
+                    coupon.isUsed ? 'bg-slate-100 text-slate-500' : 'bg-rose-50 text-primary'
+                  }`}>
+                    <Ticket size={26} />
                   </div>
-                  <div className="flex-1 p-5 relative">
-                    {role === 'boyfriend' && (
-                      <button
-                        onClick={e => { e.stopPropagation(); deleteCoupon(coupon._id); }}
-                        className="absolute top-3 right-3 p-2 text-gray-300 hover:text-red-400 md:opacity-0 md:group-hover:opacity-100 transition-all"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                    <div className="flex items-center gap-2 mb-1">
-                      <h3 className="text-base font-bold text-gray-800 leading-tight">{coupon.title}</h3>
-                    </div>
-                    <p className="text-gray-500 text-xs mb-3 line-clamp-2">{coupon.description}</p>
-                    <div className="flex justify-between items-end">
-                      <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">LOVE-{coupon._id.slice(-4)}</span>
-                      {coupon.isUsed ? (
-                        <div className="flex items-center gap-1 text-green-500 text-xs font-bold"><CheckCircle size={14} /> Đã dùng</div>
-                      ) : (
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <InfoPill
+                            label={coupon.typeLabel}
+                            className={coupon.typeTone}
+                            icon={TYPE_META[coupon.resolvedType].icon}
+                          />
+                          <InfoPill label={coupon.statusLabel} className={coupon.statusTone} />
+                          {coupon.isAiGenerated ? (
+                            <InfoPill label="AI" className="bg-violet-50 text-violet-700 ring-violet-200/80" icon={<Sparkles size={12} />} />
+                          ) : null}
+                        </div>
+
+                        <h3 className="mt-3 text-lg font-black text-ink">{coupon.title}</h3>
+                        <p className="mt-2 text-sm leading-6 text-soft">{coupon.directionLine}</p>
+                      </div>
+
+                      {role === 'boyfriend' ? (
                         <button
-                          onClick={e => { e.stopPropagation(); redeemCoupon(coupon._id); }}
-                          className="bg-primary text-white px-3 py-2 rounded-lg text-xs font-bold hover:bg-opacity-90 transition-all"
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            deleteCoupon(coupon._id);
+                          }}
+                          className="rounded-full p-2 text-slate-300 transition hover:bg-rose-50 hover:text-rose-500"
+                          aria-label="Thu hồi voucher"
                         >
-                          Sử dụng
+                          <Trash2 size={16} />
                         </button>
-                      )}
+                      ) : null}
+                    </div>
+
+                    <p className="mt-3 text-sm leading-6 text-slate-600">
+                      {coupon.description || 'Tấm vé này chưa có mô tả thêm.'}
+                    </p>
+
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {renderContextBadges(coupon)}
+                    </div>
+
+                    <div className="mt-4 flex flex-col gap-3 border-t border-slate-100 pt-4 md:flex-row md:items-center md:justify-between">
+                      <div>
+                        <p className="text-xs font-medium uppercase tracking-[0.22em] text-slate-400">
+                          {coupon.metaLine}
+                        </p>
+                        {coupon.claimWindowLabel && !coupon.isUsed ? (
+                          <p className={`mt-2 text-xs font-semibold ${coupon.isClaimExpired ? 'text-slate-400' : 'text-amber-700'}`}>
+                            {coupon.claimWindowLabel}
+                          </p>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {coupon.primaryAction ? (
+                          <button
+                            type="button"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              void handlePrimaryAction(coupon);
+                            }}
+                            className="btn-primary px-4 py-2 text-xs"
+                          >
+                            {coupon.primaryActionLabel}
+                            <ArrowRight size={14} />
+                          </button>
+                        ) : (
+                          <span className="text-xs font-semibold text-slate-400">
+                            {coupon.inactiveLabel}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="absolute top-1/2 -translate-y-1/2 -left-3 w-6 h-6 bg-background rounded-full border-2 border-pink-100" />
-                  <div className="absolute top-1/2 -translate-y-1/2 -right-3 w-6 h-6 bg-background rounded-full border-2 border-pink-100" />
-                </motion.div>
-              ))}
-            </div>
-          )}
-        </>
-      )}
+                </div>
+              </motion.article>
+            ))}
+          </div>
+        )}
+      </div>
 
-      {/* Modal Chi Tiết Voucher */}
       <AnimatePresence>
-        {detailCoupon && (
-          <div className="fixed inset-0 z-[100] flex items-end md:items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setDetailCoupon(null)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+        {detailCoupon ? (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 md:items-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setDetailCoupon(null)}
+            />
+
             <motion.div
               initial={{ y: 60, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: 60, opacity: 0 }}
-              className="relative bg-white w-full max-w-md rounded-[2.5rem] overflow-hidden shadow-2xl"
+              className="relative flex max-h-[90vh] w-full max-w-lg flex-col overflow-hidden rounded-[2rem] bg-white shadow-2xl"
             >
-              <div className={`flex items-center gap-4 px-8 py-6 ${detailCoupon.isUsed ? 'bg-gray-50' : 'bg-pink-50'}`}>
-                <div className={`p-4 rounded-2xl ${detailCoupon.isUsed ? 'bg-gray-200 text-gray-400' : 'bg-white text-primary shadow-sm'}`}>
-                  <Ticket size={32} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 flex-wrap mb-1">
-                    <h2 className="text-xl font-bold text-gray-800">{detailCoupon.title}</h2>
-                    {detailCoupon.isAiGenerated && <span className="text-[9px] font-bold bg-purple-100 text-purple-500 px-1.5 py-0.5 rounded-full">✨ AI</span>}
+              <div className="border-b border-slate-100 px-6 py-5 md:px-7">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <InfoPill
+                        label={detailCoupon.typeLabel}
+                        className={detailCoupon.typeTone}
+                        icon={TYPE_META[detailCoupon.resolvedType].icon}
+                      />
+                      <InfoPill label={detailCoupon.statusLabel} className={detailCoupon.statusTone} />
+                    </div>
+                    <h2 className="mt-3 text-2xl font-black text-ink">{detailCoupon.title}</h2>
+                    <p className="mt-2 text-sm leading-6 text-soft">{detailCoupon.directionLine}</p>
                   </div>
-                  <p className="text-xs text-gray-500">
-                    🎀 <span className="font-semibold">{ROLE_LABEL[detailCoupon.createdBy]}</span> tặng {ROLE_LABEL[detailCoupon.createdBy === 'boyfriend' ? 'girlfriend' : 'boyfriend'].toLowerCase()}
-                  </p>
-                  <span className="text-[10px] text-gray-400 font-mono uppercase tracking-widest">LOVE-{detailCoupon._id.slice(-4)}</span>
-                </div>
-                <button onClick={() => setDetailCoupon(null)} className="text-gray-400 hover:text-gray-600 shrink-0"><X /></button>
-              </div>
 
-              <div className="flex items-center">
-                <div className="w-5 h-5 rounded-full bg-gray-100 -ml-2.5 shrink-0" />
-                <div className="flex-1 border-t-2 border-dashed border-gray-100 mx-2" />
-                <div className="w-5 h-5 rounded-full bg-gray-100 -mr-2.5 shrink-0" />
-              </div>
-
-              <div className="px-8 py-6">
-                <p className="text-gray-500 text-sm leading-relaxed mb-6">
-                  {detailCoupon.description || 'Không có mô tả.'}
-                </p>
-
-                {detailCoupon.isUsed ? (
-                  <div className="flex items-center justify-center gap-2 py-3 bg-green-50 text-green-600 font-bold rounded-2xl">
-                    <CheckCircle size={18} /> Voucher đã được sử dụng
-                  </div>
-                ) : (
                   <button
-                    onClick={() => { redeemCoupon(detailCoupon._id); setDetailCoupon(null); }}
-                    className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg shadow-pink-100 hover:scale-[1.02] active:scale-95 transition-all"
+                    type="button"
+                    onClick={() => setDetailCoupon(null)}
+                    className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                    aria-label="Đóng chi tiết voucher"
                   >
-                    Sử dụng ngay 🎁
+                    <X size={18} />
                   </button>
-                )}
+                </div>
+              </div>
+
+              <div className="space-y-5 overflow-y-auto px-6 py-5 md:px-7">
+                <div className="rounded-[1.5rem] bg-[#fcf7fa] p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Mô tả</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-700">
+                    {detailCoupon.description || 'Tấm vé này chưa có mô tả thêm.'}
+                  </p>
+                </div>
+
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Ngữ nghĩa đã chốt</p>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    {renderContextBadges(detailCoupon)}
+                  </div>
+                  {detailCoupon.isLegacy ? (
+                    <p className="mt-3 text-sm leading-6 text-slate-500">
+                      Voucher này đi lên từ dữ liệu cũ nên app chỉ suy ra phần nhìn cần thiết, không ép ghi đè metadata cũ.
+                    </p>
+                  ) : null}
+                </div>
+
+                <div className="rounded-[1.5rem] border border-slate-200 bg-white p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Nhịp thời gian</p>
+                  <p className="mt-3 text-sm leading-6 text-slate-700">{detailCoupon.metaLine}</p>
+                  {detailCoupon.claimWindowLabel && !detailCoupon.isUsed ? (
+                    <p className={`mt-2 text-sm font-semibold ${detailCoupon.isClaimExpired ? 'text-slate-400' : 'text-amber-700'}`}>
+                      {detailCoupon.claimWindowLabel}
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="border-t border-slate-100 px-6 py-4 md:px-7">
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  {role === 'boyfriend' ? (
+                    <button
+                      type="button"
+                      onClick={() => deleteCoupon(detailCoupon._id)}
+                      className="btn-secondary"
+                    >
+                      <Trash2 size={16} />
+                      Thu hồi
+                    </button>
+                  ) : null}
+
+                  {detailCoupon.primaryAction ? (
+                    <button
+                      type="button"
+                      onClick={() => void handlePrimaryAction(detailCoupon)}
+                      className="btn-primary"
+                    >
+                      {detailCoupon.primaryActionLabel}
+                      <ArrowRight size={16} />
+                    </button>
+                  ) : (
+                    <div className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-4 py-2 text-sm font-semibold text-slate-500">
+                      {detailCoupon.isUsed ? <CheckCircle2 size={15} /> : <Clock3 size={15} />}
+                      {detailCoupon.inactiveLabel}
+                    </div>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
-        )}
+        ) : null}
       </AnimatePresence>
 
-      {/* Modal Thêm Voucher */}
       <AnimatePresence>
-        {showModal && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowModal(false)} className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
-            <motion.div initial={{ scale: 0.9 }} animate={{ scale: 1 }} exit={{ scale: 0.9 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl">
-              <div className="flex justify-between items-center mb-6">
+        {showModal ? (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center p-4 md:items-center">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+              onClick={() => setShowModal(false)}
+            />
+
+            <motion.div
+              initial={{ y: 60, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: 60, opacity: 0 }}
+              className="relative w-full max-w-lg rounded-[2rem] bg-white p-6 shadow-2xl md:p-7"
+            >
+              <div className="flex items-start justify-between gap-4">
                 <div>
-                  <h2 className="text-2xl font-bold text-gray-800">Tặng vé đặc quyền 🎫</h2>
-                  <p className="text-xs text-gray-400 mt-1">Tặng cho: <span className="font-bold text-primary">{ROLE_LABEL[oppositeRole]}</span></p>
+                  <p className="section-label">Tạo voucher</p>
+                  <h2 className="mt-2 text-2xl font-black text-ink">Chốt loại vé trước khi viết nội dung</h2>
+                  <p className="mt-2 text-sm leading-6 text-soft">
+                    Lượt này chỉ cần rõ loại, người nhận và người giữ để voucher mới không rơi về luồng cũ mơ hồ.
+                  </p>
                 </div>
-                <button onClick={() => setShowModal(false)}><X /></button>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="rounded-full p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-600"
+                  aria-label="Đóng form tạo voucher"
+                >
+                  <X size={18} />
+                </button>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <input required className="w-full bg-gray-50 p-4 rounded-2xl outline-none" placeholder="Tên voucher (Ví dụ: 15p mát-xa...)" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
-                <textarea required className="w-full bg-gray-50 p-4 rounded-2xl outline-none" rows={3} placeholder="Mô tả quyền lợi của tấm vé này..." value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
-                <button type="submit" className="w-full bg-primary text-white font-bold py-4 rounded-2xl shadow-lg mt-4">Gửi tặng ngay 🎁</button>
+
+              <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Loại voucher</p>
+                  <div className="mt-3 grid gap-3">
+                    {COMPOSER_TYPE_OPTIONS.map((option) => (
+                      <button
+                        key={option.value}
+                        type="button"
+                        onClick={() => setFormData((current) => ({ ...current, couponType: option.value }))}
+                        className={`rounded-[1.4rem] border p-4 text-left transition-all ${
+                          formData.couponType === option.value
+                            ? 'border-rose-200 bg-rose-50 shadow-sm'
+                            : 'border-slate-200 bg-white hover:border-slate-300'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <InfoPill
+                            label={TYPE_META[option.value].label}
+                            className={TYPE_META[option.value].tone}
+                            icon={TYPE_META[option.value].icon}
+                          />
+                        </div>
+                        <p className="mt-3 text-sm leading-6 text-slate-600">{option.description}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {formData.couponType === 'personal' ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Dành cho ai</p>
+                    <div className="mt-3 grid grid-cols-2 gap-2">
+                      {(['girlfriend', 'boyfriend'] as Role[]).map((candidateRole) => (
+                        <button
+                          key={candidateRole}
+                          type="button"
+                          onClick={() => setFormData((current) => ({ ...current, receiverRole: candidateRole }))}
+                          className={`rounded-[1.2rem] border px-4 py-3 text-left transition-all ${
+                            formData.receiverRole === candidateRole
+                              ? 'border-rose-200 bg-rose-50 shadow-sm'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <PersonBadge role={candidateRole} prefix="Tặng" variant="soft" className="!px-3 !py-1.5 !text-[11px]" />
+                          <p className="mt-3 text-xs leading-5 text-soft">
+                            {candidateRole === role
+                              ? 'Tấm vé sẽ đi thẳng về phía bạn.'
+                              : `Tấm vé sẽ nằm phía ${ROLE_NAME[candidateRole]}.`}
+                          </p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : formData.couponType === 'claimable' ? (
+                  <div>
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Giữ mở tới đâu</p>
+                    <div className="mt-3 grid gap-3">
+                      {CLAIM_WINDOW_OPTIONS.map((option) => (
+                        <button
+                          key={option.value}
+                          type="button"
+                          onClick={() => setFormData((current) => ({ ...current, claimWindowHours: option.value }))}
+                          className={`rounded-[1.2rem] border p-4 text-left transition-all ${
+                            formData.claimWindowHours === option.value
+                              ? 'border-amber-200 bg-amber-50 shadow-sm'
+                              : 'border-slate-200 bg-white hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <InfoPill label={option.label} className="bg-amber-50 text-amber-700 ring-amber-200/80" icon={<Clock3 size={12} />} />
+                          </div>
+                          <p className="mt-3 text-sm leading-6 text-slate-600">{option.description}</p>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-[1.4rem] bg-[#fcf7fa] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Hiểu nhanh</p>
+                    <p className="mt-3 text-sm leading-6 text-slate-600">{composerHint}</p>
+                  </div>
+                )}
+
+                <div>
+                  <label htmlFor="coupon-title" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Tiêu đề
+                  </label>
+                  <input
+                    id="coupon-title"
+                    required
+                    value={formData.title}
+                    onChange={(event) => setFormData((current) => ({ ...current, title: event.target.value }))}
+                    placeholder="Ví dụ: Chọn phim tối nay"
+                    className="mt-3 w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 outline-none transition focus:border-rose-200 focus:bg-white"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="coupon-description" className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">
+                    Mô tả
+                  </label>
+                  <textarea
+                    id="coupon-description"
+                    required
+                    rows={4}
+                    value={formData.description}
+                    onChange={(event) => setFormData((current) => ({ ...current, description: event.target.value }))}
+                    placeholder="Viết ngắn gọn tấm vé này dùng khi nào, để làm gì."
+                    className="mt-3 w-full rounded-[1.4rem] border border-slate-200 bg-slate-50 px-4 py-4 outline-none transition focus:border-rose-200 focus:bg-white"
+                  />
+                </div>
+
+                <div className="rounded-[1.4rem] bg-slate-50 p-4">
+                  <p className="text-sm leading-6 text-slate-600">{composerHint}</p>
+                </div>
+
+                <button type="submit" className="btn-primary w-full justify-center py-3">
+                  <Plus size={16} />
+                  Tạo tấm vé này
+                </button>
               </form>
             </motion.div>
           </div>
-        )}
+        ) : null}
       </AnimatePresence>
     </div>
   );

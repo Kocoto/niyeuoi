@@ -46,6 +46,7 @@ import authRoutes from './routes/authRoutes';
 import challengeRoutes from './routes/challengeRoutes';
 import locationRoutes from './routes/locationRoutes';
 import deepTalkRoutes from './routes/deepTalkRoutes';
+import rewardRoutes from './routes/rewardRoutes';
 import * as schedulerService from './services/schedulerService';
 
 app.use('/api/places', placeRoutes);
@@ -59,6 +60,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/challenges', challengeRoutes);
 app.use('/api/location', locationRoutes);
 app.use('/api/deeptalk', deepTalkRoutes);
+app.use('/api/rewards', rewardRoutes);
 
 // Basic Route
 app.get('/', (_req: Request, res: Response) => {
