@@ -13,6 +13,8 @@ import Reward, {
     type RewardSurface,
     type RewardTriggerType
 } from '../models/Reward';
+import type { IChallenge, ChallengeTarget } from '../models/Challenge';
+import type { IDeepTalkQuestion } from '../models/DeepTalkQuestion';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
 
@@ -35,16 +37,29 @@ type RewardContractRule = {
     defaultSurface: RewardSurface;
 };
 
+type ChallengeRewardSource = Pick<IChallenge, '_id' | 'title' | 'description' | 'createdBy' | 'forWhom'>;
+type DeepTalkRewardSource = Pick<IDeepTalkQuestion, '_id' | 'content'>;
+
 const ACTIVE_REWARD_STATUS: RewardStatus[] = ['pending', 'revealed'];
 const TERMINAL_REWARD_STATUS: RewardStatus[] = ['consumed', 'dismissed', 'expired'];
+const ROLE_LABEL: Record<AuthRole, string> = {
+    boyfriend: 'Được',
+    girlfriend: 'Ni'
+};
+
+const PARTY_LABEL: Record<RewardParty, string> = {
+    boyfriend: 'Được',
+    girlfriend: 'Ni',
+    both: 'cả hai'
+};
 
 export const REWARD_TRIGGER_RULES: Record<RewardTriggerType, RewardContractRule> = {
     challenge_completed: {
-        rewardKinds: ['coupon', 'challenge'],
+        rewardKinds: ['coupon', 'prompt', 'challenge', 'date_suggestion'],
         defaultSurface: 'challenge'
     },
     deeptalk_paired: {
-        rewardKinds: ['coupon', 'prompt', 'date_suggestion'],
+        rewardKinds: ['coupon', 'prompt', 'date_suggestion', 'memory_highlight'],
         defaultSurface: 'deeptalk'
     },
     mood_weekly_sync: {
@@ -78,7 +93,42 @@ const isRewardResourceType = (value: unknown): value is RewardResourceType =>
 const isRewardCreator = (value: unknown): value is AuthRole | 'system' =>
     value === 'boyfriend' || value === 'girlfriend' || value === 'system';
 
+const isChallengeTarget = (value: unknown): value is ChallengeTarget =>
+    value === 'boyfriend' || value === 'girlfriend' || value === 'both';
+
 const trimString = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+
+const getChallengeCompletionRewardCopy = (challenge: ChallengeRewardSource, forWhom: RewardParty) => {
+    const sourceLabel = trimString(challenge.title) || 'challenge nhỏ này';
+    const ownerLabel =
+        challenge.createdBy && (challenge.createdBy === 'boyfriend' || challenge.createdBy === 'girlfriend')
+            ? ROLE_LABEL[challenge.createdBy]
+            : undefined;
+
+    if (forWhom === 'both') {
+        return {
+            title: 'Một gợi ý hẹn hò nhỏ vừa mở ra',
+            description: `Hai bạn vừa khép lại "${sourceLabel}". Đây là lúc hợp lý để đi tiếp bằng một buổi nhỏ chỉ dành cho cả hai.`
+        };
+    }
+
+    const targetLabel = PARTY_LABEL[forWhom];
+    const ownerPrefix = ownerLabel ? `${ownerLabel} vừa khép lại ` : '';
+
+    return {
+        title: `Một gợi ý dịu nhẹ vừa mở ra cho ${targetLabel}`,
+        description: `${ownerPrefix}"${sourceLabel}". Có thể nối nhịp này bằng một buổi nhỏ dành cho ${targetLabel}.`
+    };
+};
+
+const getDeepTalkPairedRewardCopy = (question: DeepTalkRewardSource) => {
+    const sourceLabel = trimString(question.content) || 'câu hỏi này';
+
+    return {
+        title: 'Một nhịp follow-up vừa mở ra',
+        description: `Cả hai đã cùng trả lời "${sourceLabel}". Đây là lúc hợp lý để nói tiếp ngoài đời hoặc giữ lại một ý nhỏ cho lần sau.`
+    };
+};
 
 const buildRewardDedupeKey = (payload: Partial<IReward>) =>
     [
@@ -224,6 +274,39 @@ class RewardService {
             logger.error('Reward', 'Lỗi khi tạo reward', error);
             throw error;
         }
+    }
+
+    async emitChallengeCompletedReward(challenge: ChallengeRewardSource) {
+        const forWhom = isChallengeTarget(challenge.forWhom) ? challenge.forWhom : 'both';
+        const copy = getChallengeCompletionRewardCopy(challenge, forWhom);
+
+        return this.createReward({
+            triggerType: 'challenge_completed',
+            rewardKind: 'date_suggestion',
+            title: copy.title,
+            description: copy.description,
+            sourceType: 'challenge',
+            sourceId: String(challenge._id),
+            sourceLabel: trimString(challenge.title) || undefined,
+            forWhom,
+            createdBy: 'system'
+        });
+    }
+
+    async emitDeepTalkPairedReward(question: DeepTalkRewardSource) {
+        const copy = getDeepTalkPairedRewardCopy(question);
+
+        return this.createReward({
+            triggerType: 'deeptalk_paired',
+            rewardKind: 'prompt',
+            title: copy.title,
+            description: copy.description,
+            sourceType: 'deep_talk_question',
+            sourceId: String(question._id),
+            sourceLabel: trimString(question.content) || undefined,
+            forWhom: 'both',
+            createdBy: 'system'
+        });
     }
 
     async updateRewardStatus(id: string, status: RewardStatus) {

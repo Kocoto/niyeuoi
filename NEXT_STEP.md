@@ -448,7 +448,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C3b - Reward emitters on key flows
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - nối reward foundation vào đúng vài flow quan trọng trước, thay vì rải đều toàn app
 - Reference Sections:
@@ -478,7 +478,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C3c - Reward surfaces / handoff UX
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - đưa reward đã mở ra Home hoặc chỗ liên quan với copy nhẹ và đúng ngữ cảnh
 - Reference Sections:
@@ -488,23 +488,57 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
     - `34. Wireflow notification / reminder UX`
     - `38. Wireflow reward / trigger system`
 
+### C4a - Memory resurfacing foundation
+
+- Status: `active`
+- Mục tiêu:
+  - chốt contract chọn và đánh dấu memory resurfacing trước khi đưa nó ra Home hoặc Timeline
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `5. Timeline / Kỷ niệm`
+    - `17. Data / Personalization`
+- In scope:
+  - xác định dữ liệu tối thiểu để một kỷ niệm cũ có thể được gợi lại đúng lúc mà không làm frontend phải tự suy luận mơ hồ
+  - chốt rule chọn memory resurfacing theo hướng nhẹ, có ngữ cảnh, và backward-compatible với dữ liệu cũ
+  - chuẩn bị read path/backend surface đủ rõ cho slice UI kế tiếp
+- Out of scope:
+  - surface UI lớn ở Home/Timeline
+  - smart suggestion đa nguồn
+  - scheduler hoàn chỉnh
+- Likely files:
+  - `backend/src/services/memoryService.ts`
+  - `backend/src/models/Memory.ts`
+  - `backend/src/services/rewardService.ts` nếu cần dùng chung contract nhẹ
+  - một helper/service resurfacing mới ở backend nếu cần
+- Done when:
+  - có contract đủ rõ để memory resurfacing không bị hardcode ở frontend
+  - dữ liệu cũ vẫn an toàn và không bị ép thêm field mới ngay
+  - slice UI sau chỉ cần đọc và hiển thị
+
+### C4b - Memory resurfacing surfaces
+
+- Status: `pending`
+- Mục tiêu:
+  - đưa memory resurfacing ra Home hoặc Timeline với copy nhẹ và đúng thời điểm
+
 ## Current Active Slice
 
-- ID: `C3b`
+- ID: `C4a`
 - Status: `active`
-- Tên: `Reward emitters on key flows`
+- Tên: `Memory resurfacing foundation`
 - Việc phải làm ngay:
-  1. Đọc đúng `4`, `10`, `17`, và `38` trong `UI_UX_IDEAS.md`.
-  2. Nối `rewardService` vào vài trigger có ý nghĩa thật trước, ưu tiên challenge hoàn thành và cả hai cùng trả lời Deep Talk.
-  3. Giữ mọi emitter dùng cùng dedupe/status/source contract đã chốt ở `C3a`.
-  4. Chưa mở rộng sang reward surface lớn ở Home hay scheduler weekly/monthly hoàn chỉnh.
+  1. Đọc đúng `5` và `17` trong `UI_UX_IDEAS.md`.
+  2. Chốt contract chọn/gợi lại kỷ niệm cũ theo hướng nhẹ, đúng lúc, và không phá dữ liệu cũ.
+  3. Ưu tiên backend foundation/read path trước, chưa lao vào surface lớn ngay.
+  4. Không mở rộng sang smart suggestion đa nguồn hay scheduler hoàn chỉnh.
 - Không được làm trong slice này:
-  - reward UI hoàn chỉnh trên nhiều màn
-  - scheduler weekly/monthly hoàn chỉnh
-  - smart suggestions hoặc memory resurfacing
+  - surface UI lớn ở Home/Timeline
+  - smart suggestion đa nguồn
+  - scheduler hoàn chỉnh
 - Done checklist:
-  - challenge/deep talk emit reward qua cùng foundation
-  - dedupe đủ an toàn để tránh duplicate reward do retry/update
+  - contract memory resurfacing đủ rõ để frontend không tự tính mơ hồ
+  - dữ liệu cũ không bị ép metadata mới ngay
+  - có read path/backend surface đủ rõ cho slice UI kế tiếp
   - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
@@ -523,52 +557,47 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C3a - Reward trigger foundation`
+- `C3c - Reward surfaces / handoff UX`
 
 ### Current status
 
-- `C3a` đã hoàn tất và `C3b` được chuyển sang `active`.
-- Kết quả chốt cho `C3a`:
-  - thêm `backend/src/models/Reward.ts` để lưu chung trigger type, reward kind, status, source/ref, `surfaceHint`, `forWhom`, `dedupeKey`, và các mốc `openedAt/resolvedAt`
-  - thêm `backend/src/services/rewardService.ts` với rule contract cho từng trigger (`challenge_completed`, `deeptalk_paired`, `mood_weekly_sync`, `event_completed`), normalize payload, dedupe active reward, list theo `status/surface/forWhom`, và update status dùng chung
-  - thêm `backend/src/controllers/rewardController.ts` + `backend/src/routes/rewardRoutes.ts`, đồng thời mount `/api/rewards` trong `backend/src/server.ts` để slice sau có read path/backend surface ổn định
-  - lượt này chưa nối emitter vào challenge/deep talk/mood/event; phần đó được giữ đúng scope cho `C3b`
+- `C3c` đã hoàn tất và `C4` được tách thành `C4a/C4b`; `C4a` được chuyển sang `active`.
+- Kết quả chốt cho `C3c`:
+  - `frontend/src/pages/Home.tsx` giờ fetch reward từ `GET /api/rewards` theo role hiện tại, đọc trực tiếp reward đã mở thay vì tự tính lại trigger ở frontend
+  - Home có thêm block `Vừa mở ra` đủ nhẹ, chỉ hiển thị tối đa 2 reward active, copy giữ đúng tinh thần handoff chứ không biến thành game/feed KPI
+  - CTA của reward dẫn về đúng flow liên quan và chỉ mark `revealed` khi người dùng thật sự chạm vào
+  - pulse trên Home cũng nhận biết khi có một reward mới mở, nhưng vẫn giữ reward là lớp phụ chứ không chiếm vai chính
 
 ### Files touched in latest session
 
-- `backend/src/models/Reward.ts`
-- `backend/src/services/rewardService.ts`
-- `backend/src/controllers/rewardController.ts`
-- `backend/src/routes/rewardRoutes.ts`
-- `backend/src/server.ts`
+- `frontend/src/pages/Home.tsx`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
 
-- Đã chạy `npm run build` trong `backend`.
+- Đã chạy `npx eslint src/pages/Home.tsx` trong `frontend`.
+- Kết quả: pass.
+- Đã chạy `npm run build` trong `frontend`.
 - Kết quả: pass.
 - Ghi chú:
-  - lượt này chỉ chạm backend + handoff doc nên chưa chạy frontend build
-  - chưa có runtime/browser smoke cho `C3a`; mới xác nhận ở mức compile pass
+  - chưa có runtime/browser smoke cho `C3c`
+  - frontend build vẫn chỉ còn cảnh báo chunk size của Vite, không fail build
 
 ### Known blockers
 
-- Không có blocker lớn cho `C3a`.
-- Cần giữ guardrail ở `C3b`:
-  - chỉ nối emitter vào vài flow có ý nghĩa thật, không rải reward khắp app
-  - không để challenge/deep talk tự dựng payload reward riêng lệch khỏi `rewardService`
-  - không kéo `C3b` sang Home surface, scheduler hoàn chỉnh, hay smart suggestion
+- Không có blocker lớn cho `C3c`.
+- Cần giữ guardrail ở `C4a`:
+  - không để frontend tự chọn memory resurfacing bằng heuristic rời rạc
+  - không phá dữ liệu memory cũ chỉ để ép contract mới ngay
+  - không kéo `C4a` sang surface UI lớn hoặc smart suggestion đa nguồn
 
 ### Next concrete step
 
-- Bắt đầu `C3b - Reward emitters on key flows`.
+- Bắt đầu `C4a - Memory resurfacing foundation`.
 - Đọc đúng các section:
-  - `4. Deep Talk`
-  - `10. Challenges`
+  - `5. Timeline / Kỷ niệm`
   - `17. Data / Personalization`
-  - `38. Wireflow reward / trigger system`
 - Ưu tiên đọc trước:
-  - `backend/src/services/challengeService.ts`
-  - `backend/src/services/deepTalkService.ts`
-  - `backend/src/services/rewardService.ts`
-  - `backend/src/models/Reward.ts`
+  - `backend/src/services/memoryService.ts`
+  - `backend/src/models/Memory.ts`
+  - chỗ nào hiện đang đọc timeline/home để tránh tự tính resurfacing ở frontend

@@ -1,6 +1,7 @@
 import DeepTalkQuestion, { IDeepTalkQuestion } from '../models/DeepTalkQuestion';
 import JournalEntry, { IJournalEntry } from '../models/JournalEntry';
 import notificationService from './notificationService';
+import rewardService from './rewardService';
 import logger from '../utils/logger';
 
 class DeepTalkService {
@@ -48,6 +49,10 @@ class DeepTalkService {
             throw new Error('NOT_FOUND');
         }
 
+        const hadBothAnsweredBefore = Boolean(
+            question.answers.boyfriend.answeredAt && question.answers.girlfriend.answeredAt
+        );
+
         if (answerData.isInPerson) {
             question.answers[role].isInPerson = true;
             question.answers[role].text = undefined;
@@ -60,6 +65,26 @@ class DeepTalkService {
         await question.save();
 
         logger.success('DeepTalk', 'Đã lưu câu trả lời', { role, isInPerson: answerData.isInPerson });
+
+        const hasBothAnsweredNow = Boolean(
+            question.answers.boyfriend.answeredAt && question.answers.girlfriend.answeredAt
+        );
+
+        if (!hadBothAnsweredBefore && hasBothAnsweredNow) {
+            try {
+                await rewardService.emitDeepTalkPairedReward(question);
+                logger.success('DeepTalk', 'Đã mở reward sau khi cả hai cùng trả lời', {
+                    id: question._id,
+                    rewardKind: 'prompt'
+                });
+            } catch (error) {
+                logger.warn('DeepTalk', 'Không thể mở reward sau khi cả hai cùng trả lời', {
+                    id: question._id,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
+        }
+
         return question;
     }
 

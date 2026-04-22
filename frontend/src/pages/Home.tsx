@@ -75,6 +75,22 @@ type Coupon = {
   createdBy?: Role;
 };
 
+type Reward = {
+  _id: string;
+  triggerType: 'challenge_completed' | 'deeptalk_paired' | 'mood_weekly_sync' | 'event_completed';
+  rewardKind: 'coupon' | 'prompt' | 'challenge' | 'date_suggestion' | 'memory_highlight';
+  status: 'pending' | 'revealed' | 'consumed' | 'dismissed' | 'expired';
+  title: string;
+  description?: string;
+  sourceType: 'challenge' | 'deep_talk_question' | 'mood' | 'event' | 'coupon' | 'memory';
+  sourceId: string;
+  sourceLabel?: string;
+  surfaceHint?: 'home' | 'challenge' | 'deeptalk' | 'mood' | 'event';
+  forWhom?: Role | 'both';
+  createdAt?: string;
+  openedAt?: string;
+};
+
 type DashboardState = {
   memories: Memory[];
   moods: Mood[];
@@ -82,6 +98,7 @@ type DashboardState = {
   events: EventItem[];
   challenges: Challenge[];
   coupons: Coupon[];
+  rewards: Reward[];
 };
 
 type RoleSummary = {
@@ -112,6 +129,14 @@ type FeedItem = {
   meta: string;
   to: string;
   timestamp?: string;
+};
+
+type RewardHandoffView = {
+  reward: Reward;
+  to: string;
+  button: string;
+  icon: React.ReactNode;
+  meta: string;
 };
 
 type Daypart = {
@@ -291,6 +316,64 @@ function getChallengeDirectionLabel(challenge: Challenge) {
   return 'Một challenge cũ chưa rõ hướng';
 }
 
+function getRewardRoute(reward: Reward) {
+  switch (reward.rewardKind) {
+    case 'date_suggestion':
+      return {
+        to: '/events',
+        button: 'Mở gợi ý hẹn',
+        icon: <CalendarDays size={18} />,
+      };
+    case 'prompt':
+      return {
+        to: '/deeptalk',
+        button: 'Mở nhịp Deep Talk',
+        icon: <MessageCircleHeart size={18} />,
+      };
+    case 'coupon':
+      return {
+        to: '/coupons',
+        button: 'Mở voucher',
+        icon: <Ticket size={18} />,
+      };
+    case 'memory_highlight':
+      return {
+        to: '/timeline',
+        button: 'Xem lại kỷ niệm',
+        icon: <NotebookPen size={18} />,
+      };
+    case 'challenge':
+      return {
+        to: '/challenges',
+        button: 'Mở challenge',
+        icon: <Sparkles size={18} />,
+      };
+    default:
+      return {
+        to: reward.sourceType === 'deep_talk_question' ? '/deeptalk' : '/events',
+        button: 'Mở tiếp từ đây',
+        icon: <ArrowRight size={18} />,
+      };
+  }
+}
+
+function getRewardMeta(reward: Reward) {
+  const sourceLabel = reward.sourceLabel ? `"${reward.sourceLabel}"` : undefined;
+
+  switch (reward.sourceType) {
+    case 'challenge':
+      return `${reward.status === 'pending' ? 'Vừa mở ra' : 'Vẫn đang để đây'} · ${sourceLabel ? `sau ${sourceLabel}` : 'sau một challenge vừa khép lại'}`;
+    case 'deep_talk_question':
+      return `${reward.status === 'pending' ? 'Vừa mở ra' : 'Vẫn đang để đây'} · ${sourceLabel ? `sau câu hỏi ${sourceLabel}` : 'sau một nhịp Deep Talk đủ hai bên'}`;
+    case 'event':
+      return `${reward.status === 'pending' ? 'Vừa mở ra' : 'Vẫn đang để đây'} · sau một dịp vừa được khép lại`;
+    case 'mood':
+      return `${reward.status === 'pending' ? 'Vừa mở ra' : 'Vẫn đang để đây'} · sau một nhịp mood đủ đều`;
+    default:
+      return `${reward.status === 'pending' ? 'Vừa mở ra' : 'Vẫn đang để đây'} · ${formatRelative(reward.createdAt)}`;
+  }
+}
+
 const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading: boolean }> = ({ summary, currentRole, loading }) => {
   const isCurrentRole = summary.role === currentRole;
 
@@ -365,6 +448,52 @@ const FeedRow: React.FC<{ item: FeedItem }> = ({ item }) => (
   </Link>
 );
 
+const RewardHandoffCard: React.FC<{ item: RewardHandoffView; onOpen: (reward: Reward) => void }> = ({ item, onOpen }) => (
+  <Link
+    to={item.to}
+    onClick={() => onOpen(item.reward)}
+    className={`card-hover block rounded-[1.35rem] p-4 ${
+      item.reward.status === 'pending' ? 'bg-gradient-to-br from-rose-50 to-white ring-1 ring-rose-100' : 'bg-[#fcfafb]'
+    }`}
+  >
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span
+            className={`rounded-full px-3 py-1.5 text-xs font-bold ${
+              item.reward.status === 'pending'
+                ? 'bg-rose-100 text-rose-700'
+                : 'bg-stone-100 text-stone-600'
+            }`}
+          >
+            {item.reward.status === 'pending' ? 'Vừa mở ra' : 'Đã mở gần đây'}
+          </span>
+          {item.reward.forWhom === 'both' ? (
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
+              Cho cả hai
+            </span>
+          ) : item.reward.forWhom ? (
+            <PersonBadge role={item.reward.forWhom} prefix="Dành cho" showIcon={false} />
+          ) : null}
+        </div>
+        <p className="mt-3 text-sm font-bold text-ink">{item.reward.title}</p>
+        <p className="mt-2 text-sm leading-6 text-soft">{item.reward.description || 'Một nhịp mới vừa được mở ra từ điều hai người vừa khép lại.'}</p>
+      </div>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+        {item.icon}
+      </div>
+    </div>
+
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <span className="text-xs font-bold uppercase tracking-[0.18em] text-soft">{item.meta}</span>
+      <span className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+        {item.button}
+        <ArrowRight size={15} />
+      </span>
+    </div>
+  </Link>
+);
+
 const Home: React.FC = () => {
   const { role } = useAuth();
   const [data, setData] = useState<DashboardState>({
@@ -374,6 +503,7 @@ const Home: React.FC = () => {
     events: [],
     challenges: [],
     coupons: [],
+    rewards: [],
   });
   const [loading, setLoading] = useState(true);
   const [daysTogether, setDaysTogether] = useState(getElapsedDays);
@@ -393,8 +523,9 @@ const Home: React.FC = () => {
       api.get('/events'),
       api.get('/challenges'),
       api.get('/coupons'),
+      api.get('/rewards', { params: { forWhom: role } }),
     ])
-      .then(([memoryResult, moodResult, questionResult, eventResult, challengeResult, couponResult]) => {
+      .then(([memoryResult, moodResult, questionResult, eventResult, challengeResult, couponResult, rewardResult]) => {
         if (!mounted) return;
 
         setData({
@@ -404,6 +535,7 @@ const Home: React.FC = () => {
           events: eventResult.status === 'fulfilled' ? eventResult.value.data.data ?? [] : [],
           challenges: challengeResult.status === 'fulfilled' ? challengeResult.value.data.data ?? [] : [],
           coupons: couponResult.status === 'fulfilled' ? couponResult.value.data.data ?? [] : [],
+          rewards: rewardResult.status === 'fulfilled' ? rewardResult.value.data.data ?? [] : [],
         });
       })
       .finally(() => {
@@ -413,7 +545,7 @@ const Home: React.FC = () => {
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [role]);
 
   const daypart = getDaypart();
 
@@ -553,6 +685,37 @@ const Home: React.FC = () => {
     ),
     [data.coupons, role],
   );
+
+  const rewardHandoffItems = useMemo<RewardHandoffView[]>(() => {
+    return data.rewards
+      .filter(reward => reward.status === 'pending' || reward.status === 'revealed')
+      .sort((left, right) => new Date(right.createdAt ?? 0).getTime() - new Date(left.createdAt ?? 0).getTime())
+      .slice(0, 2)
+      .map(reward => ({
+        reward,
+        meta: getRewardMeta(reward),
+        ...getRewardRoute(reward),
+      }));
+  }, [data.rewards]);
+
+  const handleRewardOpen = (reward: Reward) => {
+    if (reward.status !== 'pending') return;
+
+    setData(current => ({
+      ...current,
+      rewards: current.rewards.map(item =>
+        item._id === reward._id
+          ? {
+              ...item,
+              status: 'revealed',
+              openedAt: new Date().toISOString(),
+            }
+          : item,
+      ),
+    }));
+
+    void api.patch(`/rewards/${reward._id}/status`, { status: 'revealed' });
+  };
 
   const roleSummaries = useMemo<RoleSummary[]>(() => (
     ROLE_ORDER.map(currentRole => {
@@ -794,7 +957,9 @@ const Home: React.FC = () => {
         : 'Deep Talk đang khá yên',
     ];
 
-    if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 7) {
+    if (rewardHandoffItems.length > 0) {
+      items.push(rewardHandoffItems[0].reward.status === 'pending' ? 'Có một điều vừa mở ra' : 'Có một nhịp mới vẫn đang để đây');
+    } else if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 7) {
       items.push(
         nextUpcomingEvent.daysUntil === 0
           ? `"${nextUpcomingEvent.event.title}" là hôm nay`
@@ -805,7 +970,7 @@ const Home: React.FC = () => {
     }
 
     return items;
-  }, [checkedInToday, incompleteQuestionCount, moodsByRole, nextUpcomingEvent, waitingCouponForCurrentRole]);
+  }, [checkedInToday, incompleteQuestionCount, moodsByRole, nextUpcomingEvent, rewardHandoffItems, waitingCouponForCurrentRole]);
 
   const recentFeed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -977,6 +1142,21 @@ const Home: React.FC = () => {
         </div>
 
         <div className="grid gap-4">
+          {rewardHandoffItems.length > 0 && (
+            <div className="surface-card p-5 md:p-6">
+              <p className="section-label">Vừa mở ra</p>
+              <h2 className="mt-2 text-2xl font-black text-ink">Một nhịp nhỏ đáng đi tiếp</h2>
+              <p className="mt-2 text-sm leading-6 text-soft">
+                Reward chỉ nên là lời gợi mở nhẹ sau một điều vừa được khép lại, không phải một lớp nhiệm vụ mới.
+              </p>
+              <div className="mt-5 space-y-3">
+                {rewardHandoffItems.map(item => (
+                  <RewardHandoffCard key={item.reward._id} item={item} onOpen={handleRewardOpen} />
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="surface-card p-5 md:p-6">
             <p className="section-label">Điều đang chờ giữa hai người</p>
             <h2 className="mt-2 text-2xl font-black text-ink">Những chỗ còn dang dở</h2>

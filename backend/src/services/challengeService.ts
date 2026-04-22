@@ -1,5 +1,6 @@
 import Challenge, { CHALLENGE_TARGET_VALUES, IChallenge, type ChallengeTarget } from '../models/Challenge';
 import notificationService from './notificationService';
+import rewardService from './rewardService';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
 
@@ -136,6 +137,19 @@ class ChallengeService {
                 3066993
             );
             logger.success('Challenge', 'Đã gửi thông báo Discord hoàn thành');
+
+            try {
+                await rewardService.emitChallengeCompletedReward(challenge);
+                logger.success('Challenge', 'Đã mở reward sau khi hoàn thành challenge', {
+                    id: challenge._id,
+                    rewardKind: 'date_suggestion'
+                });
+            } catch (error) {
+                logger.warn('Challenge', 'Không thể mở reward sau khi hoàn thành challenge', {
+                    id: challenge._id,
+                    error: error instanceof Error ? error.message : String(error)
+                });
+            }
         }
 
         return challenge;
