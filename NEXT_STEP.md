@@ -490,7 +490,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C4a - Memory resurfacing foundation
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - chốt contract chọn và đánh dấu memory resurfacing trước khi đưa nó ra Home hoặc Timeline
 - Reference Sections:
@@ -517,28 +517,34 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C4b - Memory resurfacing surfaces
 
-- Status: `pending`
+- Status: `active`
 - Mục tiêu:
   - đưa memory resurfacing ra Home hoặc Timeline với copy nhẹ và đúng thời điểm
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `2. Home / Dashboard`
+    - `5. Timeline / Kỷ niệm`
+    - `13. Shared UI System`
+    - `34. Wireflow notification / reminder UX`
 
 ## Current Active Slice
 
-- ID: `C4a`
+- ID: `C4b`
 - Status: `active`
-- Tên: `Memory resurfacing foundation`
+- Tên: `Memory resurfacing surfaces`
 - Việc phải làm ngay:
-  1. Đọc đúng `5` và `17` trong `UI_UX_IDEAS.md`.
-  2. Chốt contract chọn/gợi lại kỷ niệm cũ theo hướng nhẹ, đúng lúc, và không phá dữ liệu cũ.
-  3. Ưu tiên backend foundation/read path trước, chưa lao vào surface lớn ngay.
+  1. Đọc đúng `2`, `5`, `13`, và `34` trong `UI_UX_IDEAS.md`.
+  2. Dùng read path memory resurfacing mới để đưa kỷ niệm cũ ra Home hoặc Timeline theo kiểu nhẹ, đúng lúc, không gây áp lực.
+  3. Nếu cần mark một memory đã được gợi lại, dùng path backend vừa chốt thay vì tự lưu trạng thái ở frontend.
   4. Không mở rộng sang smart suggestion đa nguồn hay scheduler hoàn chỉnh.
 - Không được làm trong slice này:
-  - surface UI lớn ở Home/Timeline
+  - heuristic chọn resurfacing mới ở frontend
   - smart suggestion đa nguồn
   - scheduler hoàn chỉnh
 - Done checklist:
-  - contract memory resurfacing đủ rõ để frontend không tự tính mơ hồ
-  - dữ liệu cũ không bị ép metadata mới ngay
-  - có read path/backend surface đủ rõ cho slice UI kế tiếp
+  - Home hoặc Timeline đọc được memory resurfacing từ backend
+  - copy/CTA giữ đúng tinh thần nhẹ, không biến thành reminder gây áp lực
+  - mark flow dùng đúng path backend khi cần
   - dữ liệu cũ không bị phá và không làm màn lỗi
   - file này được cập nhật đúng trạng thái thật
 
@@ -557,47 +563,50 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C3c - Reward surfaces / handoff UX`
+- `C4a - Memory resurfacing foundation`
 
 ### Current status
 
-- `C3c` đã hoàn tất và `C4` được tách thành `C4a/C4b`; `C4a` được chuyển sang `active`.
-- Kết quả chốt cho `C3c`:
-  - `frontend/src/pages/Home.tsx` giờ fetch reward từ `GET /api/rewards` theo role hiện tại, đọc trực tiếp reward đã mở thay vì tự tính lại trigger ở frontend
-  - Home có thêm block `Vừa mở ra` đủ nhẹ, chỉ hiển thị tối đa 2 reward active, copy giữ đúng tinh thần handoff chứ không biến thành game/feed KPI
-  - CTA của reward dẫn về đúng flow liên quan và chỉ mark `revealed` khi người dùng thật sự chạm vào
-  - pulse trên Home cũng nhận biết khi có một reward mới mở, nhưng vẫn giữ reward là lớp phụ chứ không chiếm vai chính
+- `C4a` đã hoàn tất và `C4b` được chuyển sang `active`.
+- Kết quả chốt cho `C4a`:
+  - `backend/src/models/Memory.ts` giờ có lớp `resurfacing` optional theo kiểu backward-compatible để giữ `isPinned`, `lastSurfacedAt`, `surfacedCount`, và `lastReason` mà không ép dữ liệu cũ phải có ngay
+  - `backend/src/services/memoryService.ts` giờ có contract chọn candidate resurfacing (`anniversary_day`, `pinned_highlight`) và path mark khi một memory đã được gợi lại
+  - `backend/src/controllers/memoryController.ts` + `backend/src/routes/memoryRoutes.ts` đã mở read path `/api/memories/resurfacing` và mark path `/api/memories/:id/resurfacing/mark`
+  - logic hiện tại ưu tiên đúng ngày trong năm sau và pinned memory chưa được gợi lại gần đây, đủ rõ để slice UI sau đọc trực tiếp thay vì tự tính
 
 ### Files touched in latest session
 
-- `frontend/src/pages/Home.tsx`
+- `backend/src/models/Memory.ts`
+- `backend/src/services/memoryService.ts`
+- `backend/src/controllers/memoryController.ts`
+- `backend/src/routes/memoryRoutes.ts`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
 
-- Đã chạy `npx eslint src/pages/Home.tsx` trong `frontend`.
-- Kết quả: pass.
-- Đã chạy `npm run build` trong `frontend`.
+- Đã chạy `npm run build` trong `backend`.
 - Kết quả: pass.
 - Ghi chú:
-  - chưa có runtime/browser smoke cho `C3c`
-  - frontend build vẫn chỉ còn cảnh báo chunk size của Vite, không fail build
+  - chưa có runtime/API smoke cho `C4a`; mới xác nhận ở mức compile pass
 
 ### Known blockers
 
-- Không có blocker lớn cho `C3c`.
-- Cần giữ guardrail ở `C4a`:
-  - không để frontend tự chọn memory resurfacing bằng heuristic rời rạc
-  - không phá dữ liệu memory cũ chỉ để ép contract mới ngay
-  - không kéo `C4a` sang surface UI lớn hoặc smart suggestion đa nguồn
+- Không có blocker lớn cho `C4a`.
+- Cần giữ guardrail ở `C4b`:
+  - ưu tiên đọc từ `/api/memories/resurfacing` thay vì tự tính candidate ở frontend
+  - memory resurfacing phải là lời gợi mở nhẹ, không thành notification áp lực
+  - không kéo `C4b` sang smart suggestion đa nguồn hay scheduler hoàn chỉnh
 
 ### Next concrete step
 
-- Bắt đầu `C4a - Memory resurfacing foundation`.
+- Bắt đầu `C4b - Memory resurfacing surfaces`.
 - Đọc đúng các section:
+  - `2. Home / Dashboard`
   - `5. Timeline / Kỷ niệm`
-  - `17. Data / Personalization`
+  - `13. Shared UI System`
+  - `34. Wireflow notification / reminder UX`
 - Ưu tiên đọc trước:
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/Timeline.tsx`
   - `backend/src/services/memoryService.ts`
-  - `backend/src/models/Memory.ts`
-  - chỗ nào hiện đang đọc timeline/home để tránh tự tính resurfacing ở frontend
+  - `backend/src/controllers/memoryController.ts`

@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import type { IMemory } from '../models/Memory';
+import type { IMemory, MemoryResurfacingReason } from '../models/Memory';
 import memoryService from '../services/memoryService';
 import { resolveCreatePayload, resolveUpdatePayload } from '../utils/requestIdentity';
 
@@ -21,6 +21,15 @@ export const getMemory = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, error: 'Không tìm thấy kỷ niệm' });
         }
         res.status(500).json({ success: false, error: 'Lỗi máy chủ' });
+    }
+};
+
+export const getResurfacingMemories = async (_req: Request, res: Response) => {
+    try {
+        const memories = await memoryService.getResurfacingCandidates();
+        res.status(200).json({ success: true, count: memories.length, data: memories });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi máy chủ khi lấy memory resurfacing' });
     }
 };
 
@@ -59,5 +68,21 @@ export const deleteMemory = async (req: Request, res: Response) => {
             return res.status(404).json({ success: false, error: 'Không tìm thấy kỷ niệm' });
         }
         res.status(500).json({ success: false, error: 'Lỗi máy chủ khi xóa' });
+    }
+};
+
+export const markMemoryResurfaced = async (req: Request, res: Response) => {
+    try {
+        const reason = req.body?.reason as MemoryResurfacingReason | undefined;
+        const memory = await memoryService.markMemoryResurfaced(req.params.id as string, reason ?? 'anniversary_day');
+        res.status(200).json({ success: true, data: memory });
+    } catch (err: any) {
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
+        if (err.message === 'NOT_FOUND') {
+            return res.status(404).json({ success: false, error: 'Không tìm thấy kỷ niệm' });
+        }
+        res.status(500).json({ success: false, error: 'Lỗi máy chủ khi đánh dấu memory resurfacing' });
     }
 };

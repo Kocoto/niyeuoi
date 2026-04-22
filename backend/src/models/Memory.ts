@@ -2,6 +2,17 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 import type { AuthRole } from '../utils/authToken';
 
+export const MEMORY_RESURFACING_REASON_VALUES = ['anniversary_day', 'pinned_highlight'] as const;
+
+export type MemoryResurfacingReason = (typeof MEMORY_RESURFACING_REASON_VALUES)[number];
+
+export interface IMemoryResurfacingState {
+    isPinned?: boolean;
+    lastSurfacedAt?: Date;
+    surfacedCount?: number;
+    lastReason?: MemoryResurfacingReason;
+}
+
 export interface IMemory extends Document {
     title: string;
     date: Date;
@@ -9,7 +20,29 @@ export interface IMemory extends Document {
     media: string[];
     mood: string;
     createdBy?: AuthRole;
+    resurfacing?: IMemoryResurfacingState;
 }
+
+const resurfacingSchema = new Schema<IMemoryResurfacingState>({
+    isPinned: {
+        type: Boolean,
+        default: undefined
+    },
+    lastSurfacedAt: {
+        type: Date,
+        default: undefined
+    },
+    surfacedCount: {
+        type: Number,
+        default: undefined,
+        min: 0
+    },
+    lastReason: {
+        type: String,
+        enum: MEMORY_RESURFACING_REASON_VALUES,
+        default: undefined
+    }
+}, { _id: false });
 
 const memorySchema: Schema = new Schema({
     title: {
@@ -38,6 +71,10 @@ const memorySchema: Schema = new Schema({
     createdBy: {
         type: String,
         enum: ['boyfriend', 'girlfriend']
+    },
+    resurfacing: {
+        type: resurfacingSchema,
+        default: undefined
     }
 }, {
     timestamps: true

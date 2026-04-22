@@ -4,10 +4,15 @@ const router = express.Router();
 import {
     getMemories,
     getMemory,
+    getResurfacingMemories,
     createMemory,
     updateMemory,
-    deleteMemory
+    deleteMemory,
+    markMemoryResurfaced
 } from '../controllers/memoryController';
+
+router.get('/resurfacing', getResurfacingMemories);
+router.post('/:id/resurfacing/mark', validateObjectId, markMemoryResurfaced);
 
 router
     .route('/')
