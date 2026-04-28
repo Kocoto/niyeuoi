@@ -91,8 +91,46 @@ type Reward = {
   openedAt?: string;
 };
 
+type MemoryResurfacingReason = 'anniversary_day' | 'pinned_highlight';
+
+type MemoryResurfacingItem = {
+  memory: Memory;
+  reason: MemoryResurfacingReason;
+  label: string;
+  detail: string;
+  yearsAgo?: number;
+};
+
+type SmartSuggestionSourceType = 'event' | 'deep_talk_question' | 'coupon' | 'mood' | 'place' | 'wishlist';
+type SmartSuggestionTarget = Role | 'both';
+
+type SmartSuggestion = {
+  id: string;
+  type: 'event_prepare' | 'deeptalk_waiting' | 'coupon_waiting' | 'mood_soft_support' | 'place_next_time' | 'wishlist_bridge';
+  title: string;
+  detail: string;
+  reason: string;
+  priority: number;
+  targetRole?: SmartSuggestionTarget;
+  source: {
+    type: SmartSuggestionSourceType;
+    id: string;
+    label: string;
+    createdBy?: Role;
+  };
+  cta: {
+    label: string;
+    to: string;
+  };
+  surfaceHints: Array<'home' | 'places' | 'wishlist' | 'deeptalk' | 'coupons' | 'events'>;
+  createdAt?: string;
+  expiresAt?: string;
+};
+
 type DashboardState = {
   memories: Memory[];
+  resurfacingMemories: MemoryResurfacingItem[];
+  suggestions: SmartSuggestion[];
   moods: Mood[];
   questions: DeepTalkQuestion[];
   events: EventItem[];
@@ -139,6 +177,15 @@ type RewardHandoffView = {
   meta: string;
 };
 
+type MemoryResurfacingView = {
+  item: MemoryResurfacingItem;
+  owner: Role | null;
+  badge: string;
+  title: string;
+  detail: string;
+  meta: string;
+};
+
 type Daypart = {
   label: string;
   note: string;
@@ -167,6 +214,15 @@ const roleCopy: Record<Role, { eyebrow: string; title: string; subtitle: string;
 const roleSurfaceTone: Record<Role, string> = {
   girlfriend: 'bg-[#fff7fb] ring-pink-100',
   boyfriend: 'bg-[#f7fbff] ring-sky-100',
+};
+
+const suggestionSourceLabel: Record<SmartSuggestionSourceType, string> = {
+  event: 'Ngày đã ghim',
+  deep_talk_question: 'Deep Talk',
+  coupon: 'Voucher',
+  mood: 'Mood',
+  place: 'Places',
+  wishlist: 'Wishlist',
 };
 
 function getElapsedDays() {
@@ -374,6 +430,56 @@ function getRewardMeta(reward: Reward) {
   }
 }
 
+function formatMemoryDate(value?: string) {
+  const date = parseDateOnly(value);
+  if (!date) return 'một ngày cũ';
+
+  return date.toLocaleDateString('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+  });
+}
+
+function getMemoryResurfacingFallbackLabel(item: MemoryResurfacingItem) {
+  if (item.reason === 'anniversary_day') {
+    return item.yearsAgo && item.yearsAgo > 0 ? `${item.yearsAgo} năm trước cũng là ngày này` : 'Một kỷ niệm đang quay lại đúng ngày';
+  }
+
+  return 'Một kỷ niệm được ghim đang nổi lên';
+}
+
+function getMemoryResurfacingFallbackDetail(item: MemoryResurfacingItem) {
+  const title = item.memory.title ? `"${item.memory.title}"` : 'một kỷ niệm cũ';
+
+  if (item.reason === 'anniversary_day') {
+    return `${title} vừa quay lại đúng ngày. Không cần làm gì ngay, chỉ mở Timeline nếu hôm nay muốn nhìn lại một chút.`;
+  }
+
+  return `${title} đang được giữ lại như một dấu ghim nhỏ. Timeline để sẵn ở đây khi hai người muốn xem lại.`;
+}
+
+function buildMemoryResurfacingView(item: MemoryResurfacingItem): MemoryResurfacingView {
+  const owner = resolveRole(item.memory.createdBy);
+  const dateLabel = formatMemoryDate(item.memory.date);
+  const ownerLabel = owner ? `góc ${ROLE_NAME[owner]}` : 'dữ liệu cũ chưa rõ người';
+
+  return {
+    item,
+    owner,
+    badge: item.reason === 'anniversary_day' ? 'Đúng ngày' : 'Đã ghim',
+    title: item.label || getMemoryResurfacingFallbackLabel(item),
+    detail: item.detail || getMemoryResurfacingFallbackDetail(item),
+    meta: `${dateLabel} · ${ownerLabel}`,
+  };
+}
+
+function getSmartSuggestionMeta(item: SmartSuggestion) {
+  const sourceLabel = suggestionSourceLabel[item.source.type];
+  const timeLabel = item.expiresAt ? `có ngữ cảnh tới ${formatMemoryDate(item.expiresAt)}` : formatRelative(item.createdAt);
+  return `${sourceLabel} · ${timeLabel}`;
+}
+
 const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading: boolean }> = ({ summary, currentRole, loading }) => {
   const isCurrentRole = summary.role === currentRole;
 
@@ -448,6 +554,92 @@ const FeedRow: React.FC<{ item: FeedItem }> = ({ item }) => (
   </Link>
 );
 
+const SmartSuggestionCard: React.FC<{ item: SmartSuggestion }> = ({ item }) => {
+  const target = resolveTarget(item.targetRole);
+  const sourceOwner = resolveRole(item.source.createdBy);
+
+  return (
+    <Link
+      to={item.cta.to}
+      className="card-hover block rounded-[1.35rem] bg-gradient-to-br from-[#f7fbff] via-white to-rose-50 p-4 ring-1 ring-sky-100"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-sky-100 px-3 py-1.5 text-xs font-bold text-sky-700">
+              Gợi ý nhẹ
+            </span>
+            {target === 'both' ? (
+              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
+                Cho cả hai
+              </span>
+            ) : target ? (
+              <PersonBadge role={target} prefix="Dành cho" showIcon={false} />
+            ) : sourceOwner ? (
+              <PersonBadge role={sourceOwner} prefix="Từ dữ liệu của" showIcon={false} />
+            ) : (
+              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
+                Từ dữ liệu thật
+              </span>
+            )}
+          </div>
+          <p className="mt-3 text-sm font-bold text-ink">{item.title}</p>
+          <p className="mt-2 text-sm leading-6 text-soft">{item.detail}</p>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+          <Sparkles size={18} />
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-bold uppercase tracking-[0.18em] text-soft">{getSmartSuggestionMeta(item)}</span>
+        <span className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+          {item.cta.label}
+          <ArrowRight size={15} />
+        </span>
+      </div>
+    </Link>
+  );
+};
+
+const MemoryResurfacingCard: React.FC<{ item: MemoryResurfacingView; onOpen: (item: MemoryResurfacingItem) => void }> = ({ item, onOpen }) => (
+  <Link
+    to="/timeline"
+    onClick={() => onOpen(item.item)}
+    className="card-hover block rounded-[1.35rem] bg-gradient-to-br from-amber-50 via-white to-rose-50 p-4 ring-1 ring-amber-100"
+  >
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
+            {item.badge}
+          </span>
+          {item.owner ? (
+            <PersonBadge role={item.owner} prefix="Góc của" showIcon={false} />
+          ) : (
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
+              Kỷ niệm cũ
+            </span>
+          )}
+        </div>
+        <p className="mt-3 text-sm font-bold text-ink">{item.title}</p>
+        <p className="mt-2 text-sm leading-6 text-soft">{item.detail}</p>
+      </div>
+      <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+        <CalendarDays size={18} />
+      </div>
+    </div>
+
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+      <span className="text-xs font-bold uppercase tracking-[0.18em] text-soft">{item.meta}</span>
+      <span className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+        Mở Timeline
+        <ArrowRight size={15} />
+      </span>
+    </div>
+  </Link>
+);
+
 const RewardHandoffCard: React.FC<{ item: RewardHandoffView; onOpen: (reward: Reward) => void }> = ({ item, onOpen }) => (
   <Link
     to={item.to}
@@ -498,6 +690,8 @@ const Home: React.FC = () => {
   const { role } = useAuth();
   const [data, setData] = useState<DashboardState>({
     memories: [],
+    resurfacingMemories: [],
+    suggestions: [],
     moods: [],
     questions: [],
     events: [],
@@ -518,6 +712,8 @@ const Home: React.FC = () => {
 
     Promise.allSettled([
       api.get('/memories'),
+      api.get('/memories/resurfacing'),
+      api.get('/suggestions', { params: { surface: 'home', limit: 3, forWhom: role } }),
       api.get('/moods'),
       api.get('/deeptalk/questions'),
       api.get('/events'),
@@ -525,11 +721,13 @@ const Home: React.FC = () => {
       api.get('/coupons'),
       api.get('/rewards', { params: { forWhom: role } }),
     ])
-      .then(([memoryResult, moodResult, questionResult, eventResult, challengeResult, couponResult, rewardResult]) => {
+      .then(([memoryResult, resurfacingResult, suggestionResult, moodResult, questionResult, eventResult, challengeResult, couponResult, rewardResult]) => {
         if (!mounted) return;
 
         setData({
           memories: memoryResult.status === 'fulfilled' ? memoryResult.value.data.data ?? [] : [],
+          resurfacingMemories: resurfacingResult.status === 'fulfilled' ? resurfacingResult.value.data.data ?? [] : [],
+          suggestions: suggestionResult.status === 'fulfilled' ? suggestionResult.value.data.data ?? [] : [],
           moods: moodResult.status === 'fulfilled' ? moodResult.value.data.data ?? [] : [],
           questions: questionResult.status === 'fulfilled' ? questionResult.value.data.data ?? [] : [],
           events: eventResult.status === 'fulfilled' ? eventResult.value.data.data ?? [] : [],
@@ -698,6 +896,17 @@ const Home: React.FC = () => {
       }));
   }, [data.rewards]);
 
+  const memoryResurfacingItems = useMemo<MemoryResurfacingView[]>(() => (
+    data.resurfacingMemories
+      .slice(0, 2)
+      .map(buildMemoryResurfacingView)
+  ), [data.resurfacingMemories]);
+
+  const smartSuggestionItems = useMemo(
+    () => data.suggestions.slice(0, 3),
+    [data.suggestions],
+  );
+
   const handleRewardOpen = (reward: Reward) => {
     if (reward.status !== 'pending') return;
 
@@ -715,6 +924,15 @@ const Home: React.FC = () => {
     }));
 
     void api.patch(`/rewards/${reward._id}/status`, { status: 'revealed' });
+  };
+
+  const handleMemoryResurfacingOpen = (item: MemoryResurfacingItem) => {
+    setData(current => ({
+      ...current,
+      resurfacingMemories: current.resurfacingMemories.filter(candidate => candidate.memory._id !== item.memory._id),
+    }));
+
+    void api.post(`/memories/${item.memory._id}/resurfacing/mark`, { reason: item.reason }).catch(() => undefined);
   };
 
   const roleSummaries = useMemo<RoleSummary[]>(() => (
@@ -959,6 +1177,10 @@ const Home: React.FC = () => {
 
     if (rewardHandoffItems.length > 0) {
       items.push(rewardHandoffItems[0].reward.status === 'pending' ? 'Có một điều vừa mở ra' : 'Có một nhịp mới vẫn đang để đây');
+    } else if (memoryResurfacingItems.length > 0) {
+      items.push('Một kỷ niệm cũ đang quay lại');
+    } else if (smartSuggestionItems.length > 0) {
+      items.push('Có một gợi ý nhẹ từ dữ liệu thật');
     } else if (nextUpcomingEvent && nextUpcomingEvent.daysUntil <= 7) {
       items.push(
         nextUpcomingEvent.daysUntil === 0
@@ -970,7 +1192,7 @@ const Home: React.FC = () => {
     }
 
     return items;
-  }, [checkedInToday, incompleteQuestionCount, moodsByRole, nextUpcomingEvent, rewardHandoffItems, waitingCouponForCurrentRole]);
+  }, [checkedInToday, incompleteQuestionCount, memoryResurfacingItems, moodsByRole, nextUpcomingEvent, rewardHandoffItems, smartSuggestionItems, waitingCouponForCurrentRole]);
 
   const recentFeed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -1152,6 +1374,36 @@ const Home: React.FC = () => {
               <div className="mt-5 space-y-3">
                 {rewardHandoffItems.map(item => (
                   <RewardHandoffCard key={item.reward._id} item={item} onOpen={handleRewardOpen} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {memoryResurfacingItems.length > 0 && (
+            <div className="surface-card p-5 md:p-6">
+              <p className="section-label">Kỷ niệm quay lại</p>
+              <h2 className="mt-2 text-2xl font-black text-ink">Một khoảnh khắc cũ vừa đúng lúc</h2>
+              <p className="mt-2 text-sm leading-6 text-soft">
+                Home chỉ đặt lại ở đây khi backend thấy một ngày hoặc dấu ghim thật sự có ngữ cảnh. Không phải lời nhắc phải làm gì ngay.
+              </p>
+              <div className="mt-5 space-y-3">
+                {memoryResurfacingItems.map(item => (
+                  <MemoryResurfacingCard key={`${item.item.memory._id}-${item.item.reason}`} item={item} onOpen={handleMemoryResurfacingOpen} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {smartSuggestionItems.length > 0 && (
+            <div className="surface-card p-5 md:p-6">
+              <p className="section-label">Gợi ý nhẹ</p>
+              <h2 className="mt-2 text-2xl font-black text-ink">Một hướng đi tiếp từ dữ liệu thật</h2>
+              <p className="mt-2 text-sm leading-6 text-soft">
+                Home chỉ đọc những gợi ý backend đã thấy có ngữ cảnh, rồi đặt lại tối đa vài bước nhỏ để hai người tự chọn.
+              </p>
+              <div className="mt-5 space-y-3">
+                {smartSuggestionItems.map(item => (
+                  <SmartSuggestionCard key={item.id} item={item} />
                 ))}
               </div>
             </div>

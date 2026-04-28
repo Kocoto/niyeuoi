@@ -517,7 +517,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C4b - Memory resurfacing surfaces
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - đưa memory resurfacing ra Home hoặc Timeline với copy nhẹ và đúng thời điểm
 - Reference Sections:
@@ -527,25 +527,127 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
     - `13. Shared UI System`
     - `34. Wireflow notification / reminder UX`
 
+### C5a - Smart suggestion foundation
+
+- Status: `done`
+- Mục tiêu:
+  - tách smart suggestions thành contract/backend read path tối thiểu trước khi đưa ra Home hoặc các màn liên quan
+  - giữ gợi ý là lời mở nhẹ theo dữ liệu có thật, không thành scheduler, notification, hoặc AI tự bịa
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `2. Home / Dashboard`
+    - `6. Places / Địa điểm`
+    - `8. Wishlist`
+    - `13. Shared UI System`
+    - `17. Data / Personalization`
+    - `34. Wireflow notification / reminder UX`
+- In scope:
+  - chốt suggestion payload tối thiểu: type, title/detail, source, CTA, reason, target role nếu có
+  - tạo read path backend để frontend đọc suggestion thay vì tự suy luận trên UI
+  - dùng dữ liệu hiện có một cách backward-compatible, không yêu cầu backfill
+- Out of scope:
+  - surface UI lớn ở Home hoặc Places/Wishlist
+  - scheduler / push notification
+  - AI generation dài hoặc tự tạo nội dung không dựa trên dữ liệu hiện có
+  - reward trigger mới
+- Likely files:
+  - `backend/src/services/`
+  - `backend/src/controllers/`
+  - `backend/src/routes/`
+  - `backend/src/models/` nếu cần model nhẹ, nhưng ưu tiên không thêm nếu read-only đủ
+- Done when:
+  - có contract đủ rõ để slice surface không tự tính suggestion ở frontend
+  - API đọc suggestion trả dữ liệu an toàn khi repo có ít hoặc thiếu data cũ
+  - chưa đụng UI surface ngoài mức cần thiết để build không lỗi
+
+### C5b - Smart suggestion surfaces
+
+- Status: `done`
+- Mục tiêu:
+  - đưa smart suggestions từ backend lên Home hoặc màn liên quan với copy nhẹ và CTA đúng ngữ cảnh
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `2. Home / Dashboard`
+    - `6. Places / Địa điểm`
+    - `8. Wishlist`
+    - `13. Shared UI System`
+    - `34. Wireflow notification / reminder UX`
+- In scope:
+  - frontend chỉ đọc suggestion từ backend path của `C5a`
+  - CTA dẫn đúng nơi: Places, Wishlist, Events, Deep Talk, Coupons nếu contract hỗ trợ
+  - wording rõ `Ni` / `Được` khi suggestion dành cho một phía
+- Out of scope:
+  - tự chọn suggestion bằng heuristic frontend
+  - scheduler / notification hoàn chỉnh
+  - reward trigger mới
+
+### C6a - Paired completeness foundation
+
+- Status: `done`
+- Mục tiêu:
+  - chốt contract tối thiểu cho relationship state / paired completeness trước khi đưa ra Home
+  - xác định hôm nay mỗi phía đã có gì, còn thiếu gì, và bước tiếp theo hợp lý mà không biến thành KPI
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.5 Relationship state layer`
+    - `2. Home / Dashboard`
+    - `13. Shared UI System`
+    - `17. Data / Personalization`
+    - `34. Wireflow notification / reminder UX`
+- In scope:
+  - tạo read path/backend helper nếu cần để trả state nhẹ theo ngày và theo người
+  - contract phải phân biệt rõ `Ni`, `Được`, và `both`
+  - dùng dữ liệu hiện có: mood, Deep Talk, events, coupons, rewards/suggestions nếu hợp lý
+- Out of scope:
+  - redesign Home lớn
+  - scheduler / notification push
+  - scoring, streak, KPI, hoặc gamification
+  - ép dữ liệu cũ phải có field mới
+- Done when:
+  - có contract rõ để UI sau không tự gom relationship state mơ hồ
+  - dữ liệu cũ/thiếu dữ liệu trả fallback an toàn
+  - build/test phù hợp pass
+
+### C6b - Paired completeness surfaces
+
+- Status: `active`
+- Mục tiêu:
+  - đưa relationship state / paired completeness lên Home bằng copy nhẹ, rõ ai đang cần gì
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.5 Relationship state layer`
+    - `2. Home / Dashboard`
+    - `13. Shared UI System`
+    - `34. Wireflow notification / reminder UX`
+- In scope:
+  - frontend đọc contract từ `C6a`
+  - chỉ hiển thị một lớp trạng thái nhẹ, không thêm bảng KPI
+  - CTA dẫn đúng flow và giữ rõ `Ni` / `Được`
+- Out of scope:
+  - tự gom state bằng heuristic frontend
+  - scheduler / push notification
+  - scoring/streak
+
 ## Current Active Slice
 
-- ID: `C4b`
+- ID: `C6b`
 - Status: `active`
-- Tên: `Memory resurfacing surfaces`
+- Tên: `Paired completeness surfaces`
 - Việc phải làm ngay:
-  1. Đọc đúng `2`, `5`, `13`, và `34` trong `UI_UX_IDEAS.md`.
-  2. Dùng read path memory resurfacing mới để đưa kỷ niệm cũ ra Home hoặc Timeline theo kiểu nhẹ, đúng lúc, không gây áp lực.
-  3. Nếu cần mark một memory đã được gợi lại, dùng path backend vừa chốt thay vì tự lưu trạng thái ở frontend.
-  4. Không mở rộng sang smart suggestion đa nguồn hay scheduler hoàn chỉnh.
+  1. Đọc đúng `1.5`, `2`, `13`, `17`, và `34` trong `UI_UX_IDEAS.md`.
+  2. Cho Home đọc `/api/relationship-state` từ contract của `C6a`.
+  3. Hiển thị một lớp trạng thái nhẹ, rõ `Ni`, `Được`, và `both`, không thêm bảng KPI.
+  4. CTA dùng trực tiếp contract backend, không tự gom relationship state bằng heuristic frontend.
 - Không được làm trong slice này:
-  - heuristic chọn resurfacing mới ở frontend
-  - smart suggestion đa nguồn
-  - scheduler hoàn chỉnh
+  - redesign Home lớn ngoài block/surface nhỏ cần thiết
+  - scheduler / push notification
+  - scoring/streak/KPI hoặc gamification
+  - ép dữ liệu cũ phải có field mới
 - Done checklist:
-  - Home hoặc Timeline đọc được memory resurfacing từ backend
-  - copy/CTA giữ đúng tinh thần nhẹ, không biến thành reminder gây áp lực
-  - mark flow dùng đúng path backend khi cần
-  - dữ liệu cũ không bị phá và không làm màn lỗi
+  - Home đọc contract relationship state từ backend
+  - surface/copy rõ ai đang có gì và điều gì đang chờ, không phán xét
+  - không tạo heuristic relationship state mới ở frontend
+  - build/test phù hợp pass
   - file này được cập nhật đúng trạng thái thật
 
 ## Quy tắc cập nhật trước khi dừng
@@ -563,23 +665,25 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C4a - Memory resurfacing foundation`
+- `C6a - Paired completeness foundation`
 
 ### Current status
 
-- `C4a` đã hoàn tất và `C4b` được chuyển sang `active`.
-- Kết quả chốt cho `C4a`:
-  - `backend/src/models/Memory.ts` giờ có lớp `resurfacing` optional theo kiểu backward-compatible để giữ `isPinned`, `lastSurfacedAt`, `surfacedCount`, và `lastReason` mà không ép dữ liệu cũ phải có ngay
-  - `backend/src/services/memoryService.ts` giờ có contract chọn candidate resurfacing (`anniversary_day`, `pinned_highlight`) và path mark khi một memory đã được gợi lại
-  - `backend/src/controllers/memoryController.ts` + `backend/src/routes/memoryRoutes.ts` đã mở read path `/api/memories/resurfacing` và mark path `/api/memories/:id/resurfacing/mark`
-  - logic hiện tại ưu tiên đúng ngày trong năm sau và pinned memory chưa được gợi lại gần đây, đủ rõ để slice UI sau đọc trực tiếp thay vì tự tính
+- `C6a` đã hoàn tất và `C6b` được chuyển sang `active`.
+- Kết quả chốt cho `C6a`:
+  - thêm read path `/api/relationship-state`
+  - response có `people.girlfriend`, `people.boyfriend`, `shared`, và `nextStep`
+  - contract phân biệt rõ `Ni`, `Được`, và `both`; không gom thành một stream mơ hồ
+  - dữ liệu dùng read-only từ mood hôm nay, Deep Talk đang chờ, event sắp tới, voucher chưa dùng, reward đang mở
+  - fallback an toàn khi thiếu dữ liệu: mood trống tạo lời mở nhẹ, không ép record cũ có field mới
+  - frontend chưa có heuristic relationship state mới
 
 ### Files touched in latest session
 
-- `backend/src/models/Memory.ts`
-- `backend/src/services/memoryService.ts`
-- `backend/src/controllers/memoryController.ts`
-- `backend/src/routes/memoryRoutes.ts`
+- `backend/src/services/relationshipStateService.ts`
+- `backend/src/controllers/relationshipStateController.ts`
+- `backend/src/routes/relationshipStateRoutes.ts`
+- `backend/src/server.ts`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
@@ -587,26 +691,24 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 - Đã chạy `npm run build` trong `backend`.
 - Kết quả: pass.
 - Ghi chú:
-  - chưa có runtime/API smoke cho `C4a`; mới xác nhận ở mức compile pass
+  - chưa chạy runtime/API smoke với database thật cho `/api/relationship-state`
 
 ### Known blockers
 
-- Không có blocker lớn cho `C4a`.
-- Cần giữ guardrail ở `C4b`:
-  - ưu tiên đọc từ `/api/memories/resurfacing` thay vì tự tính candidate ở frontend
-  - memory resurfacing phải là lời gợi mở nhẹ, không thành notification áp lực
-  - không kéo `C4b` sang smart suggestion đa nguồn hay scheduler hoàn chỉnh
+- Không có blocker lớn cho `C6a`.
+- Rủi ro còn lại:
+  - endpoint mới mới được kiểm ở mức TypeScript build
+  - cần C6b xác nhận Home hiển thị nhẹ, không đè lên reward/resurfacing/suggestion hiện có
 
 ### Next concrete step
 
-- Bắt đầu `C4b - Memory resurfacing surfaces`.
+- Bắt đầu `C6b - Paired completeness surfaces`.
 - Đọc đúng các section:
+  - `1.5 Relationship state layer`
   - `2. Home / Dashboard`
-  - `5. Timeline / Kỷ niệm`
   - `13. Shared UI System`
   - `34. Wireflow notification / reminder UX`
 - Ưu tiên đọc trước:
   - `frontend/src/pages/Home.tsx`
-  - `frontend/src/pages/Timeline.tsx`
-  - `backend/src/services/memoryService.ts`
-  - `backend/src/controllers/memoryController.ts`
+  - contract response từ `backend/src/services/relationshipStateService.ts`
+  - các block Home hiện có: daily pulse, shared pending, reward, resurfacing, smart suggestions
