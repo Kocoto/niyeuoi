@@ -8,11 +8,11 @@ import { ROLE_AUTH_LABEL, ROLE_META, ROLE_NAME, type Role } from '../constants/r
 const roleCards = [
   {
     role: 'girlfriend' as const,
-    description: `Dang nhap de app biet phien nay la cua ${ROLE_NAME.girlfriend}.`,
+    description: `Vào góc ${ROLE_NAME.girlfriend} để các check-in, wishlist và câu trả lời mới được giữ đúng phía.`,
   },
   {
     role: 'boyfriend' as const,
-    description: `Dang nhap de cac thao tac cua ${ROLE_NAME.boyfriend} duoc gan dung nguoi dung.`,
+    description: `Vào góc ${ROLE_NAME.boyfriend} để app đổi shell và gắn thao tác mới theo đúng người đang dùng.`,
   },
 ];
 
@@ -50,8 +50,8 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
         >
           <Heart className="fill-primary text-primary" size={44} />
           <div>
-            <p className="text-lg font-bold text-gray-800">Dang kiem tra phien dang nhap</p>
-            <p className="text-sm text-gray-500">Cho mot chut de xac dinh nguoi dang dung app.</p>
+            <p className="text-lg font-bold text-gray-800">Đang kiểm tra phiên đăng nhập</p>
+            <p className="text-sm text-gray-500">Chờ một chút để xác định app đang ở góc của ai.</p>
           </div>
         </motion.div>
       </div>
@@ -73,12 +73,12 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
               </div>
               <div>
                 <p className="text-xs font-bold uppercase tracking-[0.3em] text-pink-400">Niyeuoi</p>
-                <h1 className="text-2xl font-black text-gray-900 md:text-3xl">Ai dang dung app nay?</h1>
+                <h1 className="text-2xl font-black text-gray-900 md:text-3xl">Ai đang dùng app này?</h1>
               </div>
             </div>
 
             <p className="max-w-lg text-sm leading-6 text-gray-600">
-              App se luu phien dang nhap de biet hien tai dang la {ROLE_NAME.girlfriend} hay {ROLE_NAME.boyfriend}, thay vi chi doi role o phia client.
+              Chọn đúng người để cả phiên này có màu, badge và dữ liệu mới theo đúng góc {ROLE_NAME.girlfriend} hoặc {ROLE_NAME.boyfriend}.
             </p>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2 md:mt-6 md:gap-4">
@@ -89,7 +89,10 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                   <button
                     key={card.role}
                     type="button"
-                    onClick={() => setSelectedRole(card.role)}
+                    onClick={() => {
+                      setSelectedRole(card.role);
+                      setPin('');
+                    }}
                     className={`rounded-[1.35rem] border p-4 text-left ${active ? `${meta.authBorderClassName} bg-gradient-to-br ${meta.authGradientClassName} shadow-lg` : 'border-gray-200 bg-white hover:border-gray-300'} transition-colors shadow-sm`}
                   >
                     <div className="flex items-center justify-between">
@@ -108,16 +111,16 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
 
           <form onSubmit={handleSubmit} className="flex flex-col justify-between rounded-[1.5rem] border border-gray-100 bg-white p-5 shadow-sm md:rounded-[1.75rem] md:p-8">
             <div>
-              <p className="text-sm font-bold uppercase tracking-[0.25em] text-gray-400">Dang nhap</p>
+              <p className="text-sm font-bold uppercase tracking-[0.25em] text-gray-400">Đăng nhập</p>
               <h2 className="mt-2 text-xl font-black text-gray-900 md:text-2xl">
-                Vao voi vai tro {ROLE_NAME[selectedCard.role]} <span className="text-gray-400">({ROLE_AUTH_LABEL[selectedCard.role]})</span>
+                Vào góc {ROLE_NAME[selectedCard.role]} <span className="text-gray-400">({ROLE_AUTH_LABEL[selectedCard.role]})</span>
               </h2>
               <p className="mt-3 text-sm leading-6 text-gray-500">
-                Nhap dung PIN de ca phien hien tai dung dung role.
+                Nếu góc này có PIN, nhập PIN để mở đúng phiên. Nếu không đặt PIN, có thể để trống và vào thẳng.
               </p>
 
               <label className="mt-7 block text-sm font-semibold text-gray-700">
-                Ma PIN
+                PIN của góc này
                 <div className="mt-2 flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 focus-within:border-primary transition-colors">
                   <KeyRound className="text-gray-400" size={18} aria-hidden="true" />
                   <input
@@ -125,7 +128,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                     name="pin"
                     inputMode="numeric"
                     autoComplete="current-password"
-                    aria-label="Ma PIN"
+                    aria-label="PIN của góc đang chọn"
                     value={pin}
                     onChange={event => setPin(event.target.value)}
                     placeholder="****"
@@ -142,7 +145,7 @@ const AuthGate: React.FC<{ children: React.ReactNode }> = ({ children }) => {
                 className={`flex w-full items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-bold text-white transition-colors disabled:cursor-not-allowed disabled:opacity-70 ${ROLE_META[selectedCard.role].authButtonClassName}`}
               >
                 <LogIn size={16} aria-hidden="true" />
-                {submitting ? 'Dang xac thuc...' : `Dang nhap voi ${ROLE_AUTH_LABEL[selectedCard.role]}`}
+                {submitting ? 'Đang mở đúng góc...' : `Vào với ${ROLE_NAME[selectedCard.role]}`}
               </button>
             </div>
           </form>

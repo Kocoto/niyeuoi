@@ -127,10 +127,78 @@ type SmartSuggestion = {
   expiresAt?: string;
 };
 
+type RelationshipStateTarget = Role | 'both';
+type RelationshipStateSourceType = 'mood' | 'deep_talk_question' | 'event' | 'coupon' | 'reward' | 'system';
+type RelationshipStateSignalType = 'mood_missing' | 'deeptalk_waiting' | 'event_upcoming' | 'coupon_waiting' | 'reward_open';
+
+type RelationshipStateSignal = {
+  id: string;
+  type: RelationshipStateSignalType;
+  title: string;
+  detail: string;
+  target: RelationshipStateTarget;
+  urgency: 'soft' | 'soon' | 'today';
+  source: {
+    type: RelationshipStateSourceType;
+    id?: string;
+    label?: string;
+    createdBy?: Role | 'system';
+  };
+  cta?: {
+    label: string;
+    to: string;
+  };
+  createdAt?: string;
+  dueAt?: string;
+};
+
+type RelationshipStateTodayItem = {
+  type: 'mood_checkin' | 'deeptalk_answered';
+  label: string;
+  at?: string;
+  source: {
+    type: 'mood' | 'deep_talk_question';
+    id: string;
+    label: string;
+  };
+};
+
+type RelationshipPersonState = {
+  role: Role;
+  label: string;
+  today: {
+    hasMoodCheckIn: boolean;
+    mood?: {
+      id: string;
+      value: string;
+      at?: string;
+    };
+    actions: RelationshipStateTodayItem[];
+    lastActiveAt?: string;
+  };
+  signals: RelationshipStateSignal[];
+  summary: string;
+};
+
+type RelationshipState = {
+  date: string;
+  generatedAt: string;
+  viewerRole?: Role;
+  people: Record<Role, RelationshipPersonState>;
+  shared: {
+    target: 'both';
+    signals: RelationshipStateSignal[];
+    nextStep?: RelationshipStateSignal;
+    summary: string;
+  };
+  nextStep?: RelationshipStateSignal;
+};
+
 type DashboardState = {
   memories: Memory[];
   resurfacingMemories: MemoryResurfacingItem[];
   suggestions: SmartSuggestion[];
+  relationshipState: RelationshipState | null;
   moods: Mood[];
   questions: DeepTalkQuestion[];
   events: EventItem[];
@@ -186,6 +254,14 @@ type MemoryResurfacingView = {
   meta: string;
 };
 
+type NextStepView = {
+  to: string;
+  title: string;
+  detail: string;
+  button: string;
+  icon: React.ReactNode;
+};
+
 type Daypart = {
   label: string;
   note: string;
@@ -223,6 +299,15 @@ const suggestionSourceLabel: Record<SmartSuggestionSourceType, string> = {
   mood: 'Mood',
   place: 'Places',
   wishlist: 'Wishlist',
+};
+
+const relationshipSourceLabel: Record<RelationshipStateSourceType, string> = {
+  mood: 'Mood',
+  deep_talk_question: 'Deep Talk',
+  event: 'Ngày đã ghim',
+  coupon: 'Voucher',
+  reward: 'Reward',
+  system: 'Nhịp hôm nay',
 };
 
 function getElapsedDays() {
@@ -480,6 +565,52 @@ function getSmartSuggestionMeta(item: SmartSuggestion) {
   return `${sourceLabel} · ${timeLabel}`;
 }
 
+function getRelationshipSignalMeta(signal: RelationshipStateSignal) {
+  const sourceLabel = relationshipSourceLabel[signal.source.type];
+  const urgencyLabel = signal.urgency === 'today' ? 'hôm nay' : signal.urgency === 'soon' ? 'sắp tới' : 'nhẹ';
+  const timeLabel = signal.dueAt ? `mốc ${formatMemoryDate(signal.dueAt)}` : formatRelative(signal.createdAt);
+  return `${sourceLabel} · ${urgencyLabel} · ${timeLabel}`;
+}
+
+function getRelationshipSignalIcon(type: RelationshipStateSignalType) {
+  switch (type) {
+    case 'deeptalk_waiting':
+      return <MessageCircleHeart size={18} />;
+    case 'event_upcoming':
+      return <CalendarDays size={18} />;
+    case 'coupon_waiting':
+      return <Ticket size={18} />;
+    case 'reward_open':
+      return <Sparkles size={18} />;
+    case 'mood_missing':
+    default:
+      return <Sparkles size={18} />;
+  }
+}
+
+function buildRelationshipNextStep(signal?: RelationshipStateSignal): NextStepView | null {
+  if (!signal?.cta) return null;
+
+  return {
+    to: signal.cta.to,
+    title: signal.title,
+    detail: signal.detail,
+    button: signal.cta.label,
+    icon: getRelationshipSignalIcon(signal.type),
+  };
+}
+
+function buildSharedPendingItemFromSignal(signal: RelationshipStateSignal): SharedPendingItem | null {
+  if (!signal.cta) return null;
+
+  return {
+    key: signal.id,
+    title: signal.title,
+    detail: signal.detail,
+    to: signal.cta.to,
+  };
+}
+
 const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading: boolean }> = ({ summary, currentRole, loading }) => {
   const isCurrentRole = summary.role === currentRole;
 
@@ -501,7 +632,7 @@ const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading
             summary.checkedInToday ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'
           }`}
         >
-          {summary.checkedInToday ? 'Đã check-in hôm nay' : 'Chưa check-in hôm nay'}
+          {summary.checkedInToday ? 'Đã check-in hôm nay' : 'Còn mở check-in'}
         </span>
       </div>
 
@@ -528,6 +659,100 @@ const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading
         {summary.actionLabel}
         <ArrowRight size={15} />
       </Link>
+    </div>
+  );
+};
+
+const RelationshipSignalCard: React.FC<{ signal: RelationshipStateSignal; compact?: boolean }> = ({ signal, compact = false }) => {
+  const target = resolveTarget(signal.target);
+  const sourceOwner = resolveRole(signal.source.createdBy === 'system' ? undefined : signal.source.createdBy);
+
+  return (
+    <Link
+      to={signal.cta?.to ?? '/'}
+      className="card-hover block rounded-[1.35rem] bg-gradient-to-br from-[#fff9f4] via-white to-[#f7fbff] p-4 ring-1 ring-amber-100"
+    >
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="rounded-full bg-amber-100 px-3 py-1.5 text-xs font-bold text-amber-800">
+              Tình hình hiện tại
+            </span>
+            {target === 'both' ? (
+              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
+                Cho cả hai
+              </span>
+            ) : target ? (
+              <PersonBadge role={target} prefix="Dành cho" showIcon={false} />
+            ) : sourceOwner ? (
+              <PersonBadge role={sourceOwner} prefix="Từ dữ liệu của" showIcon={false} />
+            ) : null}
+          </div>
+          <p className={`${compact ? 'mt-2 text-sm' : 'mt-3 text-sm'} font-bold text-ink`}>{signal.title}</p>
+          <p className="mt-2 text-sm leading-6 text-soft">{signal.detail}</p>
+        </div>
+        <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-white text-primary shadow-sm">
+          {getRelationshipSignalIcon(signal.type)}
+        </div>
+      </div>
+
+      <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+        <span className="text-xs font-bold uppercase tracking-[0.18em] text-soft">{getRelationshipSignalMeta(signal)}</span>
+        {signal.cta && (
+          <span className="inline-flex items-center gap-2 text-sm font-bold text-primary">
+            {signal.cta.label}
+            <ArrowRight size={15} />
+          </span>
+        )}
+      </div>
+    </Link>
+  );
+};
+
+const RelationshipStatePanel: React.FC<{ state: RelationshipState; currentRole: Role }> = ({ state, currentRole }) => {
+  const nextSignal = state.nextStep;
+
+  return (
+    <div className="surface-card p-5 md:p-6">
+      <p className="section-label">Tình hình hiện tại</p>
+      <h2 className="mt-2 text-2xl font-black text-ink">Hai phía rõ ràng, một bước nhẹ</h2>
+      <p className="mt-2 text-sm leading-6 text-soft">
+        Lớp này đọc từ backend để Home không tự đoán: hôm nay ai đã có nhịp riêng, điều gì đang chờ, và bước nào đáng mở tiếp.
+      </p>
+
+      <div className="mt-5 grid gap-3">
+        {ROLE_ORDER.map((itemRole) => {
+          const person = state.people[itemRole];
+          const firstAction = person.today.actions[0];
+          const firstSignal = person.signals[0];
+          const isCurrentRole = itemRole === currentRole;
+
+          return (
+            <div key={itemRole} className={`rounded-[1.3rem] p-4 ring-1 ${roleSurfaceTone[itemRole]}`}>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <PersonBadge role={itemRole} prefix={isCurrentRole ? 'Bạn đang là' : 'Góc của'} showIcon={false} variant={isCurrentRole ? 'solid' : 'soft'} />
+                <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${person.today.hasMoodCheckIn ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-soft ring-1 ring-stone-200'}`}>
+                  {person.today.hasMoodCheckIn ? 'Đã có check-in' : 'Còn mở check-in'}
+                </span>
+              </div>
+              <p className="mt-3 text-sm font-bold text-ink">
+                {person.today.mood ? `${person.label} đang ${person.today.mood.value.toLowerCase()}` : person.summary}
+              </p>
+              <p className="mt-2 text-sm leading-6 text-soft">
+                {firstAction
+                  ? `${firstAction.label} · ${formatRelative(firstAction.at)}`
+                  : firstSignal?.title ?? 'Chưa có nhịp mới cần kéo ra; Home vẫn giữ chỗ nhẹ nhàng.'}
+              </p>
+            </div>
+          );
+        })}
+      </div>
+
+      {nextSignal && (
+        <div className="mt-4">
+          <RelationshipSignalCard signal={nextSignal} compact />
+        </div>
+      )}
     </div>
   );
 };
@@ -692,6 +917,7 @@ const Home: React.FC = () => {
     memories: [],
     resurfacingMemories: [],
     suggestions: [],
+    relationshipState: null,
     moods: [],
     questions: [],
     events: [],
@@ -714,6 +940,7 @@ const Home: React.FC = () => {
       api.get('/memories'),
       api.get('/memories/resurfacing'),
       api.get('/suggestions', { params: { surface: 'home', limit: 3, forWhom: role } }),
+      api.get('/relationship-state', { params: { forWhom: role } }),
       api.get('/moods'),
       api.get('/deeptalk/questions'),
       api.get('/events'),
@@ -721,13 +948,14 @@ const Home: React.FC = () => {
       api.get('/coupons'),
       api.get('/rewards', { params: { forWhom: role } }),
     ])
-      .then(([memoryResult, resurfacingResult, suggestionResult, moodResult, questionResult, eventResult, challengeResult, couponResult, rewardResult]) => {
+      .then(([memoryResult, resurfacingResult, suggestionResult, relationshipStateResult, moodResult, questionResult, eventResult, challengeResult, couponResult, rewardResult]) => {
         if (!mounted) return;
 
         setData({
           memories: memoryResult.status === 'fulfilled' ? memoryResult.value.data.data ?? [] : [],
           resurfacingMemories: resurfacingResult.status === 'fulfilled' ? resurfacingResult.value.data.data ?? [] : [],
           suggestions: suggestionResult.status === 'fulfilled' ? suggestionResult.value.data.data ?? [] : [],
+          relationshipState: relationshipStateResult.status === 'fulfilled' ? relationshipStateResult.value.data.data ?? null : null,
           moods: moodResult.status === 'fulfilled' ? moodResult.value.data.data ?? [] : [],
           questions: questionResult.status === 'fulfilled' ? questionResult.value.data.data ?? [] : [],
           events: eventResult.status === 'fulfilled' ? eventResult.value.data.data ?? [] : [],
@@ -746,6 +974,7 @@ const Home: React.FC = () => {
   }, [role]);
 
   const daypart = getDaypart();
+  const relationshipState = data.relationshipState;
 
   const moodsByRole = useMemo<Record<Role, Mood | undefined>>(() => {
     const grouped: Record<Role, Mood | undefined> = {
@@ -945,6 +1174,10 @@ const Home: React.FC = () => {
       const latestGift = latestCouponGiftByRole[currentRole];
       const latestUsedVoucher = latestCouponUseByRole[currentRole];
       const pendingCount = pendingQuestionsByRole[currentRole].length;
+      const relationshipPerson = relationshipState?.people[currentRole];
+      const relationshipMood = relationshipPerson?.today.mood;
+      const relationshipAction = relationshipPerson?.today.actions[0];
+      const relationshipSignal = relationshipPerson?.signals[0];
 
       const activityCandidates: Array<{ timestamp?: string; label: string; meta: string; to: string }> = [];
 
@@ -1014,25 +1247,31 @@ const Home: React.FC = () => {
       }
 
       const latestActivity = pickLatestByTimestamp(activityCandidates, candidate => candidate.timestamp);
-      const hasOwnCheckIn = checkedInToday[currentRole];
+      const hasOwnCheckIn = relationshipPerson?.today.hasMoodCheckIn ?? checkedInToday[currentRole];
 
       return {
         role: currentRole,
         title: `Hôm nay của ${ROLE_NAME[currentRole]}`,
         checkedInToday: hasOwnCheckIn,
-        moodValue: latestMood ? latestMood.mood : 'Chưa có check-in riêng',
-        moodMeta: latestMood
+        moodValue: relationshipMood?.value ?? (latestMood ? latestMood.mood : 'Còn mở check-in riêng'),
+        moodMeta: relationshipPerson
+          ? relationshipPerson.summary
+          : latestMood
           ? `${hasOwnCheckIn ? 'Đã có nhịp hôm nay' : 'Lần gần nhất'} · ${formatRelative(latestMood.createdAt)}${latestMood.note ? ` · ${latestMood.note}` : ''}`
           : `Home vẫn giữ chỗ cho nhịp của ${ROLE_NAME[currentRole]} kể cả khi hôm nay chưa có dữ liệu.`,
-        recentLabel: latestActivity ? latestActivity.label : `Chưa có cập nhật riêng gần đây từ ${ROLE_NAME[currentRole]}.`,
-        recentMeta: latestActivity ? latestActivity.meta : 'Khi có mood, Deep Talk, kỷ niệm, kế hoạch, challenge hoặc voucher mới, phần này sẽ hiện đúng phía của người đó.',
-        waitingLabel: pendingCount > 0
+        recentLabel: relationshipAction?.label ?? (latestActivity ? latestActivity.label : `Chưa có cập nhật riêng gần đây từ ${ROLE_NAME[currentRole]}.`),
+        recentMeta: relationshipAction
+          ? `${relationshipAction.source.label} · ${formatRelative(relationshipAction.at)}`
+          : latestActivity
+            ? latestActivity.meta
+            : 'Khi có mood, Deep Talk, kỷ niệm, kế hoạch, challenge hoặc voucher mới, phần này sẽ hiện đúng phía của người đó.',
+        waitingLabel: relationshipSignal?.title ?? (pendingCount > 0
           ? `${pendingCount} câu hỏi đang mở cho ${ROLE_NAME[currentRole]}.`
           : hasOwnCheckIn
             ? `Phía ${ROLE_NAME[currentRole]} đang khá yên cho hôm nay.`
-            : `Nếu ${ROLE_NAME[currentRole]} muốn để lại một nhịp cho hôm nay, chỗ này đang giữ sẵn.`,
-        actionTo: !hasOwnCheckIn ? '/mood' : pendingCount > 0 ? '/deeptalk' : latestActivity?.to ?? '/mood',
-        actionLabel: !hasOwnCheckIn ? 'Ghi một nhịp ngắn' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ',
+            : `Nếu ${ROLE_NAME[currentRole]} muốn để lại một nhịp cho hôm nay, chỗ này đang giữ sẵn.`),
+        actionTo: relationshipSignal?.cta?.to ?? (!hasOwnCheckIn ? '/mood' : pendingCount > 0 ? '/deeptalk' : latestActivity?.to ?? '/mood'),
+        actionLabel: relationshipSignal?.cta?.label ?? (!hasOwnCheckIn ? 'Ghi một nhịp ngắn' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ'),
       };
     })
   ), [
@@ -1045,16 +1284,35 @@ const Home: React.FC = () => {
     memoriesByRole,
     moodsByRole,
     pendingQuestionsByRole,
+    relationshipState,
   ]);
 
   const sharedPendingItems = useMemo<SharedPendingItem[]>(() => {
+    if (relationshipState) {
+      const backendSignals = [
+        relationshipState.nextStep,
+        ...ROLE_ORDER.flatMap(currentRole => relationshipState.people[currentRole].signals),
+        ...relationshipState.shared.signals,
+      ].filter((signal): signal is RelationshipStateSignal => Boolean(signal));
+
+      const seen = new Set<string>();
+      return backendSignals
+        .flatMap((signal) => {
+          if (seen.has(signal.id)) return [];
+          seen.add(signal.id);
+          const item = buildSharedPendingItemFromSignal(signal);
+          return item ? [item] : [];
+        })
+        .slice(0, 4);
+    }
+
     const items: SharedPendingItem[] = [];
 
     for (const currentRole of ROLE_ORDER) {
       if (!checkedInToday[currentRole]) {
         items.push({
           key: `mood-${currentRole}`,
-          title: `${ROLE_NAME[currentRole]} chưa để lại nhịp hôm nay`,
+          title: `Một check-in nhẹ còn mở cho ${ROLE_NAME[currentRole]}`,
           detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu phía này đang thế nào mà không cần nhắc dồn dập.',
           to: '/mood',
         });
@@ -1094,9 +1352,12 @@ const Home: React.FC = () => {
     }
 
     return items.slice(0, 4);
-  }, [checkedInToday, nextUpcomingEvent, pendingQuestionsByRole, role, waitingCouponForCurrentRole]);
+  }, [checkedInToday, nextUpcomingEvent, pendingQuestionsByRole, relationshipState, role, waitingCouponForCurrentRole]);
 
-  const nextStep = useMemo(() => {
+  const nextStep = useMemo<NextStepView>(() => {
+    const backendNextStep = buildRelationshipNextStep(relationshipState?.nextStep);
+    if (backendNextStep) return backendNextStep;
+
     const myPendingQuestion = pendingQuestionsByRole[role][0];
     const myLatestMemory = memoriesByRole[role];
 
@@ -1160,16 +1421,26 @@ const Home: React.FC = () => {
       button: 'Mở timeline',
       icon: <CalendarDays size={18} />,
     };
-  }, [checkedInToday, memoriesByRole, nextUpcomingEvent, pendingQuestionsByRole, role, waitingCouponForCurrentRole]);
+  }, [checkedInToday, memoriesByRole, nextUpcomingEvent, pendingQuestionsByRole, relationshipState, role, waitingCouponForCurrentRole]);
 
   const pulseItems = useMemo(() => {
+    const girlfriendState = relationshipState?.people.girlfriend;
+    const boyfriendState = relationshipState?.people.boyfriend;
     const items = [
-      checkedInToday.girlfriend && moodsByRole.girlfriend
-        ? `Ni đang ${moodsByRole.girlfriend.mood.toLowerCase()}`
-        : 'Ni chưa check-in',
-      checkedInToday.boyfriend && moodsByRole.boyfriend
-        ? `Được đang ${moodsByRole.boyfriend.mood.toLowerCase()}`
-        : 'Được chưa check-in',
+      girlfriendState
+        ? girlfriendState.today.mood
+          ? `Ni đang ${girlfriendState.today.mood.value.toLowerCase()}`
+          : 'Ni còn mở check-in nhẹ'
+        : checkedInToday.girlfriend && moodsByRole.girlfriend
+          ? `Ni đang ${moodsByRole.girlfriend.mood.toLowerCase()}`
+          : 'Ni còn mở check-in nhẹ',
+      boyfriendState
+        ? boyfriendState.today.mood
+          ? `Được đang ${boyfriendState.today.mood.value.toLowerCase()}`
+          : 'Được còn mở check-in nhẹ'
+        : checkedInToday.boyfriend && moodsByRole.boyfriend
+          ? `Được đang ${moodsByRole.boyfriend.mood.toLowerCase()}`
+          : 'Được còn mở check-in nhẹ',
       incompleteQuestionCount > 0
         ? `${incompleteQuestionCount} câu hỏi đang chờ`
         : 'Deep Talk đang khá yên',
@@ -1192,7 +1463,7 @@ const Home: React.FC = () => {
     }
 
     return items;
-  }, [checkedInToday, incompleteQuestionCount, memoryResurfacingItems, moodsByRole, nextUpcomingEvent, rewardHandoffItems, smartSuggestionItems, waitingCouponForCurrentRole]);
+  }, [checkedInToday, incompleteQuestionCount, memoryResurfacingItems, moodsByRole, nextUpcomingEvent, relationshipState, rewardHandoffItems, smartSuggestionItems, waitingCouponForCurrentRole]);
 
   const recentFeed = useMemo<FeedItem[]>(() => {
     const items: FeedItem[] = [
@@ -1364,6 +1635,10 @@ const Home: React.FC = () => {
         </div>
 
         <div className="grid gap-4">
+          {relationshipState && (
+            <RelationshipStatePanel state={relationshipState} currentRole={role} />
+          )}
+
           {rewardHandoffItems.length > 0 && (
             <div className="surface-card p-5 md:p-6">
               <p className="section-label">Vừa mở ra</p>

@@ -610,7 +610,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### C6b - Paired completeness surfaces
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - đưa relationship state / paired completeness lên Home bằng copy nhẹ, rõ ai đang cần gì
 - Reference Sections:
@@ -628,27 +628,65 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
   - scheduler / push notification
   - scoring/streak
 
+### C7a - Auth / role switching foundation check
+
+- Status: `done`
+- Mục tiêu:
+  - rà lại auth/session và role switching hiện có để đảm bảo app luôn rõ đang ở góc `Ni` hay `Được`
+  - chốt những guardrail tối thiểu trước khi polish chuyển vai trò
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.1 Identity system cho Ni và Được`
+    - `13. Shared UI System`
+    - `17. Data / Personalization`
+    - `37. Wireflow auth / role switching`
+- In scope:
+  - đọc hiện trạng `AuthContext`, auth routes/controller, role constants, và app shell liên quan
+  - xác định có cần chỉnh contract/session/local storage để role switching không bị mơ hồ
+  - sửa nhỏ nếu phát hiện bug rõ ràng hoặc copy/guardrail nền bị lệch
+- Out of scope:
+  - redesign toàn bộ auth UI
+  - thêm multi-user account system
+  - đổi cơ chế PIN lớn hoặc migration auth phức tạp
+  - animation/polish chuyển role lớn
+- Done when:
+  - role hiện tại được xác định rõ và không dễ rơi về trạng thái mơ hồ
+  - không phá token/session cũ
+  - nếu cần surface polish, bàn giao rõ sang `C7b`
+  - build/test phù hợp pass
+
+### C7b - Role switching surface polish
+
+- Status: `done`
+- Mục tiêu:
+  - làm trải nghiệm đổi vai trò mượt và rõ cảm giác app đổi góc nhìn thật sự
+- Reference Sections:
+  - `UI_UX_IDEAS.md`:
+    - `1.1 Identity system cho Ni và Được`
+    - `13. Shared UI System`
+    - `37. Wireflow auth / role switching`
+- In scope:
+  - polish UI/copy khi đổi vai trò dựa trên nền `C7a`
+  - giữ rõ `Ni` / `Được`, tránh cảm giác chỉ đổi label kỹ thuật
+- Out of scope:
+  - auth architecture lớn
+  - thêm notification/scheduler/reward mới
+
 ## Current Active Slice
 
-- ID: `C6b`
-- Status: `active`
-- Tên: `Paired completeness surfaces`
+- ID: `none`
+- Status: `waiting_for_next_slice`
+- Tên: `Đợt C hiện tại đã hoàn tất`
 - Việc phải làm ngay:
-  1. Đọc đúng `1.5`, `2`, `13`, `17`, và `34` trong `UI_UX_IDEAS.md`.
-  2. Cho Home đọc `/api/relationship-state` từ contract của `C6a`.
-  3. Hiển thị một lớp trạng thái nhẹ, rõ `Ni`, `Được`, và `both`, không thêm bảng KPI.
-  4. CTA dùng trực tiếp contract backend, không tự gom relationship state bằng heuristic frontend.
+  1. Không còn slice implementation active trong breakdown hiện tại.
+  2. Nếu tiếp tục code, cần thêm slice mới rõ ràng vào file này trước.
+  3. Bước hợp lý tiếp theo là runtime/browser smoke cho các flow vừa hoàn tất, hoặc mở roadmap mới.
 - Không được làm trong slice này:
-  - redesign Home lớn ngoài block/surface nhỏ cần thiết
-  - scheduler / push notification
-  - scoring/streak/KPI hoặc gamification
-  - ép dữ liệu cũ phải có field mới
+  - tự mở thêm feature ngoài roadmap hiện tại khi chưa tạo slice mới
+  - sửa rộng không có done criteria rõ
 - Done checklist:
-  - Home đọc contract relationship state từ backend
-  - surface/copy rõ ai đang có gì và điều gì đang chờ, không phán xét
-  - không tạo heuristic relationship state mới ở frontend
-  - build/test phù hợp pass
-  - file này được cập nhật đúng trạng thái thật
+  - toàn bộ breakdown hiện tại từ A0 đến C7b đã được đánh dấu `done`
+  - file này được cập nhật đúng trạng thái thật trước khi mở việc mới
 
 ## Quy tắc cập nhật trước khi dừng
 - Nếu chưa xong slice:
@@ -665,50 +703,46 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C6a - Paired completeness foundation`
+- `C7b - Role switching surface polish`
 
 ### Current status
 
-- `C6a` đã hoàn tất và `C6b` được chuyển sang `active`.
-- Kết quả chốt cho `C6a`:
-  - thêm read path `/api/relationship-state`
-  - response có `people.girlfriend`, `people.boyfriend`, `shared`, và `nextStep`
-  - contract phân biệt rõ `Ni`, `Được`, và `both`; không gom thành một stream mơ hồ
-  - dữ liệu dùng read-only từ mood hôm nay, Deep Talk đang chờ, event sắp tới, voucher chưa dùng, reward đang mở
-  - fallback an toàn khi thiếu dữ liệu: mood trống tạo lời mở nhẹ, không ép record cũ có field mới
-  - frontend chưa có heuristic relationship state mới
+- `C7b` đã hoàn tất.
+- Breakdown hiện tại không còn slice implementation active sau `C7b`.
+- Kết quả chốt cho `C7b`:
+  - AuthGate copy được polish sang tiếng Việt có dấu, rõ phiên hiện tại là góc `Ni` hay `Được`
+  - khi đổi role ở AuthGate, PIN cũ được reset để tránh lẫn giữa hai người
+  - `AuthContext` có `switchingRole` để surface biết đang chuyển sang ai
+  - `toggleRole` hiển thị prompt rõ đang đổi từ ai sang ai
+  - Navbar hiển thị copy `Đổi sang Ni` / `Đổi sang Được` và trạng thái `Đang đổi sang...`
+  - shell bổ sung dòng nhắc thao tác mới đang ghi theo góc hiện tại
 
 ### Files touched in latest session
 
-- `backend/src/services/relationshipStateService.ts`
-- `backend/src/controllers/relationshipStateController.ts`
-- `backend/src/routes/relationshipStateRoutes.ts`
-- `backend/src/server.ts`
+- `frontend/src/context/AuthContext.tsx`
+- `frontend/src/components/Navbar.tsx`
+- `frontend/src/components/AuthGate.tsx`
 - `NEXT_STEP.md`
 
 ### Tests run in latest session
 
-- Đã chạy `npm run build` trong `backend`.
+- Đã chạy `npx eslint src/context/AuthContext.tsx src/components/Navbar.tsx src/components/AuthGate.tsx` trong `frontend`.
+- Đã chạy `npm run build` trong `frontend`.
 - Kết quả: pass.
 - Ghi chú:
-  - chưa chạy runtime/API smoke với database thật cho `/api/relationship-state`
+  - build còn cảnh báo chunk lớn sẵn có của Vite; không chặn slice này
+  - chưa chạy browser/runtime smoke cho flow đổi vai trò thật
 
 ### Known blockers
 
-- Không có blocker lớn cho `C6a`.
+- Không có blocker lớn cho `C7b`.
 - Rủi ro còn lại:
-  - endpoint mới mới được kiểm ở mức TypeScript build
-  - cần C6b xác nhận Home hiển thị nhẹ, không đè lên reward/resurfacing/suggestion hiện có
+  - chưa xác nhận bằng browser smoke với PIN thật
+  - nếu muốn tiếp tục implementation, cần tạo slice mới trong `NEXT_STEP.md` trước khi code
 
 ### Next concrete step
 
-- Bắt đầu `C6b - Paired completeness surfaces`.
-- Đọc đúng các section:
-  - `1.5 Relationship state layer`
-  - `2. Home / Dashboard`
-  - `13. Shared UI System`
-  - `34. Wireflow notification / reminder UX`
-- Ưu tiên đọc trước:
-  - `frontend/src/pages/Home.tsx`
-  - contract response từ `backend/src/services/relationshipStateService.ts`
-  - các block Home hiện có: daily pulse, shared pending, reward, resurfacing, smart suggestions
+- Không còn slice active trong breakdown hiện tại.
+- Bước nhỏ nhất tiếp theo:
+  - tạo một slice QA/runtime smoke rõ ràng nếu muốn kiểm thử end-to-end
+  - hoặc cập nhật roadmap/NEXT_STEP với phase/slice sản phẩm kế tiếp trước khi code tiếp

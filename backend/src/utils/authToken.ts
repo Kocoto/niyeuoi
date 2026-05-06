@@ -15,7 +15,7 @@ const THIRTY_DAYS_IN_MS = 1000 * 60 * 60 * 24 * 30;
 const TOKEN_SECRET = process.env['AUTH_TOKEN_SECRET'] || process.env['PIN'] || 'niyeuoi-dev-secret';
 
 const ROLE_LABELS: Record<AuthRole, string> = {
-    boyfriend: 'Duoc',
+    boyfriend: 'Được',
     girlfriend: 'Ni',
 };
 

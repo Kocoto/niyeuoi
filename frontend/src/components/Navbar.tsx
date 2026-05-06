@@ -7,7 +7,8 @@ import {
   Grid3x3,
   Heart,
   History,
-  LogOut,
+  ArrowRightLeft,
+  Loader2,
   Map,
   MapPinned,
   MessageCircleHeart,
@@ -21,7 +22,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 
 import { useAuth } from '../context/AuthContext';
 import { useLocationTracker } from '../hooks/useLocationTracker';
-import { ROLE_CORNER_LABEL } from '../constants/roles';
+import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roles';
 import PersonBadge from './PersonBadge';
 
 type NavItem = {
@@ -295,11 +296,15 @@ const MoreMenuContent: React.FC<{
 
 const Navbar: React.FC = () => {
   const { pathname } = useLocation();
-  const { role, logout } = useAuth();
+  const { role, switchingRole, toggleRole } = useAuth();
   const [showMore, setShowMore] = useState(false);
   const [recentPaths, setRecentPaths] = useState<string[]>(readRecentPaths);
   const { tracking } = useLocationTracker(role === 'girlfriend');
   const isMoreActive = secondaryNav.some((item) => item.to === pathname);
+  const nextRole = role === 'boyfriend' ? 'girlfriend' : 'boyfriend';
+  const roleSwitchLabel = switchingRole
+    ? `Đang đổi sang ${ROLE_NAME[switchingRole]}`
+    : `Đổi sang ${ROLE_NAME[nextRole]}`;
 
   const activeItem = useMemo(
     () => allNavItems.find((entry) => entry.to === pathname) ?? primaryNav[0],
@@ -385,6 +390,9 @@ const Navbar: React.FC = () => {
                 <p className="truncate text-xs text-soft md:text-sm">
                   {activeItem.label} · {activeItem.description}
                 </p>
+                <p className="mt-0.5 hidden text-[11px] font-semibold text-soft/80 sm:block">
+                  Thao tác mới đang được ghi theo góc {ROLE_NAME[role]}; đổi người dùng sẽ chuyển cả shell sang {ROLE_NAME[nextRole]}.
+                </p>
               </div>
             </div>
           </div>
@@ -423,12 +431,15 @@ const Navbar: React.FC = () => {
 
           <button
             type="button"
-            onClick={logout}
-            className="btn-secondary shrink-0 px-3 py-2 text-xs md:px-4 md:text-sm"
-            aria-label="Đổi người dùng"
+            onClick={() => {
+              void toggleRole();
+            }}
+            className="btn-secondary shrink-0 px-3 py-2 text-xs disabled:cursor-wait disabled:opacity-70 md:px-4 md:text-sm"
+            aria-label={roleSwitchLabel}
+            disabled={Boolean(switchingRole)}
           >
-            <LogOut size={15} />
-            <span className="hidden sm:inline">Đổi người dùng</span>
+            {switchingRole ? <Loader2 size={15} className="animate-spin" /> : <ArrowRightLeft size={15} />}
+            <span className="hidden sm:inline">{roleSwitchLabel}</span>
           </button>
         </div>
       </header>
