@@ -672,21 +672,168 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
   - auth architecture lớn
   - thêm notification/scheduler/reward mới
 
+### D0 - QA smoke pass toàn bộ A–C
+
+- Status: `done`
+- Mục tiêu:
+  - xác nhận toàn bộ flow từ Phase A đến C không bị lỗi build/type sau khi gộp hết
+  - phát hiện type error, unused import, và broken import còn sót ở các file đã chạm trong Đợt C
+  - ghi lại danh sách vấn đề cần sửa trước khi chạy browser smoke thật
+- Reference Sections:
+  - không đọc thêm UI_UX_IDEAS.md (slice này là QA, không implement feature mới)
+- In scope:
+  - chạy `npm run build` và `npx tsc --noEmit` ở cả `frontend` và `backend`
+  - chạy `npx eslint` trên các file đã chạm gần nhất (AuthContext, Navbar, AuthGate, Coupons, Home, rewardService, couponService, relationshipService, suggestionService)
+  - ghi lại và sửa lỗi cụ thể nếu nhỏ và rõ ràng
+  - nếu lỗi lớn hoặc cần thay đổi logic thì ghi vào blocker, không tự sửa
+- Out of scope:
+  - thêm tính năng mới
+  - thay đổi UX/copy
+  - browser smoke thật (cần người dùng chạy tay với PIN)
+  - chạy test suite nếu chưa có
+- Likely files (chỉ đọc và check, không sửa trừ lỗi nhỏ):
+  - `frontend/src/context/AuthContext.tsx`
+  - `frontend/src/components/Navbar.tsx`
+  - `frontend/src/components/AuthGate.tsx`
+  - `frontend/src/pages/Home.tsx`
+  - `frontend/src/pages/Coupons.tsx`
+  - `backend/src/services/rewardService.ts`
+  - `backend/src/services/couponService.ts`
+  - `backend/src/services/challengeService.ts`
+  - `backend/src/services/deepTalkService.ts`
+  - `backend/src/controllers/couponController.ts`
+- Done when:
+  - `npm run build` frontend và backend đều pass (hoặc lỗi đã được ghi rõ là blocker)
+  - `npx tsc --noEmit` không còn error (warning OK)
+  - danh sách browser smoke checklist được ghi vào handoff để người dùng tự kiểm tra
+
+### D1 - Cleanup pre-existing warning từ D0
+
+- Status: `done`
+- Mục tiêu:
+  - sửa warning ESLint pre-existing ở `MoodLofi.tsx` (useEffect missing deps)
+- Reference Sections: không đọc thêm UI_UX_IDEAS.md
+- In scope:
+  - thêm `useCallback` cho `fetchMoods` trong `MoodLofi.tsx`
+  - không thay đổi behavior, không đụng UI/copy
+- Out of scope:
+  - sửa chunk size warning (Vite config, ngoài scope)
+  - thêm feature mới
+- Likely files:
+  - `frontend/src/pages/MoodLofi.tsx`
+- Done when:
+  - `npx eslint src/pages/MoodLofi.tsx` không còn warning
+  - `npm run build` frontend vẫn pass
+
+### D2 - Cải thiện prompt AI gen Deep Talk
+
+- Status: `done`
+- Mục tiêu:
+  - sửa ngôi xưng trong câu hỏi AI gen: không còn "bạn/mình" lẫn lộn
+  - câu hỏi cụ thể hơn, chạm cảm xúc hơn, bớt trừu tượng triết lý
+- Reference Sections: không cần đọc thêm UI_UX_IDEAS.md
+- In scope:
+  - chỉnh prompt trong `generateDeepQuestion` ở `backend/src/services/aiService.ts`
+  - không đổi schema, không đổi API surface, không đổi frontend
+- Out of scope:
+  - thay đổi cách lưu câu hỏi
+  - sửa các câu hỏi đã có trong DB
+  - thay đổi UI Deep Talk
+- Likely files:
+  - `backend/src/services/aiService.ts`
+- Done when:
+  - prompt không còn ví dụ dùng "bạn/mình" lẫn lộn
+  - hướng dẫn rõ: dùng cấu trúc không cần đại từ hoặc "người ấy" cho đối phương
+  - câu hỏi mẫu trong prompt cụ thể, gợi khoảnh khắc thật, không trừu tượng
+  - `npm run build` backend vẫn pass
+
+## Phase E Breakdown — Copy Audit
+
+### E1 - Home copy fix
+
+- Status: `done`
+- Mục tiêu:
+  - Xóa developer rationale khỏi Home.tsx
+  - Xóa technical fallback ("backend", "dữ liệu thật", "Từ dữ liệu của")
+  - Sửa ngôi xưng "bạn" trong Home
+  - Viết lại heading/description theo tinh thần người dùng
+- Reference Sections:
+  - `COPY_AUDIT.md` — toàn bộ
+  - Không cần đọc UI_UX_IDEAS.md
+- In scope:
+  - Chỉ chạm string literals trong `frontend/src/pages/Home.tsx`
+  - Không đổi layout, component, logic
+- Out of scope:
+  - Các trang khác (để E2, E3)
+  - Backend copy
+  - Nav label (để E4)
+- Likely files:
+  - `frontend/src/pages/Home.tsx`
+- Done when:
+  - Không còn "backend", "dữ liệu thật", "Từ dữ liệu của", "Record cũ" trong Home
+  - Không còn developer rationale trong heading hoặc description
+  - Không còn "bạn" trong các ngữ cảnh thân mật
+  - `npm run build` pass
+
+### E2 - Places / Wishlist / Events / Challenges copy fix
+
+- Status: `active`
+- Mục tiêu:
+  - Xóa technical fallback khỏi 4 trang này
+  - Đồng bộ tiếng Việt trong copy mô tả
+- Reference Sections:
+  - `COPY_AUDIT.md`
+- In scope:
+  - String literals trong `Places.tsx`, `Wishlist.tsx`, `Events.tsx`, `Challenges.tsx`
+- Done when:
+  - "Record cũ", "Dữ liệu cũ", "Quick Decision Mode" không còn xuất hiện
+  - Copy fallback là tiếng Việt trung tính
+
+### E3 - Coupons / DeepTalk / MoodLofi / Timeline copy fix
+
+- Status: `pending`
+- Mục tiêu:
+  - Đồng bộ tiếng Việt, xóa technical leakage còn sót
+- Reference Sections:
+  - `COPY_AUDIT.md`
+- In scope:
+  - String literals trong `Coupons.tsx`, `DeepTalk.tsx`, `MoodLofi.tsx`, `Timeline.tsx`
+- Done when:
+  - "check-in", "metadata", "wording trung tính" không còn xuất hiện trong UI
+  - Copy tiếng Việt nhất quán
+
+### E4 - Đồng bộ thuật ngữ toàn app
+
+- Status: `pending`
+- Mục tiêu:
+  - Chốt bảng thuật ngữ và áp dụng nhất quán
+  - Đồng bộ nav labels nếu cần đổi
+- Reference Sections:
+  - `COPY_AUDIT.md` — bảng thuật ngữ
+- In scope:
+  - Nav labels, shared components, constants
+  - Bất kỳ string English còn sót sau E1-E3
+- Done when:
+  - Bảng thuật ngữ trong COPY_AUDIT.md đã được áp dụng nhất quán
+  - Không còn English/Vietnamese lẫn lộn trong copy mô tả
+
 ## Current Active Slice
 
-- ID: `none`
-- Status: `waiting_for_next_slice`
-- Tên: `Đợt C hiện tại đã hoàn tất`
-- Việc phải làm ngay:
-  1. Không còn slice implementation active trong breakdown hiện tại.
-  2. Nếu tiếp tục code, cần thêm slice mới rõ ràng vào file này trước.
-  3. Bước hợp lý tiếp theo là runtime/browser smoke cho các flow vừa hoàn tất, hoặc mở roadmap mới.
-- Không được làm trong slice này:
-  - tự mở thêm feature ngoài roadmap hiện tại khi chưa tạo slice mới
-  - sửa rộng không có done criteria rõ
+- ID: `E2`
+- Status: `active`
+- Tên: `Places / Wishlist / Events / Challenges copy fix`
 - Done checklist:
-  - toàn bộ breakdown hiện tại từ A0 đến C7b đã được đánh dấu `done`
-  - file này được cập nhật đúng trạng thái thật trước khi mở việc mới
+  - [x] `npm run build` frontend pass
+  - [x] `npm run build` backend pass
+  - [x] `npx tsc --noEmit` frontend pass (no errors)
+  - [x] `npx tsc --noEmit` backend pass (no errors)
+  - [x] eslint pass trên 10 frontend files (1 pre-existing warning ở MoodLofi - không blocking)
+  - [x] browser smoke checklist được ghi vào Session Handoff
+- Lưu ý:
+  - Backend không có ESLint config (pre-existing); TypeScript là checker chính và pass
+  - 1 warning ESLint ở `MoodLofi.tsx` line 67 về useEffect deps - pre-existing, không phá build
+  - Chunk size warning (807 KB) ở Vite build - pre-existing, không phá build
+  - **Browser smoke cần người dùng chạy thủ công** - xem checklist ở Session Handoff
 
 ## Quy tắc cập nhật trước khi dừng
 - Nếu chưa xong slice:
@@ -703,46 +850,64 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `C7b - Role switching surface polish`
+- `D2 - Cải thiện prompt AI gen Deep Talk`
 
 ### Current status
 
-- `C7b` đã hoàn tất.
-- Breakdown hiện tại không còn slice implementation active sau `C7b`.
-- Kết quả chốt cho `C7b`:
-  - AuthGate copy được polish sang tiếng Việt có dấu, rõ phiên hiện tại là góc `Ni` hay `Được`
-  - khi đổi role ở AuthGate, PIN cũ được reset để tránh lẫn giữa hai người
-  - `AuthContext` có `switchingRole` để surface biết đang chuyển sang ai
-  - `toggleRole` hiển thị prompt rõ đang đổi từ ai sang ai
-  - Navbar hiển thị copy `Đổi sang Ni` / `Đổi sang Được` và trạng thái `Đang đổi sang...`
-  - shell bổ sung dòng nhắc thao tác mới đang ghi theo góc hiện tại
+- Phase A–D hoàn tất.
+- Phase E (Copy Audit) vừa được tạo. Slice E1 là active.
+- Chưa có implementation trong E1 — session này chỉ tạo tài liệu và breakdown.
 
 ### Files touched in latest session
 
-- `frontend/src/context/AuthContext.tsx`
-- `frontend/src/components/Navbar.tsx`
-- `frontend/src/components/AuthGate.tsx`
-- `NEXT_STEP.md`
+- `COPY_AUDIT.md` (tạo mới)
+- `IMPLEMENTATION_ROADMAP.md` (thêm Phase 4)
+- `NEXT_STEP.md` (thêm Phase E breakdown, set E1 active)
 
 ### Tests run in latest session
 
-- Đã chạy `npx eslint src/context/AuthContext.tsx src/components/Navbar.tsx src/components/AuthGate.tsx` trong `frontend`.
-- Đã chạy `npm run build` trong `frontend`.
-- Kết quả: pass.
-- Ghi chú:
-  - build còn cảnh báo chunk lớn sẵn có của Vite; không chặn slice này
-  - chưa chạy browser/runtime smoke cho flow đổi vai trò thật
+- Không có implementation — chưa cần test
 
 ### Known blockers
 
-- Không có blocker lớn cho `C7b`.
-- Rủi ro còn lại:
-  - chưa xác nhận bằng browser smoke với PIN thật
-  - nếu muốn tiếp tục implementation, cần tạo slice mới trong `NEXT_STEP.md` trước khi code
+- Không có blocker kỹ thuật.
+- Cần browser smoke thủ công (xem checklist bên dưới).
+
+### Browser smoke checklist (người dùng tự kiểm tra)
+
+Chạy app, thực hiện lần lượt:
+
+#### Core identity / role switching
+- [ ] Đăng nhập → app hiện rõ đang ở góc `Ni` hay `Được`
+- [ ] Đổi vai trò từ Ni sang Được: PIN cũ bị reset, copy đổi sang "Đang đổi sang Được"
+- [ ] Đổi vai trò từ Được sang Ni: tương tự, shell hiện đúng góc mới
+- [ ] Sau đổi vai trò: thao tác mới (thêm mood, tạo event, v.v.) ghi đúng theo góc hiện tại
+
+#### Phase A – Identity trên Mood / Deep Talk / Timeline
+- [ ] Mood: mỗi check-in hiện rõ ai ghi (Ni hay Được), record cũ không lỗi
+- [ ] Deep Talk: câu hỏi hiện rõ ai đã trả lời / ai chưa, cả hai góc nhìn đều đúng
+- [ ] Timeline: mỗi kỷ niệm hiện rõ ai ghi, record cũ không lỗi
+
+#### Phase B – Nhịp dùng hằng ngày
+- [ ] Places: 3 nhóm `Muốn đi`, `Đã đi`, `Lần tới nên thử` hiện đúng, record cũ không lỗi
+- [ ] Wishlist: 3 nhóm `Ni muốn`, `Được muốn`, `Đang chuẩn bị` hiện đúng
+- [ ] Events: ai tạo, ngày dành cho ai hiện rõ
+- [ ] Challenges: nhóm `Cùng nhau`, `Ni dành cho Được`, `Được dành cho Ni` đúng
+- [ ] Home: activity feed hiện ai vừa làm gì, next step rõ
+
+#### Phase C – Reward / Voucher / Suggestions / Map
+- [ ] Voucher: tạo đích danh (cho Ni / cho Được) → claim → detail hiện đúng người nhận
+- [ ] Voucher: tạo nhanh tay → người đầu tiên nhận được
+- [ ] Voucher: tạo dùng chung → cả hai có thể dùng
+- [ ] Challenge hoàn thành → reward nhẹ được emit, `GET /api/rewards` trả record mới
+- [ ] Cả hai trả lời cùng câu Deep Talk → reward được emit
+- [ ] Home: smart suggestion hiện đúng ngữ cảnh, CTA dẫn đúng màn
+- [ ] Home: relationship state hiện rõ hôm nay mỗi phía đã làm gì / còn thiếu gì
+- [ ] LoveMap: map chung và private tracking mode tách rõ, BF mode có gating
+- [ ] Memory resurfacing: Home hoặc Timeline có gợi lại kỷ niệm cũ đúng lúc
 
 ### Next concrete step
 
-- Không còn slice active trong breakdown hiện tại.
-- Bước nhỏ nhất tiếp theo:
-  - tạo một slice QA/runtime smoke rõ ràng nếu muốn kiểm thử end-to-end
-  - hoặc cập nhật roadmap/NEXT_STEP với phase/slice sản phẩm kế tiếp trước khi code tiếp
+- Nếu tất cả browser smoke checklist pass: roadmap A–C đã hoàn tất.
+- Nếu phát hiện lỗi khi smoke: tạo slice `D1` mô tả lỗi cụ thể trước khi sửa.
+- Nếu muốn mở phase mới (D/E): thêm breakdown mới vào file này rồi mới code.

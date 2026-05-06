@@ -18,7 +18,10 @@
       "Bash(done)",
       "Bash(find /d/Code/niyeuoi/niyeuoi/frontend/src -type f -name *.ts -o -name *.tsx)",
       "Bash(npx tsc:*)",
-      "Bash(node -e \"const {GoogleGenerativeAI} = require\\('@google/generative-ai'\\); console.log\\(require\\('./node_modules/@google/generative-ai/package.json'\\).version\\)\")"
+      "Bash(node -e \"const {GoogleGenerativeAI} = require\\('@google/generative-ai'\\); console.log\\(require\\('./node_modules/@google/generative-ai/package.json'\\).version\\)\")",
+      "Bash(npx eslint *)",
+      "Bash(cd /mnt/d/Code/niyeuoi/niyeuoi/frontend && npx eslint src/pages/Challenges.tsx src/pages/DeepTalk.tsx src/pages/Events.tsx src/pages/LoveMap.tsx src/pages/MoodLofi.tsx src/pages/Places.tsx src/pages/Timeline.tsx src/pages/Wishlist.tsx 2>&1 | head -60)",
+      "Read(//mnt/d/Code/niyeuoi/niyeuoi/**)"
     ]
   }
 }

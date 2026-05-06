@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Coffee, CloudRain, Heart, Loader2, Music2, Smile, Sparkles, Volume2, Frown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import api from '../api/api';
@@ -51,7 +51,7 @@ const MoodLofi: React.FC = () => {
   const [historyLoading, setHistoryLoading] = useState(true);
   const { toast } = useUI();
 
-  const fetchMoods = async () => {
+  const fetchMoods = useCallback(async () => {
     try {
       const response = await api.get('/moods');
       setEntries(response.data.data ?? []);
@@ -60,11 +60,11 @@ const MoodLofi: React.FC = () => {
     } finally {
       setHistoryLoading(false);
     }
-  };
+  }, [toast]);
 
   useEffect(() => {
     void fetchMoods();
-  }, []);
+  }, [fetchMoods]);
 
   const handleMoodSelect = async (label: string) => {
     setSelectedMood(label);

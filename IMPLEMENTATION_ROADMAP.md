@@ -477,6 +477,42 @@ Phần này dùng để tránh AI thread mới đoán sai `createdBy`, `owner`, 
 
 ---
 
+## Phase 4: Copy Audit — Ngôn Ngữ Và Giọng Điệu
+
+### Mục tiêu
+
+- Xóa toàn bộ developer rationale copy khỏi UI người dùng thấy
+- Không để lộ trạng thái kỹ thuật (backend, metadata, record cũ) lên màn hình
+- Đồng bộ tiếng Việt nhất quán trong toàn bộ copy mô tả
+- Giữ ngôi xưng rõ ràng (Ni, Được, em, anh — không dùng “bạn” trong ngữ cảnh thân mật)
+
+### Tài liệu nguồn
+
+- `COPY_AUDIT.md` — danh sách lỗi cụ thể, bảng thuật ngữ, nguyên tắc viết copy
+- Không cần đọc thêm `UI_UX_IDEAS.md` cho phase này
+
+### Phạm vi
+
+- Chỉ chạm string literals trong `frontend/src/`
+- Không đụng schema, API, logic backend
+- Không đụng nav labels nếu là tên tính năng (có thể giữ English)
+
+### Không làm trong Phase 4
+
+- Thêm tính năng mới
+- Đổi layout hay component
+- Đổi backend copy (error messages hệ thống)
+
+### Done criteria
+
+- Không còn từ “backend”, “metadata”, “Record cũ”, “dữ liệu cũ” trong UI
+- Không còn developer rationale trong heading hay description
+- Copy mô tả là tiếng Việt có dấu hoàn toàn
+- Fallback khi thiếu dữ liệu là trung tính, không kỹ thuật
+- Ngôi xưng “bạn” được thay bằng tên người hoặc bỏ trong các ngữ cảnh thân mật
+
+---
+
 ## Slice order khuyến nghị trong codebase
 
 Phần này để AI thread mới biết nên chia nhỏ ra sao.
@@ -510,6 +546,13 @@ Phần này để AI thread mới biết nên chia nhỏ ra sao.
 - `C5`: smart suggestions
 - `C6`: paired completeness / relationship state
 - `C7`: auth / role switching refinement
+
+### Phase 4
+
+- `E1`: Home copy fix — developer rationale, technical fallback, ngôi xưng
+- `E2`: Places / Wishlist / Events / Challenges copy fix
+- `E3`: Coupons / DeepTalk / MoodLofi / Timeline copy fix
+- `E4`: Đồng bộ thuật ngữ Anh/Việt toàn app
 
 ---
 

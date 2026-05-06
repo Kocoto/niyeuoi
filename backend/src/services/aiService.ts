@@ -68,8 +68,27 @@ export async function generateDeepQuestion(existingContents: string[]): Promise<
             ? `\nCác câu hỏi đang có (KHÔNG được trùng lặp hoặc tương tự): ${JSON.stringify(existingContents)}`
             : '';
 
-        const prompt = `Tạo 1 câu hỏi sâu sắc, ý nghĩa giúp cặp đôi người Việt hiểu nhau hơn. Câu hỏi phải chạm đến cảm xúc, ký ức, giá trị, hay ước mơ. Viết bằng tiếng Việt tự nhiên, thân mật.${avoidList}
-Ví dụ phong cách: "Điều gì khiến bạn cảm thấy được yêu thương nhất?", "Ký ức nào của chúng mình khiến bạn hay nhớ lại nhất?", "Bạn sợ điều gì nhất trong mối quan hệ này?"
+        const prompt = `Tạo 1 câu hỏi deep talk cho cặp đôi người Việt trẻ (20s), giúp hai người hiểu nhau sâu hơn.${avoidList}
+
+Quy tắc ngôi xưng (BẮT BUỘC):
+- KHÔNG dùng "bạn" làm đại từ xưng hô — nghe xa cách
+- KHÔNG dùng "mình" để chỉ cả người đọc lẫn người yêu trong cùng một câu — gây nhầm lẫn
+- Ưu tiên viết câu KHÔNG cần đại từ rõ ràng: "Có lần nào...", "Điều gì...", "Khoảnh khắc nào..."
+- Nếu cần nhắc đến người đọc: dùng "em" hoặc "anh" (không dùng "bạn")
+- Khi nhắc đến người yêu: dùng "người ấy" hoặc "nửa kia" — không dùng "mình"
+
+Yêu cầu nội dung:
+- Cụ thể, gợi lên một khoảnh khắc thật hoặc cảm xúc thật — không trừu tượng, không triết lý
+- Chạm đến: ký ức riêng tư, điều chưa nói ra, khoảnh khắc nhỏ nhưng đáng nhớ, nỗi sợ nhẹ, kỳ vọng thầm
+- Giọng: ấm áp, tò mò, thân mật — không nghe như bài tập tâm lý hay câu hỏi phỏng vấn
+
+Ví dụ phong cách đúng:
+- "Có lần nào người ấy làm một điều nhỏ thôi, nhưng khiến em nhớ mãi đến giờ?"
+- "Điều gì vẫn chưa dám nói thẳng, dù đã nghĩ đến nhiều lần?"
+- "Lần đầu nhận ra mình thực sự quan trọng với người ấy là khoảnh khắc nào?"
+- "Có kỷ niệm nào tưởng bình thường nhưng giờ nhớ lại thấy thật ý nghĩa không?"
+- "Điều gì ở người ấy mà lúc đầu em không để ý, nhưng giờ lại thích nhất?"
+
 Trả về JSON hợp lệ (không markdown, không code block):
 {"content":"..."}`;
 

@@ -276,13 +276,13 @@ const roleCopy: Record<Role, { eyebrow: string; title: string; subtitle: string;
   girlfriend: {
     eyebrow: 'Home của Ni',
     title: 'Mở ra là thấy hôm nay của cả hai đang ở đâu.',
-    subtitle: 'Trang chủ cần giữ riêng góc của bạn, nhưng vẫn cho thấy điều gì đang chờ giữa hai người để không còn cảm giác một khối chung mơ hồ.',
+    subtitle: 'Hôm nay Ni và Được đang ở đâu, điều gì còn đang chờ giữa hai người.',
     accent: 'from-pink-100 via-rose-50 to-white',
   },
   boyfriend: {
     eyebrow: 'Home của Được',
-    title: 'Thấy rõ nhịp của từng người rồi mới quyết định bước tiếp theo.',
-    subtitle: 'Home giờ nên dẫn lại đúng ngữ cảnh: ai vừa cập nhật gì, phía nào còn đang chờ, và việc nào đáng làm nhất ngay lúc này.',
+    title: 'Ai vừa làm gì, phía nào còn đang chờ.',
+    subtitle: 'Thấy rõ nhịp của từng người rồi chọn bước tiếp theo phù hợp nhất lúc này.',
     accent: 'from-sky-100 via-white to-rose-50',
   },
 };
@@ -380,14 +380,14 @@ function getDaypart(): Daypart {
   if (hour < 18) {
     return {
       label: 'Buổi chiều cần một nhịp rõ ràng',
-      note: 'Một lần mở app là đủ thấy phía nào vừa cập nhật, phía nào còn đang chờ.',
+      note: 'Ai vừa cập nhật gì, phía nào còn đang chờ — một lần mở là đủ thấy.',
       icon: <Sunset size={16} />,
     };
   }
 
   return {
     label: 'Buổi tối là lúc kéo nhau quay lại đúng chỗ',
-    note: 'Home nên giúp hai người tiếp tục câu chuyện đang dở, không phải nhìn một bảng số liệu.',
+    note: 'Lúc tốt nhất để tiếp tục câu chuyện còn đang dở giữa hai người.',
     icon: <MoonStar size={16} />,
   };
 }
@@ -547,7 +547,7 @@ function getMemoryResurfacingFallbackDetail(item: MemoryResurfacingItem) {
 function buildMemoryResurfacingView(item: MemoryResurfacingItem): MemoryResurfacingView {
   const owner = resolveRole(item.memory.createdBy);
   const dateLabel = formatMemoryDate(item.memory.date);
-  const ownerLabel = owner ? `góc ${ROLE_NAME[owner]}` : 'dữ liệu cũ chưa rõ người';
+  const ownerLabel = owner ? `góc ${ROLE_NAME[owner]}` : 'kỷ niệm cũ';
 
   return {
     item,
@@ -622,7 +622,7 @@ const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading
           <div className="mt-2">
             <PersonBadge
               role={summary.role}
-              prefix={isCurrentRole ? 'Bạn đang là' : 'Góc của'}
+              prefix="Góc của"
               variant={isCurrentRole ? 'solid' : 'soft'}
             />
           </div>
@@ -715,9 +715,9 @@ const RelationshipStatePanel: React.FC<{ state: RelationshipState; currentRole: 
   return (
     <div className="surface-card p-5 md:p-6">
       <p className="section-label">Tình hình hiện tại</p>
-      <h2 className="mt-2 text-2xl font-black text-ink">Hai phía rõ ràng, một bước nhẹ</h2>
+      <h2 className="mt-2 text-2xl font-black text-ink">Nhịp hôm nay của hai người</h2>
       <p className="mt-2 text-sm leading-6 text-soft">
-        Lớp này đọc từ backend để Home không tự đoán: hôm nay ai đã có nhịp riêng, điều gì đang chờ, và bước nào đáng mở tiếp.
+        Hôm nay ai đã có nhịp riêng, điều gì còn đang chờ, và bước nào đáng mở tiếp.
       </p>
 
       <div className="mt-5 grid gap-3">
@@ -730,7 +730,7 @@ const RelationshipStatePanel: React.FC<{ state: RelationshipState; currentRole: 
           return (
             <div key={itemRole} className={`rounded-[1.3rem] p-4 ring-1 ${roleSurfaceTone[itemRole]}`}>
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <PersonBadge role={itemRole} prefix={isCurrentRole ? 'Bạn đang là' : 'Góc của'} showIcon={false} variant={isCurrentRole ? 'solid' : 'soft'} />
+                <PersonBadge role={itemRole} prefix="Góc của" showIcon={false} variant={isCurrentRole ? 'solid' : 'soft'} />
                 <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${person.today.hasMoodCheckIn ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-soft ring-1 ring-stone-200'}`}>
                   {person.today.hasMoodCheckIn ? 'Đã có check-in' : 'Còn mở check-in'}
                 </span>
@@ -741,7 +741,7 @@ const RelationshipStatePanel: React.FC<{ state: RelationshipState; currentRole: 
               <p className="mt-2 text-sm leading-6 text-soft">
                 {firstAction
                   ? `${firstAction.label} · ${formatRelative(firstAction.at)}`
-                  : firstSignal?.title ?? 'Chưa có nhịp mới cần kéo ra; Home vẫn giữ chỗ nhẹ nhàng.'}
+                  : firstSignal?.title ?? 'Chưa có gì mới từ phía này hôm nay.'}
               </p>
             </div>
           );
@@ -765,7 +765,7 @@ const FeedRow: React.FC<{ item: FeedItem }> = ({ item }) => (
           <PersonBadge role={item.role} showIcon={false} />
         ) : (
           <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 ring-1 ring-stone-200">
-            Bản ghi cũ chưa rõ người
+            Đã lưu trước đây
           </span>
         )}
         <span className="text-xs text-soft">{item.meta}</span>
@@ -802,11 +802,7 @@ const SmartSuggestionCard: React.FC<{ item: SmartSuggestion }> = ({ item }) => {
               <PersonBadge role={target} prefix="Dành cho" showIcon={false} />
             ) : sourceOwner ? (
               <PersonBadge role={sourceOwner} prefix="Từ dữ liệu của" showIcon={false} />
-            ) : (
-              <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-soft ring-1 ring-stone-200">
-                Từ dữ liệu thật
-              </span>
-            )}
+            ) : null}
           </div>
           <p className="mt-3 text-sm font-bold text-ink">{item.title}</p>
           <p className="mt-2 text-sm leading-6 text-soft">{item.detail}</p>
@@ -1258,18 +1254,18 @@ const Home: React.FC = () => {
           ? relationshipPerson.summary
           : latestMood
           ? `${hasOwnCheckIn ? 'Đã có nhịp hôm nay' : 'Lần gần nhất'} · ${formatRelative(latestMood.createdAt)}${latestMood.note ? ` · ${latestMood.note}` : ''}`
-          : `Home vẫn giữ chỗ cho nhịp của ${ROLE_NAME[currentRole]} kể cả khi hôm nay chưa có dữ liệu.`,
+          : `Chưa có nhịp nào từ ${ROLE_NAME[currentRole]} hôm nay.`,
         recentLabel: relationshipAction?.label ?? (latestActivity ? latestActivity.label : `Chưa có cập nhật riêng gần đây từ ${ROLE_NAME[currentRole]}.`),
         recentMeta: relationshipAction
           ? `${relationshipAction.source.label} · ${formatRelative(relationshipAction.at)}`
           : latestActivity
             ? latestActivity.meta
-            : 'Khi có mood, Deep Talk, kỷ niệm, kế hoạch, challenge hoặc voucher mới, phần này sẽ hiện đúng phía của người đó.',
+            : 'Chưa có hoạt động mới từ phía này.',
         waitingLabel: relationshipSignal?.title ?? (pendingCount > 0
           ? `${pendingCount} câu hỏi đang mở cho ${ROLE_NAME[currentRole]}.`
           : hasOwnCheckIn
             ? `Phía ${ROLE_NAME[currentRole]} đang khá yên cho hôm nay.`
-            : `Nếu ${ROLE_NAME[currentRole]} muốn để lại một nhịp cho hôm nay, chỗ này đang giữ sẵn.`),
+            : `Mọi thứ đang khá yên từ phía ${ROLE_NAME[currentRole]} hôm nay.`),
         actionTo: relationshipSignal?.cta?.to ?? (!hasOwnCheckIn ? '/mood' : pendingCount > 0 ? '/deeptalk' : latestActivity?.to ?? '/mood'),
         actionLabel: relationshipSignal?.cta?.label ?? (!hasOwnCheckIn ? 'Ghi một nhịp ngắn' : pendingCount > 0 ? 'Mở Deep Talk' : latestActivity?.to === '/timeline' ? 'Xem kỷ niệm' : 'Mở đúng chỗ'),
       };
@@ -1313,7 +1309,7 @@ const Home: React.FC = () => {
         items.push({
           key: `mood-${currentRole}`,
           title: `Một check-in nhẹ còn mở cho ${ROLE_NAME[currentRole]}`,
-          detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu phía này đang thế nào mà không cần nhắc dồn dập.',
+          detail: 'Chỉ cần một dòng ngắn là đủ.',
           to: '/mood',
         });
       }
@@ -1345,7 +1341,7 @@ const Home: React.FC = () => {
         key: `coupon-${waitingCouponForCurrentRole._id}`,
         title: giver
           ? `${ROLE_NAME[giver]} để sẵn một voucher cho ${ROLE_NAME[role]}`
-          : 'Có một voucher đang nằm yên chờ bạn mở',
+          : 'Có một voucher đang chờ.',
         detail: waitingCouponForCurrentRole.description || waitingCouponForCurrentRole.title,
         to: '/coupons',
       });
@@ -1365,7 +1361,7 @@ const Home: React.FC = () => {
       return {
         to: '/mood',
         title: `Đặt một nhịp ngắn cho hôm nay của ${ROLE_NAME[role]}`,
-        detail: 'Chỉ một dòng ngắn cũng đủ để Home hiểu hôm nay phía bạn đang thế nào.',
+        detail: 'Chỉ cần một dòng ngắn là đủ để bắt đầu hôm nay.',
         button: 'Ghi cảm xúc',
         icon: <Sparkles size={18} />,
       };
@@ -1417,7 +1413,7 @@ const Home: React.FC = () => {
     return {
       to: '/timeline',
       title: 'Xem lại một điều vừa được giữ lại',
-      detail: `Kỷ niệm gần nhất từ phía bạn là "${myLatestMemory.title}". Nếu còn điều gì muốn thêm, đây là chỗ quay lại nhanh nhất.`,
+      detail: `Kỷ niệm gần nhất: "${myLatestMemory.title}". Mở ra nếu còn muốn thêm gì.`,
       button: 'Mở timeline',
       icon: <CalendarDays size={18} />,
     };
@@ -1473,7 +1469,7 @@ const Home: React.FC = () => {
           key: `mood-${mood.createdAt ?? mood.mood}`,
           role: owner,
           title: owner ? `${ROLE_NAME[owner]} vừa ghi ${mood.mood.toLowerCase()}` : 'Một check-in vừa được giữ lại',
-          detail: mood.note ? mood.note : 'Mood mới sẽ hiện đúng phía của người ghi thay vì dồn vào một luồng chung.',
+          detail: mood.note ? mood.note : 'Một nhịp cảm xúc vừa được ghi lại.',
           meta: `${formatRelative(mood.createdAt)} · Cảm xúc`,
           to: '/mood',
           timestamp: mood.createdAt,
@@ -1576,7 +1572,7 @@ const Home: React.FC = () => {
           <div>
             <p className="section-label">{roleCopy[role].eyebrow}</p>
             <div className="mt-3 flex flex-wrap items-center gap-2">
-              <PersonBadge role={role} prefix="Bạn đang ở" variant="solid" />
+              <PersonBadge role={role} prefix="Góc của" variant="solid" />
               <span className="chip bg-white/85 text-soft">{ROLE_CORNER_LABEL[role]}</span>
               <span className="chip bg-white/85 text-soft">{daysTogether} ngày đi cùng nhau</span>
             </div>
@@ -1622,7 +1618,7 @@ const Home: React.FC = () => {
           <div className="mb-4 flex items-end justify-between gap-3">
             <div>
               <p className="section-label">Hôm nay</p>
-              <h2 className="mt-2 text-2xl font-black text-ink">Hai nhịp tách rõ, không còn một khối chung</h2>
+              <h2 className="mt-2 text-2xl font-black text-ink">Hôm nay của hai người</h2>
             </div>
             {loading && <span className="text-xs font-bold text-soft">Đang làm mới...</span>}
           </div>
@@ -1644,7 +1640,7 @@ const Home: React.FC = () => {
               <p className="section-label">Vừa mở ra</p>
               <h2 className="mt-2 text-2xl font-black text-ink">Một nhịp nhỏ đáng đi tiếp</h2>
               <p className="mt-2 text-sm leading-6 text-soft">
-                Reward chỉ nên là lời gợi mở nhẹ sau một điều vừa được khép lại, không phải một lớp nhiệm vụ mới.
+                Điều vừa được mở ra sau khi hai người khép lại một việc cùng nhau.
               </p>
               <div className="mt-5 space-y-3">
                 {rewardHandoffItems.map(item => (
@@ -1659,7 +1655,7 @@ const Home: React.FC = () => {
               <p className="section-label">Kỷ niệm quay lại</p>
               <h2 className="mt-2 text-2xl font-black text-ink">Một khoảnh khắc cũ vừa đúng lúc</h2>
               <p className="mt-2 text-sm leading-6 text-soft">
-                Home chỉ đặt lại ở đây khi backend thấy một ngày hoặc dấu ghim thật sự có ngữ cảnh. Không phải lời nhắc phải làm gì ngay.
+                Một kỷ niệm cũ vừa quay lại đúng ngày hoặc đúng dấu ghim. Không cần làm gì, chỉ mở nếu muốn nhìn lại.
               </p>
               <div className="mt-5 space-y-3">
                 {memoryResurfacingItems.map(item => (
@@ -1674,7 +1670,7 @@ const Home: React.FC = () => {
               <p className="section-label">Gợi ý nhẹ</p>
               <h2 className="mt-2 text-2xl font-black text-ink">Một hướng đi tiếp từ dữ liệu thật</h2>
               <p className="mt-2 text-sm leading-6 text-soft">
-                Home chỉ đọc những gợi ý backend đã thấy có ngữ cảnh, rồi đặt lại tối đa vài bước nhỏ để hai người tự chọn.
+                Vài bước nhỏ từ những gì hai người đang có. Chọn hoặc bỏ qua, không bắt buộc.
               </p>
               <div className="mt-5 space-y-3">
                 {smartSuggestionItems.map(item => (
@@ -1693,7 +1689,7 @@ const Home: React.FC = () => {
                 className="mt-5"
                 icon={<MessageCircleHeart size={18} />}
                 title="Hiện chưa có điều gì cần kéo hai người đi ngay"
-                description="Khu này chỉ giữ những việc đáng nhắc thật: check-in còn bỏ ngỏ, câu Deep Talk đang mở, ngày sắp tới, hoặc voucher đang chờ đúng người."
+                description="Khu này chỉ giữ những việc đáng nhắc thật: ghi cảm xúc còn bỏ ngỏ, câu Deep Talk đang mở, ngày sắp tới, hoặc voucher đang chờ đúng người."
                 action={{ label: nextStep.button, to: nextStep.to, variant: 'secondary' }}
               />
             ) : (
@@ -1738,7 +1734,7 @@ const Home: React.FC = () => {
             layout="inline"
             icon={<NotebookPen size={18} />}
             title="Hôm nay luồng này vẫn còn trống"
-            description="Feed này dùng để thấy ai vừa chạm vào mood, Deep Talk, kỷ niệm, ngày ghim, challenge, hoặc voucher. Khi chưa có gì mới, bạn có thể bắt đầu bằng bước tiếp theo đang được Home giữ sẵn."
+            description="Khi hai người ghi cảm xúc, trả lời câu hỏi, lưu kỷ niệm, hoặc dùng voucher, luồng này sẽ hiện lại theo thứ tự."
             action={{ label: nextStep.button, to: nextStep.to, variant: 'secondary' }}
           />
         ) : (
