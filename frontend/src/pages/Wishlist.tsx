@@ -72,9 +72,9 @@ const SECTION_META: Record<
   },
   preparing: {
     title: 'Đang chuẩn bị',
-    description: 'Những món bạn đang âm thầm chuẩn bị cho người kia, tách riêng để nhịp quan tâm không bị lẫn.',
-    emptyTitle: 'Chưa có món nào bạn đang chuẩn bị bí mật',
-    emptyBody: 'Khi thấy một điều của người kia đáng làm ngay, đánh dấu chuẩn bị để giữ nhịp này cho riêng bạn.',
+    description: 'Những món đang âm thầm được chuẩn bị cho người kia, tách riêng để nhịp quan tâm không bị lẫn.',
+    emptyTitle: 'Chưa có món nào đang được chuẩn bị bí mật',
+    emptyBody: 'Khi thấy một điều của người kia đáng làm ngay, đánh dấu chuẩn bị để giữ nhịp này riêng.',
     accent: 'bg-amber-50 text-amber-700 ring-amber-200',
   },
 };
@@ -292,14 +292,14 @@ const Wishlist: React.FC = () => {
           </span>
           {isPreparedForCurrentViewer && (
             <span className="inline-flex rounded-full bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-700 ring-1 ring-amber-200">
-              Bạn đang chuẩn bị
+              Đang chuẩn bị
             </span>
           )}
         </div>
 
         <h3 className="mt-4 text-2xl font-black text-slate-900">{wish.itemName}</h3>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          {wish.note || 'Chưa có ghi chú thêm, nhưng item này đã được giữ lại để không bị quên.'}
+          {wish.note || 'Chưa có ghi chú thêm, nhưng mục này đã được giữ lại để không bị quên.'}
         </p>
 
         <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
@@ -374,10 +374,10 @@ const Wishlist: React.FC = () => {
             <p className="text-xs font-black uppercase tracking-[0.32em] text-[#b292a6]">Wishlist</p>
             <h1 className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">Ai muốn gì, và mình đang chuẩn bị gì cho nhau?</h1>
             <p className="mt-3 text-sm leading-6 text-slate-600 md:text-[15px]">
-              Wishlist bây giờ tách rõ mong muốn của Ni, mong muốn của Được, và phần bạn đang âm thầm chuẩn bị để mọi thứ không còn lẫn thành một list chung.
+              Mong muốn của Ni, của Được, và phần đang âm thầm được chuẩn bị cho nhau.
             </p>
             <div className="mt-4 flex flex-wrap gap-2">
-              <PersonBadge role={role} prefix="Đang xem với vai" />
+              <PersonBadge role={role} prefix="Góc của" />
               <span className={`inline-flex rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${SECTION_META.girlfriend.accent}`}>
                 Ni muốn: {sections.girlfriend.length}
               </span>
@@ -488,7 +488,7 @@ const Wishlist: React.FC = () => {
                     {isEditing ? 'Cập nhật mong muốn' : 'Thêm mong muốn mới'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-500">
-                    Chọn rõ item này thuộc về ai. `createdBy` vẫn là người ghi lại, còn `owner` là người thật sự muốn món đó.
+                    Chọn rõ món này thuộc về ai — người ghi lại có thể khác người thật sự muốn.
                   </p>
                 </div>
                 <button
@@ -505,9 +505,9 @@ const Wishlist: React.FC = () => {
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">
                 <div className="space-y-2">
-                  <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai' : 'Bạn đang ghi với vai'} />
+                  <PersonBadge role={role} prefix="Góc của" />
                   <p className="text-xs leading-5 text-slate-400">
-                    Nếu bạn đang ghi lại mong muốn giúp người kia, hãy chọn owner đúng ở phần bên dưới thay vì để app tự đoán.
+                    Nếu đang ghi lại mong muốn cho người kia, chọn rõ bên dưới là của ai.
                   </p>
                 </div>
 
@@ -529,7 +529,7 @@ const Wishlist: React.FC = () => {
                       >
                         <span className="block text-sm font-black">{ROLE_NAME[ownerOption]}</span>
                         <span className="mt-1 block text-xs leading-5 opacity-80">
-                          {ownerOption === role ? 'Đây là điều bạn thật sự muốn.' : `Đây là điều ${ROLE_NAME[ownerOption]} đang muốn.`}
+                          {ownerOption === role ? `Đây là điều ${ROLE_NAME[ownerOption]} thật sự muốn.` : `Đây là điều ${ROLE_NAME[ownerOption]} đang muốn.`}
                         </span>
                       </button>
                     ))}

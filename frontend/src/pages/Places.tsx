@@ -229,7 +229,7 @@ const Places: React.FC = () => {
     : `Chưa có địa điểm nào trong nhóm "${activeStatusMeta.label}" từ phía ${activeScopeLabel}`;
   const filteredEmptyBody = personScope === 'all'
     ? activeStatusMeta.emptyBody
-    : `${ROLE_NAME[personScope]} chưa có địa điểm nào khớp nhóm này. Các record cũ chưa rõ người lưu vẫn ở mục Tất cả để không bị mất dấu.`;
+    : `${ROLE_NAME[personScope]} chưa có địa điểm nào khớp nhóm này.`;
 
   const cleanupPreview = () => {
     if (previewUrl) {
@@ -606,11 +606,11 @@ const Places: React.FC = () => {
               <p className="text-xs font-black uppercase tracking-[0.32em] text-[#b292a6]">Places</p>
               <h1 className="mt-2 text-3xl font-black text-slate-900 md:text-4xl">Đi đâu tiếp theo, và nơi nào đáng nhớ lại?</h1>
               <p className="mt-3 text-sm leading-6 text-slate-600 md:text-[15px]">
-                Màn này không chỉ để cất địa chỉ. Nó giúp hai bạn giữ những nơi muốn đi, chốt nhanh chỗ cho lần tới, và nhớ lại nơi đã thành kỷ niệm.
+                Màn này không chỉ để cất địa chỉ. Nó giúp hai người giữ những nơi muốn đi, chốt nhanh chỗ cho lần tới, và nhớ lại nơi đã thành kỷ niệm.
               </p>
               <div className="mt-4 space-y-3">
                 <div className="flex flex-wrap gap-2">
-                  <PersonBadge role={role} prefix="Đang xem với vai" />
+                  <PersonBadge role={role} prefix="Góc của" />
                   {PLACE_STATUS_ORDER.map((status) => (
                     <button
                       key={status}
@@ -638,7 +638,7 @@ const Places: React.FC = () => {
                   />
                   {personScope !== 'all' ? (
                     <p className="text-xs leading-5 text-slate-500">
-                      Chế độ này chỉ hiện các địa điểm đã gắn rõ với {ROLE_NAME[personScope]}. Record cũ chưa rõ người lưu vẫn nằm ở mục Tất cả.
+                      Chế độ này chỉ hiện các địa điểm đã gắn rõ với {ROLE_NAME[personScope]}.
                     </p>
                   ) : null}
                 </div>
@@ -672,7 +672,7 @@ const Places: React.FC = () => {
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
           <div className="max-w-2xl">
             <p className="text-xs font-black uppercase tracking-[0.28em] text-[#b292a6]">
-              {activeTab === 'next_time' ? 'Quick Decision Mode' : 'Context'}
+              {activeTab === 'next_time' ? 'Chốt nhanh' : 'Context'}
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-900">{activeStatusMeta.label}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-600">{activeStatusMeta.description}</p>
@@ -726,7 +726,7 @@ const Places: React.FC = () => {
                     {randomPlace.address}
                   </p>
                   <p className="mt-3 text-sm leading-6 text-slate-600">
-                    {randomPlace.note || 'Chưa có note riêng, nhưng có thể là lựa chọn tốt để hai bạn quyết nhanh khi cần.'}
+                    {randomPlace.note || 'Chưa có ghi chú riêng.'}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 md:w-52">
@@ -854,7 +854,7 @@ const Places: React.FC = () => {
                       {STATUS_META[status].noteLabel}
                     </p>
                     <p className="mt-2 text-sm leading-6 text-slate-600">
-                      {place.note || 'Chưa có note riêng cho địa điểm này, nhưng bạn vẫn có thể mở ra và thêm lại để bối cảnh rõ hơn.'}
+                      {place.note || 'Chưa có ghi chú cho địa điểm này.'}
                     </p>
                   </div>
 
@@ -863,12 +863,7 @@ const Places: React.FC = () => {
                       <PersonBadge role={owner} prefix="Lưu bởi" />
                     ) : (
                       <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 ring-1 ring-stone-200">
-                        Dữ liệu cũ chưa rõ ai lưu
-                      </span>
-                    )}
-                    {!place.note && (
-                      <span className="inline-flex rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-500 ring-1 ring-slate-200">
-                        Cần thêm bối cảnh
+                        Đã lưu trước đây
                       </span>
                     )}
                   </div>
@@ -959,12 +954,12 @@ const Places: React.FC = () => {
                           <PersonBadge role={owner} prefix="Lưu bởi" />
                         ) : (
                           <span className="inline-flex items-center rounded-full bg-stone-100 px-3 py-1.5 text-xs font-bold text-stone-600 ring-1 ring-stone-200">
-                            Dữ liệu cũ chưa rõ ai lưu
+                            Đã lưu trước đây
                           </span>
                         )}
                         {hasCoordinates && (
                           <span className="inline-flex rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-bold text-emerald-700 ring-1 ring-emerald-200/80">
-                            Có thể mở đường đi
+                            Xem đường đi
                           </span>
                         )}
                       </div>
@@ -1210,7 +1205,7 @@ const Places: React.FC = () => {
                       {isEditing ? 'Cập nhật địa điểm' : 'Thêm địa điểm mới'}
                     </h2>
                     <p className="mt-2 text-sm leading-6 text-slate-500">
-                      Chọn rõ địa điểm này đang ở `Muốn đi`, `Lần tới nên thử`, hay `Đã đi` để Places không bị thành một list phẳng.
+                      Chọn rõ địa điểm này đang ở "Muốn đi", "Lần tới nên thử", hay "Đã đi".
                     </p>
                   </div>
                   <button type="button" onClick={() => closeFormModal()} className="rounded-full p-2 text-slate-400 transition-all hover:text-slate-700">
@@ -1220,9 +1215,9 @@ const Places: React.FC = () => {
 
                 <form onSubmit={handleSubmit} className="mt-6 space-y-5">
                   <div className="space-y-2">
-                    <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai' : 'Địa điểm mới sẽ gắn với'} />
+                    <PersonBadge role={role} prefix="Góc của" />
                     <p className="text-xs leading-5 text-slate-400">
-                      Record cũ chưa có metadata vẫn được giữ nguyên; record mới sẽ rõ là Ni hay Được đã lưu.
+                      Địa điểm mới sẽ gắn với người đang lưu.
                     </p>
                   </div>
 

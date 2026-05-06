@@ -256,7 +256,7 @@ const DeepTalk: React.FC = () => {
         </div>
         <p className="text-sm text-gray-500">Nhìn là biết ai đã trả lời, ai còn một phần đang mở, và nhật ký riêng là của ai.</p>
         <div className="mt-4 flex flex-wrap items-center gap-2">
-          <PersonBadge role={role} prefix="Bạn đang tiếp tục với vai trò" />
+          <PersonBadge role={role} prefix="Góc của" />
           <span className={`rounded-full px-3 py-1.5 text-xs font-semibold ${unansweredCount > 0 ? 'bg-amber-50 text-amber-700' : 'bg-emerald-50 text-emerald-700'}`}>
             {unansweredCount > 0 ? `${ROLE_NAME[role]} còn ${unansweredCount} câu đang mở` : `${ROLE_NAME[role]} đang tạm khép các câu đang mở`}
           </span>
@@ -513,7 +513,7 @@ const DeepTalk: React.FC = () => {
               {/* Answer controls */}
               {!hasAnswered(detailQuestion, role) ? (
                 <div className="border-t border-gray-100 pt-4">
-                  <p className="text-xs font-bold text-gray-500 mb-3">Bạn đang trả lời với vai trò:</p>
+                  <p className="text-xs font-bold text-gray-500 mb-3">Đang trả lời với vai trò:</p>
                   <PersonBadge role={role} prefix="Đang là" className="mb-3" />
                   <textarea
                     value={answerText}
@@ -603,11 +603,11 @@ const DeepTalk: React.FC = () => {
                 <button onClick={() => setShowAddJournal(false)} className="p-1.5 text-gray-400 hover:text-gray-600"><X size={18} /></button>
               </div>
               <form onSubmit={handleAddJournal}>
-                <PersonBadge role={role} prefix="Bạn đang ghi với vai trò" className="mb-4" />
+                <PersonBadge role={role} prefix="Góc của" className="mb-4" />
                 <textarea
                   value={newJournalText}
                   onChange={e => setNewJournalText(e.target.value)}
-                  placeholder="Bạn đang cảm thấy thế nào? (1-2 câu thôi nhé...)"
+                  placeholder="Cảm xúc hôm nay là gì? (1-2 câu thôi nhé...)"
                   rows={3}
                   maxLength={500}
                   autoFocus

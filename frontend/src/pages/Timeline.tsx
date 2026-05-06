@@ -133,7 +133,7 @@ const Timeline: React.FC = () => {
           <h1 className="page-title">Dòng thời gian Kỷ niệm</h1>
           <p className="page-subtitle">Nơi lưu giữ những thước phim hạnh phúc của hai ta, và nhìn vào là biết ai đã ghi lại khoảnh khắc đó.</p>
           <div className="mt-3">
-            <PersonBadge role={role} prefix="Bạn đang xem với vai trò" />
+            <PersonBadge role={role} prefix="Góc của" />
           </div>
         </div>
         <button
@@ -187,7 +187,7 @@ const Timeline: React.FC = () => {
                   <p className="text-gray-600 leading-relaxed text-xs md:text-sm">{memory.content}</p>
                   {!owner && (
                     <p className="mt-3 text-[11px] font-medium text-gray-400">
-                      Bản ghi này được giữ nguyên vì dữ liệu cũ chưa có metadata người tạo.
+                      Kỷ niệm này chưa rõ ai đã ghi lại.
                     </p>
                   )}
                 </div>
@@ -209,9 +209,9 @@ const Timeline: React.FC = () => {
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai trò' : 'Kỷ niệm mới sẽ gắn với'} />
+                  <PersonBadge role={role} prefix="Góc của" />
                   <p className="text-xs text-gray-400">
-                    Nếu bản ghi cũ chưa có metadata người tạo, màn hình timeline sẽ giữ wording trung tính thay vì gán bừa.
+                    Kỷ niệm mới sẽ gắn với người đang ghi lại.
                   </p>
                 </div>
                 <div className="relative aspect-video bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200 flex flex-col items-center justify-center overflow-hidden group cursor-pointer">

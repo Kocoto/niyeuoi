@@ -341,7 +341,7 @@ function getDirectionLine(coupon: ICoupon, creator: CouponCreator | null, resolv
     return 'Một voucher cũ từ hệ thống chưa ghi đủ loại hay người giữ.';
   }
 
-  return 'Voucher cũ này vẫn được giữ lại, nhưng chưa đủ metadata để gọi rõ loại.';
+  return 'Voucher cũ này vẫn được giữ lại.';
 }
 
 function getStatusLabel(coupon: ICoupon, resolvedType: ResolvedCouponType, receiver: CouponParty | null, holder: CouponParty | null) {
@@ -369,7 +369,7 @@ function getStatusLabel(coupon: ICoupon, resolvedType: ResolvedCouponType, recei
     return `Dành cho ${ROLE_NAME[receiver]}`;
   }
 
-  return 'Dữ liệu cũ';
+  return 'Lượt cũ';
 }
 
 function getStatusTone(coupon: ICoupon, resolvedType: ResolvedCouponType, holder: CouponParty | null) {
@@ -418,7 +418,7 @@ function getInactiveLabel(
     }
 
     if (holder === role) {
-      return 'Đang nằm phía bạn';
+      return `Đang ở phía ${ROLE_NAME[role]}`;
     }
 
     if (isRole(holder)) {
@@ -443,7 +443,7 @@ function getInactiveLabel(
   }
 
   if (creator === role) {
-    return 'Bạn là người mở tấm vé này';
+    return `${ROLE_NAME[role]} mở tấm vé này`;
   }
 
   return 'Giữ lại từ lượt cũ';
@@ -469,7 +469,7 @@ function buildCouponView(coupon: ICoupon, role: Role): CouponViewModel {
         : null;
 
   const metaParts = [
-    `LOVE-${coupon._id.slice(-4).toUpperCase()}`,
+    `#${coupon._id.slice(-4).toUpperCase()}`,
     creator === 'system' ? 'Hệ thống mở' : isRole(creator) ? `${ROLE_NAME[creator]} tạo` : 'Lượt cũ',
     formatRelative(coupon.updatedAt ?? coupon.createdAt),
   ];
@@ -795,14 +795,14 @@ const Coupons: React.FC = () => {
             title: 'Chưa có tấm vé nào đang chờ nhận',
             description: 'Những vé nhanh tay hoặc lượt cũ còn treo sẽ hiện ở đây để cả hai nhìn ra ngay đâu là điều còn dang dở.',
             action: {
-              label: 'Xem những tấm vé đang ở phía bạn',
+              label: `Xem những tấm vé đang ở phía ${ROLE_NAME[role]}`,
               onClick: () => setActiveBucket('owned'),
               variant: 'secondary' as const,
             },
           }
         : {
             title: 'Chỗ này đang chờ một lời rủ vui',
-            description: 'Bạn có thể mở một vé nhanh tay để ai chạm trước thì giữ, hoặc mở vé chung cho cả hai khỏi phải đoán.',
+            description: 'Mở một vé nhanh tay để ai chạm trước thì giữ, hoặc mở vé chung cho cả hai.',
             action: {
               label: 'Tạo một tấm vé mới',
               onClick: () => setShowModal(true),

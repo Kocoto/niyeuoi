@@ -101,7 +101,7 @@ const MoodLofi: React.FC = () => {
         <p className="page-subtitle">Ở đây cần rõ ràng cảm xúc là của ai. Mỗi lần ghi sẽ gắn thẳng với Ni hoặc Được, không còn là một luồng chung mơ hồ.</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
-          <PersonBadge role={role} prefix="Bạn đang ghi với vai trò" />
+          <PersonBadge role={role} prefix="Góc của" />
           <span className="chip bg-white/80 text-soft">{ROLE_CORNER_LABEL[role]}</span>
         </div>
 
@@ -179,12 +179,11 @@ const MoodLofi: React.FC = () => {
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="section-label">Bản ghi cũ</p>
-                <h2 className="mt-2 text-2xl font-black text-ink">Một vài check-in chưa rõ là của ai</h2>
+                <h2 className="mt-2 text-2xl font-black text-ink">Một vài ghi chú cảm xúc chưa rõ là của ai</h2>
               </div>
-              <span className="chip bg-white/80 text-soft">Giữ nguyên dữ liệu cũ</span>
             </div>
             <p className="mt-3 text-sm text-soft">
-              Các check-in này chưa có metadata người tạo. Màn hình sẽ giữ wording trung tính thay vì tự gán về Ni hay Được.
+              Những ghi chú này chưa rõ người ghi lại.
             </p>
             <div className="mt-4 space-y-3">
               {grouped.legacy.slice(0, 4).map(entry => (
@@ -193,8 +192,8 @@ const MoodLofi: React.FC = () => {
                     <p className="text-sm font-bold text-ink">{entry.mood}</p>
                     <span className="text-xs text-soft">{formatRelative(entry.createdAt || entry.date)}</span>
                   </div>
-                  <p className="mt-2 text-sm text-soft">{entry.note || 'Check-in cũ chưa có lời nhắn kèm theo.'}</p>
-                  <p className="mt-3 text-xs font-medium text-soft">Chưa rõ ai đã ghi check-in này.</p>
+                  <p className="mt-2 text-sm text-soft">{entry.note || 'Chưa có lời nhắn kèm theo.'}</p>
+                  <p className="mt-3 text-xs font-medium text-soft">Chưa rõ ai đã ghi lại.</p>
                 </div>
               ))}
             </div>

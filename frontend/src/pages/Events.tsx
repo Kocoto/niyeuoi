@@ -186,7 +186,7 @@ const getFallbackMeaning = (item: EventCard) => {
     case 'special_plan':
       return `Một ngày đặc biệt dành cho ${targetLabel}, đáng được lưu lại kèm lý do ngắn gọn.`;
     default:
-      return 'Một record cũ vẫn được giữ an toàn ở đây, dù chưa rõ loại ngày hay người liên quan.';
+      return 'Một ngày đã được lưu lại trước đây.';
   }
 };
 
@@ -214,7 +214,7 @@ const getCountdownCopy = (item: EventCard) => {
       case 'birthday':
         return targetLabel ? `Hôm nay là sinh nhật của ${targetLabel}.` : 'Hôm nay là một ngày sinh nhật quan trọng.';
       case 'anniversary':
-        return 'Hôm nay là ngày quen nhau của hai bạn.';
+        return 'Hôm nay là ngày quen nhau.';
       case 'date_plan':
         return item.target === 'both' ? 'Hôm nay là buổi mình hẹn.' : `Hôm nay là ngày dành cho ${targetLabel ?? 'người ấy'}.`;
       case 'special_plan':
@@ -365,7 +365,7 @@ const Events: React.FC = () => {
     : `Chưa có ngày nào đang chạm tới ${activeScopeLabel}`;
   const filteredEmptyBody = personScope === 'all'
     ? 'Events là nơi giữ sinh nhật, ngày quen nhau, buổi hẹn, và các dịp đặc biệt để nhìn vào là biết ngày đó thuộc về ai và vì sao nó đáng nhớ. Hiện tại phần này còn trống, nên bước đầu tiên là lưu một ngày thật sự có nghĩa.'
-    : `${activeScopeLabel} chưa có ngày riêng hoặc ngày chung nào khớp với bộ lọc này. Các record cũ chưa rõ người liên quan vẫn được giữ ở mục Tất cả để không mất ngữ cảnh.`;
+    : `${activeScopeLabel} chưa có ngày riêng hoặc ngày chung nào khớp với bộ lọc này.`;
   const countdownSummary = closestUpcoming
     ? getCountdownCopy(closestUpcoming)
     : personScope === 'all'
@@ -415,7 +415,7 @@ const Events: React.FC = () => {
               </span>
               <span className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold ring-1 ${meta ? meta.tone : 'bg-slate-100 text-slate-600 ring-slate-200'}`}>
                 <TypeIcon size={12} />
-                {meta ? meta.label : 'Record cũ'}
+                {meta ? meta.label : 'Ngày đặc biệt'}
               </span>
             </div>
             <h3 className="mt-3 text-xl font-black tracking-tight text-slate-900">{item.event.title}</h3>
@@ -441,7 +441,7 @@ const Events: React.FC = () => {
             <PersonBadge role={item.creator} prefix="Tạo bởi" showIcon={false} />
           ) : (
             <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-              Record cũ chưa rõ ai tạo
+              Đã thêm trước đây
             </span>
           )}
           {renderTarget(item.target)}
@@ -510,7 +510,7 @@ const Events: React.FC = () => {
               </span>
               <h1 className="mt-4 text-3xl font-black tracking-tight text-slate-900 md:text-[2.75rem]">Những ngày cần được nhớ rõ</h1>
               <p className="mt-3 text-sm leading-7 text-slate-600 md:text-[15px]">
-                Đây không chỉ là một list ngày tháng. Màn này giúp biết ngày nào sắp tới, ngày đó dành cho ai, và vì sao nó đáng để giữ lại giữa nhịp sống hằng ngày của hai bạn.
+                Đây không chỉ là một danh sách ngày tháng. Màn này giúp biết ngày nào sắp tới, ngày đó dành cho ai, và vì sao nó đáng để giữ lại giữa nhịp sống hằng ngày của hai người.
               </p>
             </div>
             <button onClick={() => openCreateModal()} className="inline-flex items-center justify-center gap-2 rounded-full bg-slate-900 px-5 py-3 text-sm font-bold text-white shadow-lg shadow-slate-200 transition hover:-translate-y-0.5 hover:bg-slate-800 active:scale-[0.98]">
@@ -521,7 +521,7 @@ const Events: React.FC = () => {
 
           <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
             <div className="flex flex-wrap items-center gap-3">
-              <PersonBadge role={role} prefix="Đang xem với vai" variant="solid" />
+              <PersonBadge role={role} prefix="Góc của" variant="solid" />
               <div className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-white/70">
                 {closestUpcoming ? <CalendarClock size={15} className="text-rose-500" /> : <Clock3 size={15} className="text-slate-400" />}
                 {countdownSummary}
@@ -538,7 +538,7 @@ const Events: React.FC = () => {
               />
               {personScope !== 'all' ? (
                 <p className="text-xs leading-5 text-slate-500">
-                  Filter này vẫn giữ các ngày chung của cả hai, và chỉ ẩn những ngày không chạm tới {activeScopeLabel.toLowerCase()}.
+                  Bộ lọc này vẫn giữ các ngày chung của cả hai, và chỉ ẩn những ngày không chạm tới {activeScopeLabel.toLowerCase()}.
                 </p>
               ) : null}
             </div>
@@ -611,7 +611,7 @@ const Events: React.FC = () => {
               </div>
 
               <div className="mt-4">
-                <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai' : 'Bạn đang ghi với vai'} />
+                <PersonBadge role={role} prefix="Góc của" />
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">

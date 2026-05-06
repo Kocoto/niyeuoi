@@ -106,9 +106,9 @@ const SECTION_META: Record<
   },
   legacy: {
     title: 'Đang giữ từ trước',
-    description: 'Những record cũ chưa rõ ai khởi xướng hoặc dành cho ai vẫn được giữ an toàn ở đây để bổ sung nghĩa dần dần.',
-    emptyTitle: 'Không còn record cũ nào chưa rõ hướng',
-    emptyBody: 'Khi dữ liệu cũ được bổ sung lại ý nghĩa, phần này sẽ tự thu gọn.',
+    description: 'Những thử thách cũ đang được giữ ở đây.',
+    emptyTitle: 'Không còn thử thách cũ nào chưa rõ hướng',
+    emptyBody: 'Khi hướng của các thử thách này được cập nhật, phần này sẽ thu nhỏ lại.',
     tone: 'bg-slate-100 text-slate-700 ring-slate-200',
     icon: Sparkles,
   },
@@ -152,9 +152,9 @@ const getFallbackDescription = (challenge: IChallenge) => {
   const sectionKey = getChallengeSection(challenge);
   if (sectionKey === 'together') return 'Một challenge được giữ cho cả hai, để khi mở ra là biết đây là điều mình có thể đi cùng nhau.';
   if (sectionKey === 'for_girlfriend' || sectionKey === 'for_boyfriend') {
-    return 'Một challenge riêng cho một người trong hai bạn, để sự quan tâm không bị chìm vào danh sách chung.';
+    return 'Một challenge riêng cho một người trong hai, để sự quan tâm không bị chìm vào danh sách chung.';
   }
-  return 'Một challenge cũ vẫn đang được giữ an toàn ở đây, dù chưa đủ metadata để biết rõ hướng của nó.';
+  return 'Một thử thách cũ đang được giữ ở đây.';
 };
 
 const sortChallenges = (items: IChallenge[]) =>
@@ -509,8 +509,8 @@ const Challenges: React.FC = () => {
                 Những điều để gần nhau hơn, không phải nhiệm vụ để kiếm điểm
               </h1>
               <p className="mt-3 text-sm leading-7 text-slate-600 md:text-[15px]">
-                Màn này giữ những điều hai bạn cùng làm hoặc dành cho nhau. Điểm và độ khó vẫn còn ở đây nếu cần,
-                nhưng chúng chỉ là chi tiết phụ sau ý nghĩa thật của challenge.
+                Những điều hai người cùng làm hoặc dành cho nhau. Điểm và độ khó vẫn ở đây nếu cần,
+                nhưng chỉ là chi tiết phụ.
               </p>
             </div>
 
@@ -527,11 +527,7 @@ const Challenges: React.FC = () => {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
-            <PersonBadge role={role} prefix="Đang xem với vai" variant="solid" />
-            <span className="inline-flex items-center gap-2 rounded-full bg-white/85 px-4 py-2 text-sm font-semibold text-slate-700 ring-1 ring-white/70">
-              <HeartHandshake size={15} className="text-amber-500" />
-              Challenge riêng cho nhau sẽ được tách rõ khỏi challenge cùng nhau.
-            </span>
+            <PersonBadge role={role} prefix="Góc của" variant="solid" />
           </div>
 
           <div className="grid gap-3 md:grid-cols-4">
@@ -663,7 +659,7 @@ const Challenges: React.FC = () => {
                     {isEditing ? 'Làm rõ hướng của challenge này' : 'Mở một challenge có nghĩa thật sự'}
                   </h2>
                   <p className="mt-2 text-sm leading-6 text-slate-600">
-                    Chọn xem đây là điều cả hai cùng làm hay điều bạn dành riêng cho người kia, rồi thêm mức độ nếu cần.
+                    Chọn hướng challenge, rồi thêm mức độ nếu cần.
                   </p>
                 </div>
 
@@ -673,7 +669,7 @@ const Challenges: React.FC = () => {
               </div>
 
               <div className="mt-4">
-                <PersonBadge role={role} prefix={isEditing ? 'Bạn đang chỉnh với vai' : 'Bạn đang mở với vai'} />
+                <PersonBadge role={role} prefix="Góc của" />
               </div>
 
               <form onSubmit={handleSubmit} className="mt-6 space-y-5">

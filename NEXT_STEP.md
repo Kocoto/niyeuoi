@@ -777,7 +777,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### E2 - Places / Wishlist / Events / Challenges copy fix
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - Xóa technical fallback khỏi 4 trang này
   - Đồng bộ tiếng Việt trong copy mô tả
@@ -791,7 +791,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### E3 - Coupons / DeepTalk / MoodLofi / Timeline copy fix
 
-- Status: `pending`
+- Status: `done`
 - Mục tiêu:
   - Đồng bộ tiếng Việt, xóa technical leakage còn sót
 - Reference Sections:
@@ -804,7 +804,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### E4 - Đồng bộ thuật ngữ toàn app
 
-- Status: `pending`
+- Status: `active`
 - Mục tiêu:
   - Chốt bảng thuật ngữ và áp dụng nhất quán
   - Đồng bộ nav labels nếu cần đổi
@@ -819,21 +819,17 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Active Slice
 
-- ID: `E2`
+- ID: `E4`
 - Status: `active`
-- Tên: `Places / Wishlist / Events / Challenges copy fix`
+- Tên: `Đồng bộ thuật ngữ toàn app`
 - Done checklist:
-  - [x] `npm run build` frontend pass
-  - [x] `npm run build` backend pass
-  - [x] `npx tsc --noEmit` frontend pass (no errors)
-  - [x] `npx tsc --noEmit` backend pass (no errors)
-  - [x] eslint pass trên 10 frontend files (1 pre-existing warning ở MoodLofi - không blocking)
-  - [x] browser smoke checklist được ghi vào Session Handoff
+  - [ ] Rà từng entry trong bảng thuật ngữ COPY_AUDIT.md
+  - [ ] Xác nhận không còn English/Vietnamese lẫn lộn trong copy mô tả
+  - [ ] `npx tsc --noEmit` frontend pass
+  - [ ] `npm run build` frontend pass
 - Lưu ý:
-  - Backend không có ESLint config (pre-existing); TypeScript là checker chính và pass
-  - 1 warning ESLint ở `MoodLofi.tsx` line 67 về useEffect deps - pre-existing, không phá build
-  - Chunk size warning (807 KB) ở Vite build - pre-existing, không phá build
-  - **Browser smoke cần người dùng chạy thủ công** - xem checklist ở Session Handoff
+  - Nav labels (Mood, Timeline, Deep Talk, v.v.) được giữ English nếu là brand của app
+  - Chỉ đổi copy mô tả, không đổi route/component name
 
 ## Quy tắc cập nhật trước khi dừng
 - Nếu chưa xong slice:
@@ -850,28 +846,29 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `D2 - Cải thiện prompt AI gen Deep Talk`
+- `E3 - Coupons / DeepTalk / MoodLofi / Timeline copy fix`
 
 ### Current status
 
-- Phase A–D hoàn tất.
-- Phase E (Copy Audit) vừa được tạo. Slice E1 là active.
-- Chưa có implementation trong E1 — session này chỉ tạo tài liệu và breakdown.
+- E1–E3 xong. E4 là active.
+- `npx tsc --noEmit` pass sau E3.
 
 ### Files touched in latest session
 
-- `COPY_AUDIT.md` (tạo mới)
-- `IMPLEMENTATION_ROADMAP.md` (thêm Phase 4)
-- `NEXT_STEP.md` (thêm Phase E breakdown, set E1 active)
+- `frontend/src/pages/MoodLofi.tsx` — bỏ "check-in", "wording trung tính", "metadata", chip "Giữ nguyên dữ liệu cũ", PersonBadge prefix
+- `frontend/src/pages/DeepTalk.tsx` — bỏ "Bạn đang" trước vai trò, PersonBadge prefix, placeholder "Bạn đang cảm thấy"
+- `frontend/src/pages/Timeline.tsx` — bỏ "metadata", "wording trung tính", PersonBadge prefix
+- `frontend/src/pages/Coupons.tsx` — bỏ "metadata", "Dữ liệu cũ", "LOVE-" prefix → "#", "bạn" → role name
+- `NEXT_STEP.md` (cập nhật trạng thái)
 
 ### Tests run in latest session
 
-- Không có implementation — chưa cần test
+- `npx tsc --noEmit` frontend: pass (no errors)
 
 ### Known blockers
 
 - Không có blocker kỹ thuật.
-- Cần browser smoke thủ công (xem checklist bên dưới).
+- Browser smoke vẫn cần chạy thủ công.
 
 ### Browser smoke checklist (người dùng tự kiểm tra)
 
