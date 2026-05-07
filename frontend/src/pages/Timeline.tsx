@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import api from '../api/api';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Calendar, Loader2, Plus, X, Trash2, Camera, Pencil } from 'lucide-react';
@@ -244,11 +244,11 @@ const Timeline: React.FC = () => {
       <AnimatePresence>
         {showModal && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } setCropMeta(null); setCropPos({ x: 50, y: 50 }); } className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } setCropMeta(null); setCropPos({ x: 50, y: 50 }); }} className="absolute inset-0 bg-black/40 backdrop-blur-sm"></motion.div>
             <motion.div initial={{ scale: 0.9, y: 20 }} animate={{ scale: 1, y: 0 }} exit={{ scale: 0.9, y: 20 }} className="relative bg-white w-full max-w-md rounded-[2.5rem] p-8 shadow-2xl max-h-[90vh] overflow-y-auto">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-2xl font-bold text-gray-800 font-romantic">{isEditing ? 'Sửa lại kỷ niệm 📝' : 'Ghi lại kỷ niệm 📝'}</h2>
-                <button type="button" onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } setCropMeta(null); setCropPos({ x: 50, y: 50 }); }><X /></button>
+                <button type="button" onClick={() => { setShowModal(false); setSelectedFile(null); if (previewUrl) { URL.revokeObjectURL(previewUrl); setPreviewUrl(''); } setCropMeta(null); setCropPos({ x: 50, y: 50 }); }}><X /></button>
               </div>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
