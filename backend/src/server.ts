@@ -97,8 +97,10 @@ if (cloudinaryOk) {
 
 logger.info('Server', 'Đang kết nối MongoDB...', { uri: MONGODB_URI.replace(/:\/\/.*@/, '://***@') });
 mongoose.connect(MONGODB_URI)
-    .then(() => {
+    .then(async () => {
         logger.success('Server', 'Kết nối MongoDB thành công');
+        // Drop stale unique index left from an older schema version
+        await mongoose.connection.db!.collection('coupons').dropIndex('code_1').catch(() => {});
         schedulerService.start();
         app.listen(PORT, () => {
             logger.success('Server', `Đang chạy trên cổng ${PORT}`);
