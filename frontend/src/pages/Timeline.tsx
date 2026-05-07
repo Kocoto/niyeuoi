@@ -33,9 +33,6 @@ const Timeline: React.FC = () => {
   const [previewUrl, setPreviewUrl] = useState<string>('');
   const [cropPos, setCropPos] = useState({ x: 50, y: 50 });
   const [cropMeta, setCropMeta] = useState<{ w: number; h: number } | null>(null);
-  const cropContainerRef = useRef<HTMLDivElement>(null);
-  const isDraggingRef = useRef(false);
-  const lastPointerRef = useRef({ x: 0, y: 0 });
 
   const initialForm = {
     title: '',
@@ -75,6 +72,8 @@ const Timeline: React.FC = () => {
     setShowModal(true);
   };
 
+  const CROP_ASPECT = 16 / 9;
+
   const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -86,71 +85,36 @@ const Timeline: React.FC = () => {
     setSelectedFile(file);
     setPreviewUrl(url);
     setCropPos({ x: 50, y: 50 });
+    setCropMeta(null);
   };
-
-  const CROP_ASPECT = 16 / 9;
-
-  const handleCropPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
-    isDraggingRef.current = true;
-    lastPointerRef.current = { x: e.clientX, y: e.clientY };
-    e.currentTarget.setPointerCapture(e.pointerId);
-  };
-
-  const handleCropPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isDraggingRef.current || !cropMeta || !cropContainerRef.current) return;
-    const container = cropContainerRef.current;
-    const cw = container.clientWidth;
-    const ch = container.clientHeight;
-    const imageAspect = cropMeta.w / cropMeta.h;
-    const dx = e.clientX - lastPointerRef.current.x;
-    const dy = e.clientY - lastPointerRef.current.y;
-    lastPointerRef.current = { x: e.clientX, y: e.clientY };
-    setCropPos(prev => {
-      if (imageAspect > CROP_ASPECT) {
-        const renderedW = ch * imageAspect;
-        const range = renderedW - cw;
-        if (range <= 0) return prev;
-        const dxPct = (-dx / range) * 100;
-        return { x: Math.max(0, Math.min(100, prev.x + dxPct)), y: prev.y };
-      } else if (imageAspect < CROP_ASPECT) {
-        const renderedH = cw / imageAspect;
-        const range = renderedH - ch;
-        if (range <= 0) return prev;
-        const dyPct = (-dy / range) * 100;
-        return { x: prev.x, y: Math.max(0, Math.min(100, prev.y + dyPct)) };
-      }
-      return prev;
-    });
-  };
-
-  const handleCropPointerUp = () => { isDraggingRef.current = false; };
 
   const produceCroppedBlob = (): Promise<Blob> =>
     new Promise((resolve, reject) => {
-      if (!cropMeta || !previewUrl) { reject(new Error('no image')); return; }
+      if (!previewUrl) { reject(new Error('no image')); return; }
       const img = new Image();
       img.onload = () => {
-        const { naturalWidth: nw, naturalHeight: nh } = img;
-        const imageAspect = nw / nh;
-        let srcX: number, srcY: number, srcW: number, srcH: number;
-        if (imageAspect > CROP_ASPECT) {
-          srcH = nh; srcW = nh * CROP_ASPECT;
-          srcX = (nw - srcW) * (cropPos.x / 100); srcY = 0;
+        const iw = img.naturalWidth;
+        const ih = img.naturalHeight;
+        const imgAspect = iw / ih;
+        let sx: number, sy: number, sw: number, sh: number;
+        if (imgAspect >= CROP_ASPECT) {
+          sh = ih; sw = ih * CROP_ASPECT;
+          sx = (iw - sw) * (cropPos.x / 100); sy = 0;
         } else {
-          srcW = nw; srcH = nw / CROP_ASPECT;
-          srcX = 0; srcY = (nh - srcH) * (cropPos.y / 100);
+          sw = iw; sh = iw / CROP_ASPECT;
+          sx = 0; sy = (ih - sh) * (cropPos.y / 100);
         }
         const canvas = document.createElement('canvas');
         canvas.width = 1280; canvas.height = 720;
         const ctx = canvas.getContext('2d');
         if (!ctx) { reject(new Error('no ctx')); return; }
-        ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 1280, 720);
+        ctx.drawImage(img, sx, sy, sw, sh, 0, 0, 1280, 720);
         canvas.toBlob(
-          blob => (blob ? resolve(blob) : reject(new Error('empty blob'))),
+          b => (b ? resolve(b) : reject(new Error('empty blob'))),
           'image/jpeg', 0.88,
         );
       };
-      img.onerror = reject;
+      img.onerror = () => reject(new Error('load failed'));
       img.src = previewUrl;
     });
 
@@ -296,28 +260,12 @@ const Timeline: React.FC = () => {
                 <div className="relative overflow-hidden rounded-3xl border-2 border-dashed border-gray-200 bg-gray-50" style={{ aspectRatio: '16/9' }}>
                   {(previewUrl || formData.media) ? (
                     <>
-                      <div
-                        ref={cropContainerRef}
-                        className="w-full h-full touch-none"
-                        style={{ cursor: selectedFile ? 'grab' : 'default' }}
-                        onPointerDown={selectedFile ? handleCropPointerDown : undefined}
-                        onPointerMove={selectedFile ? handleCropPointerMove : undefined}
-                        onPointerUp={selectedFile ? handleCropPointerUp : undefined}
-                        onPointerLeave={selectedFile ? handleCropPointerUp : undefined}
-                      >
-                        <img
-                          src={previewUrl || formData.media}
-                          alt="Preview"
-                          className="w-full h-full object-cover select-none pointer-events-none"
-                          style={{ objectPosition: `${cropPos.x}% ${cropPos.y}%` }}
-                          draggable={false}
-                        />
-                      </div>
-                      {selectedFile && (
-                        <div className="absolute bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full bg-black/50 px-3 py-1.5 text-[10px] font-bold text-white backdrop-blur-sm pointer-events-none">
-                          Kéo để chọn khung ảnh
-                        </div>
-                      )}
+                      <img
+                        src={previewUrl || formData.media}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                        style={{ objectPosition: `${cropPos.x}% ${cropPos.y}%` }}
+                      />
                       <label className="absolute right-3 top-3 cursor-pointer rounded-full bg-black/50 p-2 text-white backdrop-blur-sm transition hover:bg-black/70">
                         <Camera size={14} />
                         <input type="file" accept="image/*" className="hidden" onChange={handleFileSelect} />
@@ -331,6 +279,26 @@ const Timeline: React.FC = () => {
                     </label>
                   )}
                 </div>
+                {selectedFile && cropMeta && (() => {
+                  const imgAspect = cropMeta.w / cropMeta.h;
+                  if (imgAspect > CROP_ASPECT) return (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold text-gray-400">Chọn vùng hiển thị ← →</p>
+                      <input type="range" min={0} max={100} value={cropPos.x}
+                        onChange={e => setCropPos(p => ({ ...p, x: +e.target.value }))}
+                        className="w-full accent-primary" />
+                    </div>
+                  );
+                  if (imgAspect < CROP_ASPECT) return (
+                    <div className="space-y-1">
+                      <p className="text-[11px] font-bold text-gray-400">Chọn vùng hiển thị ↑ ↓</p>
+                      <input type="range" min={0} max={100} value={cropPos.y}
+                        onChange={e => setCropPos(p => ({ ...p, y: +e.target.value }))}
+                        className="w-full accent-primary" />
+                    </div>
+                  );
+                  return null;
+                })()}
                 <input required className="w-full bg-gray-50 p-4 rounded-2xl outline-none focus:bg-white border-2 border-transparent focus:border-primary transition-all text-sm" placeholder="Tiêu đề kỷ niệm..." value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
                 <input type="date" required className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                 <textarea required className="w-full bg-gray-50 p-4 rounded-2xl outline-none text-sm" rows={3} placeholder="Hôm đó chúng mình đã thế nào..." value={formData.content} onChange={e => setFormData({...formData, content: e.target.value})} />
