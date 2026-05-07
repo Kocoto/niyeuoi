@@ -49,6 +49,7 @@ import deepTalkRoutes from './routes/deepTalkRoutes';
 import rewardRoutes from './routes/rewardRoutes';
 import suggestionRoutes from './routes/suggestionRoutes';
 import relationshipStateRoutes from './routes/relationshipStateRoutes';
+import letterRoutes from './routes/letterRoutes';
 import * as schedulerService from './services/schedulerService';
 
 app.use('/api/places', placeRoutes);
@@ -65,6 +66,7 @@ app.use('/api/deeptalk', deepTalkRoutes);
 app.use('/api/rewards', rewardRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/relationship-state', relationshipStateRoutes);
+app.use('/api/letters', letterRoutes);
 
 // Basic Route
 app.get('/', (_req: Request, res: Response) => {

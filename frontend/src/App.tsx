@@ -10,6 +10,7 @@ import Events from './pages/Events';
 import MoodLofi from './pages/MoodLofi';
 import Challenges from './pages/Challenges';
 import DeepTalk from './pages/DeepTalk';
+import Letters from './pages/Letters';
 import { AuthProvider } from './context/AuthContext';
 import { UIProvider } from './context/UIContext';
 import ServerGate from './components/ServerGate';
@@ -36,6 +37,7 @@ function App() {
                     <Route path="/mood" element={<MoodLofi />} />
                     <Route path="/challenges" element={<Challenges />} />
                     <Route path="/deeptalk" element={<DeepTalk />} />
+                    <Route path="/letters" element={<Letters />} />
                     <Route path="*" element={<div className="surface-card mx-auto mt-20 max-w-xl px-8 py-12 text-center text-sm font-medium text-soft">Trang này đang được chuẩn bị để vừa hơn với không gian riêng của hai bạn.</div>} />
                   </Routes>
                 </main>

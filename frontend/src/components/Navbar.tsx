@@ -12,6 +12,7 @@ import {
   Map,
   MapPinned,
   MessageCircleHeart,
+  MessageSquareHeart,
   NotebookTabs,
   Sparkles,
   Ticket,
@@ -76,6 +77,7 @@ const groupedNav: NavGroup[] = [
     items: [
       { to: '/mood', label: 'Góc cảm xúc', description: 'Ghi cảm xúc nhẹ nhàng hôm nay', icon: <Sparkles size={18} /> },
       { to: '/deeptalk', label: 'Trò chuyện sâu', description: 'Những câu hỏi cần thời gian', icon: <MessageCircleHeart size={18} /> },
+      { to: '/letters', label: 'Lời muốn nói', description: 'Viết ra điều đang nghĩ', icon: <MessageSquareHeart size={18} /> },
     ],
   },
   {
