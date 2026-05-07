@@ -804,7 +804,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### E4 - Đồng bộ thuật ngữ toàn app
 
-- Status: `active`
+- Status: `done`
 - Mục tiêu:
   - Chốt bảng thuật ngữ và áp dụng nhất quán
   - Đồng bộ nav labels nếu cần đổi
@@ -819,17 +819,15 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ## Current Active Slice
 
-- ID: `E4`
-- Status: `active`
-- Tên: `Đồng bộ thuật ngữ toàn app`
-- Done checklist:
-  - [ ] Rà từng entry trong bảng thuật ngữ COPY_AUDIT.md
-  - [ ] Xác nhận không còn English/Vietnamese lẫn lộn trong copy mô tả
-  - [ ] `npx tsc --noEmit` frontend pass
-  - [ ] `npm run build` frontend pass
-- Lưu ý:
-  - Nav labels (Mood, Timeline, Deep Talk, v.v.) được giữ English nếu là brand của app
-  - Chỉ đổi copy mô tả, không đổi route/component name
+- ID: `—`
+- Status: `Phase E hoàn tất`
+- Tên: `Copy Audit xong — không còn slice active`
+- Ghi chú:
+  - Tất cả E1–E4 đã done
+  - Không còn "check-in", "metadata", "backend", "Record cũ", "Dữ liệu cũ", "LOVE-", "Quick Decision Mode" trong UI
+  - "Reward" → "Điều vừa mở ra" trong feed label
+  - Tất cả PersonBadge prefix thống nhất → "Góc của"
+  - Phase tiếp theo cần xác định trong IMPLEMENTATION_ROADMAP.md
 
 ## Quy tắc cập nhật trước khi dừng
 - Nếu chưa xong slice:
@@ -846,19 +844,21 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 
 ### Last completed slice
 
-- `E3 - Coupons / DeepTalk / MoodLofi / Timeline copy fix`
+- `E4 - Đồng bộ thuật ngữ toàn app`
 
 ### Current status
 
-- E1–E3 xong. E4 là active.
-- `npx tsc --noEmit` pass sau E3.
+- Phase E (Copy Audit) hoàn tất toàn bộ E1–E4.
+- Không còn slice active. Cần xác định phase tiếp theo.
+- `npx tsc --noEmit` pass sau E4.
 
 ### Files touched in latest session
 
-- `frontend/src/pages/MoodLofi.tsx` — bỏ "check-in", "wording trung tính", "metadata", chip "Giữ nguyên dữ liệu cũ", PersonBadge prefix
-- `frontend/src/pages/DeepTalk.tsx` — bỏ "Bạn đang" trước vai trò, PersonBadge prefix, placeholder "Bạn đang cảm thấy"
-- `frontend/src/pages/Timeline.tsx` — bỏ "metadata", "wording trung tính", PersonBadge prefix
-- `frontend/src/pages/Coupons.tsx` — bỏ "metadata", "Dữ liệu cũ", "LOVE-" prefix → "#", "bạn" → role name
+- `frontend/src/components/Navbar.tsx` — "check-in" → "ghi cảm xúc"
+- `frontend/src/components/AuthGate.tsx` — "check-in" → "cảm xúc"
+- `frontend/src/pages/Home.tsx` — toàn bộ "check-in" → "ghi cảm xúc", "Reward" label → "Điều vừa mở ra"
+- `frontend/src/pages/Challenges.tsx` — "Record cũ chưa rõ ai khởi xướng" → "Đã thêm trước đây"
+- `frontend/src/pages/Coupons.tsx` — "metadata cũ" → "thông tin cũ"
 - `NEXT_STEP.md` (cập nhật trạng thái)
 
 ### Tests run in latest session
@@ -868,7 +868,7 @@ Nếu dừng giữa chừng, phải cập nhật NEXT_STEP.md với:
 ### Known blockers
 
 - Không có blocker kỹ thuật.
-- Browser smoke vẫn cần chạy thủ công.
+- Browser smoke vẫn cần chạy thủ công với PIN thật.
 
 ### Browser smoke checklist (người dùng tự kiểm tra)
 

@@ -1101,7 +1101,7 @@ const Coupons: React.FC = () => {
                   </div>
                   {detailCoupon.isLegacy ? (
                     <p className="mt-3 text-sm leading-6 text-slate-500">
-                      Voucher này đi lên từ dữ liệu cũ nên app chỉ suy ra phần nhìn cần thiết, không ép ghi đè metadata cũ.
+                      Voucher này đi lên từ dữ liệu cũ nên app chỉ suy ra phần nhìn cần thiết, không ép ghi đè thông tin cũ.
                     </p>
                   ) : null}
                 </div>

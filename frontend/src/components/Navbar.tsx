@@ -72,9 +72,9 @@ const groupedNav: NavGroup[] = [
   {
     key: 'feelings',
     title: 'Cảm xúc và trò chuyện',
-    hint: 'Những flow để check-in và tiếp tục điều còn đang chờ giữa hai người.',
+    hint: 'Những flow để ghi cảm xúc và tiếp tục điều còn đang chờ giữa hai người.',
     items: [
-      { to: '/mood', label: 'Góc cảm xúc', description: 'Check-in nhẹ nhàng hôm nay', icon: <Sparkles size={18} /> },
+      { to: '/mood', label: 'Góc cảm xúc', description: 'Ghi cảm xúc nhẹ nhàng hôm nay', icon: <Sparkles size={18} /> },
       { to: '/deeptalk', label: 'Trò chuyện sâu', description: 'Những câu hỏi cần thời gian', icon: <MessageCircleHeart size={18} /> },
     ],
   },

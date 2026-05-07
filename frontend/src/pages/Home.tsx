@@ -306,7 +306,7 @@ const relationshipSourceLabel: Record<RelationshipStateSourceType, string> = {
   deep_talk_question: 'Deep Talk',
   event: 'Ngày đã ghim',
   coupon: 'Voucher',
-  reward: 'Reward',
+  reward: 'Điều vừa mở ra',
   system: 'Nhịp hôm nay',
 };
 
@@ -632,7 +632,7 @@ const TodayRoleCard: React.FC<{ summary: RoleSummary; currentRole: Role; loading
             summary.checkedInToday ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'
           }`}
         >
-          {summary.checkedInToday ? 'Đã check-in hôm nay' : 'Còn mở check-in'}
+          {summary.checkedInToday ? 'Đã ghi cảm xúc hôm nay' : 'Còn mở ghi cảm xúc'}
         </span>
       </div>
 
@@ -732,7 +732,7 @@ const RelationshipStatePanel: React.FC<{ state: RelationshipState; currentRole: 
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <PersonBadge role={itemRole} prefix="Góc của" showIcon={false} variant={isCurrentRole ? 'solid' : 'soft'} />
                 <span className={`rounded-full px-3 py-1.5 text-xs font-bold ${person.today.hasMoodCheckIn ? 'bg-emerald-50 text-emerald-700' : 'bg-white text-soft ring-1 ring-stone-200'}`}>
-                  {person.today.hasMoodCheckIn ? 'Đã có check-in' : 'Còn mở check-in'}
+                  {person.today.hasMoodCheckIn ? 'Đã ghi cảm xúc' : 'Còn mở ghi cảm xúc'}
                 </span>
               </div>
               <p className="mt-3 text-sm font-bold text-ink">
@@ -1249,7 +1249,7 @@ const Home: React.FC = () => {
         role: currentRole,
         title: `Hôm nay của ${ROLE_NAME[currentRole]}`,
         checkedInToday: hasOwnCheckIn,
-        moodValue: relationshipMood?.value ?? (latestMood ? latestMood.mood : 'Còn mở check-in riêng'),
+        moodValue: relationshipMood?.value ?? (latestMood ? latestMood.mood : 'Còn mở ghi cảm xúc riêng'),
         moodMeta: relationshipPerson
           ? relationshipPerson.summary
           : latestMood
@@ -1308,7 +1308,7 @@ const Home: React.FC = () => {
       if (!checkedInToday[currentRole]) {
         items.push({
           key: `mood-${currentRole}`,
-          title: `Một check-in nhẹ còn mở cho ${ROLE_NAME[currentRole]}`,
+          title: `Một ghi cảm xúc nhẹ còn mở cho ${ROLE_NAME[currentRole]}`,
           detail: 'Chỉ cần một dòng ngắn là đủ.',
           to: '/mood',
         });
@@ -1426,17 +1426,17 @@ const Home: React.FC = () => {
       girlfriendState
         ? girlfriendState.today.mood
           ? `Ni đang ${girlfriendState.today.mood.value.toLowerCase()}`
-          : 'Ni còn mở check-in nhẹ'
+          : 'Ni còn mở ghi cảm xúc nhẹ'
         : checkedInToday.girlfriend && moodsByRole.girlfriend
           ? `Ni đang ${moodsByRole.girlfriend.mood.toLowerCase()}`
-          : 'Ni còn mở check-in nhẹ',
+          : 'Ni còn mở ghi cảm xúc nhẹ',
       boyfriendState
         ? boyfriendState.today.mood
           ? `Được đang ${boyfriendState.today.mood.value.toLowerCase()}`
-          : 'Được còn mở check-in nhẹ'
+          : 'Được còn mở ghi cảm xúc nhẹ'
         : checkedInToday.boyfriend && moodsByRole.boyfriend
           ? `Được đang ${moodsByRole.boyfriend.mood.toLowerCase()}`
-          : 'Được còn mở check-in nhẹ',
+          : 'Được còn mở ghi cảm xúc nhẹ',
       incompleteQuestionCount > 0
         ? `${incompleteQuestionCount} câu hỏi đang chờ`
         : 'Deep Talk đang khá yên',
@@ -1468,7 +1468,7 @@ const Home: React.FC = () => {
         return {
           key: `mood-${mood.createdAt ?? mood.mood}`,
           role: owner,
-          title: owner ? `${ROLE_NAME[owner]} vừa ghi ${mood.mood.toLowerCase()}` : 'Một check-in vừa được giữ lại',
+          title: owner ? `${ROLE_NAME[owner]} vừa ghi ${mood.mood.toLowerCase()}` : 'Một cảm xúc vừa được ghi lại',
           detail: mood.note ? mood.note : 'Một nhịp cảm xúc vừa được ghi lại.',
           meta: `${formatRelative(mood.createdAt)} · Cảm xúc`,
           to: '/mood',

@@ -8,7 +8,7 @@ import { ROLE_AUTH_LABEL, ROLE_META, ROLE_NAME, type Role } from '../constants/r
 const roleCards = [
   {
     role: 'girlfriend' as const,
-    description: `Vào góc ${ROLE_NAME.girlfriend} để các check-in, wishlist và câu trả lời mới được giữ đúng phía.`,
+    description: `Vào góc ${ROLE_NAME.girlfriend} để cảm xúc, wishlist và câu trả lời mới được giữ đúng phía.`,
   },
   {
     role: 'boyfriend' as const,

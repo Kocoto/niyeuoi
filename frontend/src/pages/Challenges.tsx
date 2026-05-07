@@ -387,7 +387,7 @@ const Challenges: React.FC = () => {
                 <PersonBadge role={creator} prefix="Khởi xướng bởi" showIcon={false} />
               ) : (
                 <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-                  Record cũ chưa rõ ai khởi xướng
+                  Đã thêm trước đây
                 </span>
               )}
 
@@ -601,7 +601,7 @@ const Challenges: React.FC = () => {
                     <PersonBadge role={detailChallenge.createdBy as Role} prefix="Khởi xướng bởi" showIcon={false} />
                   ) : (
                     <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-600 ring-1 ring-slate-200">
-                      Record cũ chưa rõ ai khởi xướng
+                      Đã thêm trước đây
                     </span>
                   )}
 
