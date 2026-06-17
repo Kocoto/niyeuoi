@@ -8,9 +8,10 @@ router.post('/', (req: Request, res: Response) => {
     upload.single('image')(req, res, (err: any) => {
         if (err) {
             logger.error('Upload', 'Multer/Cloudinary error', err);
-            return res.status(500).json({
+            const isFileTooLarge = err.code === 'LIMIT_FILE_SIZE';
+            return res.status(isFileTooLarge ? 413 : 400).json({
                 success: false,
-                message: `Lỗi upload: ${err.message || 'Unknown error'}`,
+                message: isFileTooLarge ? 'Ảnh quá lớn, tối đa 10MB.' : 'Không thể tải ảnh lên.',
             });
         }
 

@@ -275,11 +275,11 @@ const Events: React.FC = () => {
       data.sort((a, b) => parseEventDate(a.date).getTime() - parseEventDate(b.date).getTime());
       setEvents(data);
     } catch {
-      console.error('Lỗi khi tải sự kiện');
+      toast('Chưa tải được danh sách ngày hẹn.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchEvents();

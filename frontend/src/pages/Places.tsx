@@ -266,15 +266,19 @@ const Places: React.FC = () => {
       setPlaces(data);
       setDetailPlace((prev) => (prev ? data.find((place) => place._id === prev._id) ?? null : null));
     } catch {
-      console.error('Lỗi khi tải địa điểm');
+      toast('Chưa tải được danh sách địa điểm.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchPlaces();
   }, [fetchPlaces]);
+
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
 
   useEffect(() => {
     setRandomPlace((current) => {

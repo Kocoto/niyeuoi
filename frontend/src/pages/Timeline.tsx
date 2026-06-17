@@ -48,6 +48,10 @@ const Timeline: React.FC = () => {
     fetchMemories();
   }, []);
 
+  useEffect(() => {
+    return () => { if (previewUrl) URL.revokeObjectURL(previewUrl); };
+  }, [previewUrl]);
+
   const fetchMemories = async () => {
     try {
       const res = await api.get('/memories');

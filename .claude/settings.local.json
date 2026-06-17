@@ -21,7 +21,13 @@
       "Bash(node -e \"const {GoogleGenerativeAI} = require\\('@google/generative-ai'\\); console.log\\(require\\('./node_modules/@google/generative-ai/package.json'\\).version\\)\")",
       "Bash(npx eslint *)",
       "Bash(cd /mnt/d/Code/niyeuoi/niyeuoi/frontend && npx eslint src/pages/Challenges.tsx src/pages/DeepTalk.tsx src/pages/Events.tsx src/pages/LoveMap.tsx src/pages/MoodLofi.tsx src/pages/Places.tsx src/pages/Timeline.tsx src/pages/Wishlist.tsx 2>&1 | head -60)",
-      "Read(//mnt/d/Code/niyeuoi/niyeuoi/**)"
+      "Read(//mnt/d/Code/niyeuoi/niyeuoi/**)",
+      "Bash(Get-ChildItem -Path \"D:\\\\Code\\\\niyeuoi\\\\niyeuoi\\\\backend\\\\src\" -Recurse -Directory)",
+      "Bash(Select-Object FullName)",
+      "Bash(Get-ChildItem -Path \"d:\\\\Code\\\\niyeuoi\\\\niyeuoi\\\\frontend\\\\src\" -Recurse -Include \"*.tsx\", \"*.ts\", \"*.jsx\", \"*.js\")",
+      "Bash(ConvertTo-Json)",
+      "PowerShell(ls -R \"D:\\\\Code\\\\niyeuoi\\\\niyeuoi\\\\backend\\\\src\")",
+      "Bash(Get-ChildItem -Path \"D:\\\\Code\\\\niyeuoi\\\\niyeuoi\" -Recurse -Depth 2)"
     ]
   }
 }

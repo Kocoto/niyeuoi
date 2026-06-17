@@ -152,11 +152,11 @@ const Wishlist: React.FC = () => {
       const res = await api.get('/wishlist');
       setWishes(res.data.data ?? []);
     } catch {
-      console.error('Lỗi khi tải wishlist');
+      toast('Chưa tải được danh sách mong muốn.', 'error');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchWishes();
