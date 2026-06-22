@@ -50,7 +50,11 @@ import rewardRoutes from './routes/rewardRoutes';
 import suggestionRoutes from './routes/suggestionRoutes';
 import relationshipStateRoutes from './routes/relationshipStateRoutes';
 import letterRoutes from './routes/letterRoutes';
+import expenseRoutes from './routes/expenseRoutes';
 import * as schedulerService from './services/schedulerService';
+import expenseCategoryService from './services/expenseCategoryService';
+import expenseWalletService from './services/expenseWalletService';
+import recurringRuleService from './services/recurringRuleService';
 
 app.use('/api/places', placeRoutes);
 app.use('/api/memories', memoryRoutes);
@@ -67,6 +71,7 @@ app.use('/api/rewards', rewardRoutes);
 app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/relationship-state', relationshipStateRoutes);
 app.use('/api/letters', letterRoutes);
+app.use('/api/expenses', expenseRoutes);
 
 // Basic Route
 app.get('/', (_req: Request, res: Response) => {
@@ -103,6 +108,8 @@ mongoose.connect(MONGODB_URI)
         logger.success('Server', 'Kết nối MongoDB thành công');
         // Drop stale unique index left from an older schema version
         await mongoose.connection.db!.collection('coupons').dropIndex('code_1').catch(() => {});
+        await expenseCategoryService.seedDefaults();
+        await expenseWalletService.seedDefaults();
         schedulerService.start();
         app.listen(PORT, () => {
             logger.success('Server', `Đang chạy trên cổng ${PORT}`);

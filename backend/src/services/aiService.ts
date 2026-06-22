@@ -110,6 +110,52 @@ Trả về JSON hợp lệ (không markdown, không code block):
     }
 }
 
+export interface AIReceiptData {
+    amount: number | null;
+    date: string | null;
+    note: string | null;
+    type: 'income' | 'expense' | null;
+}
+
+export async function extractReceiptData(imageBase64: string, mimeType: string): Promise<AIReceiptData | null> {
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+        const prompt = `Đây là ảnh biên lai/thông báo giao dịch ngân hàng hoặc ví điện tử Việt Nam (Techcombank, VPBank, Vietcombank, MB Bank, MoMo, ZaloPay, VNPay...).
+
+Hãy trích xuất thông tin giao dịch và trả về JSON hợp lệ (không markdown, không code block):
+{"amount": số_tiền_VND_hoặc_null, "date": "ISO_date_string_hoặc_null", "note": "mô_tả_giao_dịch_hoặc_null", "type": "income_hoặc_expense_hoặc_null"}
+
+Quy tắc:
+- amount: chỉ số nguyên dương, đơn vị VND. Bỏ dấu chấm và phẩy
+- date: định dạng ISO 8601 (YYYY-MM-DDTHH:mm:ss) nếu đọc được, null nếu không
+- note: nội dung chuyển khoản, tên người nhận/gửi, hoặc mô tả ngắn gọn
+- type: "income" nếu là nhận tiền/tiền vào, "expense" nếu là chuyển tiền/tiền ra, null nếu không rõ
+- Nếu không đọc được trường nào thì để null`;
+
+        logger.info('AI', 'Đang scan biên lai bằng Gemini...');
+        const result = await model.generateContent({
+            contents: [{
+                role: 'user',
+                parts: [
+                    { text: prompt },
+                    { inlineData: { mimeType, data: imageBase64 } },
+                ],
+            }],
+        });
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Không tìm thấy JSON trong response');
+
+        const parsed = JSON.parse(jsonMatch[0]) as AIReceiptData;
+        logger.success('AI', 'Đã scan biên lai', { amount: parsed.amount, type: parsed.type });
+        return parsed;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi scan biên lai', err);
+        return null;
+    }
+}
+
 export async function generateCoupon(existingTitles: string[]): Promise<AICoupon | null> {
     try {
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });

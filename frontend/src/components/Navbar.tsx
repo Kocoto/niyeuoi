@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   CalendarDays,
+  CalendarCheck,
   ChevronRight,
   Compass,
   Grid3x3,
@@ -14,9 +15,11 @@ import {
   MessageCircleHeart,
   MessageSquareHeart,
   NotebookTabs,
+  PiggyBank,
   Sparkles,
   Ticket,
   Trophy,
+  Wallet,
   X,
 } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -91,6 +94,17 @@ const groupedNav: NavGroup[] = [
     ],
   },
   {
+    key: 'finance',
+    title: 'Chi tiêu',
+    hint: 'Theo dõi thu chi, quỹ chung, và mục tiêu tiết kiệm của hai bạn.',
+    items: [
+      { to: '/expenses',              label: 'Tổng quan chi tiêu', description: 'Dashboard thu chi tháng này',          icon: <Wallet size={18} /> },
+      { to: '/expenses/transactions', label: 'Giao dịch',          description: 'Toàn bộ thu chi theo thời gian',      icon: <ArrowRightLeft size={18} /> },
+      { to: '/expenses/savings',      label: 'Mục tiêu tiết kiệm', description: 'Đang để dành cho điều gì?',           icon: <PiggyBank size={18} /> },
+      { to: '/expenses/recurring',    label: 'Thu chi định kỳ',    description: 'Hoá đơn và lương định kỳ tự động',    icon: <CalendarCheck size={18} /> },
+    ],
+  },
+  {
     key: 'utility',
     title: 'Tiện ích',
     hint: 'Mở khi thật sự cần, để app shell vẫn giữ nhịp nhẹ và rõ.',
@@ -121,6 +135,10 @@ const CONTEXTUAL_LINKS: Partial<Record<string, string[]>> = {
   '/challenges': ['/events', '/coupons'],
   '/coupons': ['/events', '/wishlist'],
   '/map': ['/places', '/timeline'],
+  '/expenses': ['/expenses/transactions', '/expenses/savings', '/expenses/recurring'],
+  '/expenses/transactions': ['/expenses', '/expenses/savings'],
+  '/expenses/savings': ['/expenses', '/wishlist'],
+  '/expenses/recurring': ['/expenses'],
 };
 
 const readRecentPaths = () => {
