@@ -1,8 +1,17 @@
 import mongoose from 'mongoose';
 import Transaction, { ITransaction, TransactionType } from '../models/Transaction';
+import Wallet from '../models/Wallet';
+import Budget from '../models/Budget';
 import expenseWalletService from './expenseWalletService';
+import notificationService from './notificationService';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
+
+function fmtVND(amount: number): string {
+    if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`;
+    if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`;
+    return `${amount}đ`;
+}
 
 type WalletOwnerScope = 'shared' | AuthRole;
 
@@ -83,6 +92,12 @@ class ExpenseTransactionService {
 
             await session.commitTransaction();
             logger.success('Transaction', 'Đã tạo giao dịch', { id: transaction._id });
+
+            // Cảnh báo ngân sách (fire-and-forget, không chặn luồng chính)
+            if (data.type === 'expense' && data.categoryId) {
+                this.checkBudgetAlert(data.categoryId, data.amount, new Date(data.date ?? Date.now())).catch(() => {});
+            }
+
             return transaction;
         } catch (err: any) {
             await session.abortTransaction();
@@ -91,6 +106,54 @@ class ExpenseTransactionService {
             throw err;
         } finally {
             session.endSession();
+        }
+    }
+
+    private async checkBudgetAlert(categoryId: any, amount: number, date: Date): Promise<void> {
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+
+        const budgets = await Budget.find({ categoryId, month, year }).populate('categoryId', 'name');
+        if (budgets.length === 0) return;
+
+        const start = new Date(year, month - 1, 1);
+        const end = new Date(year, month, 1);
+
+        for (const budget of budgets) {
+            // tính chi tiêu danh mục này theo owner của ngân sách
+            const ids = await expenseWalletService.resolveWalletIds(budget.owner as any);
+            const match: Record<string, any> = {
+                type: 'expense', categoryId, date: { $gte: start, $lt: end },
+            };
+            if (ids) match.walletId = { $in: ids.map((i) => new mongoose.Types.ObjectId(i)) };
+
+            const agg = await Transaction.aggregate([
+                { $match: match },
+                { $group: { _id: null, total: { $sum: '$amount' } } },
+            ]);
+            const spentAfter = agg[0]?.total ?? 0;
+            const spentBefore = spentAfter - amount;
+            const limit = budget.limitAmount;
+            const catName = (budget.categoryId as any)?.name ?? 'Danh mục';
+            const scopeLabel = budget.owner === 'shared' ? 'Quỹ chung' : 'Cá nhân';
+
+            // chỉ thông báo khi giao dịch này khiến vượt ngưỡng
+            const crossed100 = spentBefore < limit && spentAfter >= limit;
+            const crossed80 = spentBefore < limit * 0.8 && spentAfter >= limit * 0.8 && spentAfter < limit;
+
+            if (crossed100) {
+                await notificationService.sendDiscord(
+                    '⚠️ Vượt ngân sách',
+                    `[${scopeLabel}] Danh mục **${catName}** đã chi ${fmtVND(spentAfter)} / ${fmtVND(limit)} — vượt hạn mức tháng ${month}/${year}.`,
+                    15158332,
+                );
+            } else if (crossed80) {
+                await notificationService.sendDiscord(
+                    '🔔 Sắp chạm ngân sách',
+                    `[${scopeLabel}] Danh mục **${catName}** đã dùng ${Math.round((spentAfter / limit) * 100)}% ngân sách tháng (${fmtVND(spentAfter)} / ${fmtVND(limit)}).`,
+                    16753920,
+                );
+            }
         }
     }
 
@@ -195,7 +258,6 @@ class ExpenseTransactionService {
             },
         ]);
 
-        const Wallet = (await import('../models/Wallet')).default;
         const walletFilter = owner ? { owner } : {};
         const wallets = await Wallet.find(walletFilter);
 
@@ -252,6 +314,72 @@ class ExpenseTransactionService {
         ]);
 
         return result;
+    }
+
+    async getTrends(months: number, owner?: WalletOwnerScope) {
+        const now = new Date();
+        const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1);
+
+        const match: Record<string, any> = {
+            type: { $in: ['income', 'expense'] },
+            date: { $gte: start },
+        };
+        if (owner) {
+            const ids = await expenseWalletService.resolveWalletIds(owner);
+            match.walletId = { $in: (ids ?? []).map((i) => new mongoose.Types.ObjectId(i)) };
+        }
+
+        const agg = await Transaction.aggregate([
+            { $match: match },
+            {
+                $group: {
+                    _id: { year: { $year: '$date' }, month: { $month: '$date' }, type: '$type' },
+                    total: { $sum: '$amount' },
+                },
+            },
+        ]);
+
+        const result: Array<{ month: number; year: number; label: string; income: number; expense: number }> = [];
+        for (let i = 0; i < months; i++) {
+            const d = new Date(now.getFullYear(), now.getMonth() - (months - 1) + i, 1);
+            const m = d.getMonth() + 1;
+            const y = d.getFullYear();
+            const income = agg.find((a: any) => a._id.year === y && a._id.month === m && a._id.type === 'income')?.total ?? 0;
+            const expense = agg.find((a: any) => a._id.year === y && a._id.month === m && a._id.type === 'expense')?.total ?? 0;
+            result.push({ month: m, year: y, label: `T${m}`, income, expense });
+        }
+        return result;
+    }
+
+    async exportCsv(month: number, year: number, owner?: WalletOwnerScope): Promise<string> {
+        const query: Record<string, any> = { ...buildDateRange(month, year) };
+        if (owner) {
+            const ids = await expenseWalletService.resolveWalletIds(owner);
+            query.walletId = { $in: ids ?? [] };
+        }
+        const txs = await Transaction.find(query)
+            .populate('walletId', 'name')
+            .populate('categoryId', 'name')
+            .populate('toWalletId', 'name')
+            .sort({ date: -1 });
+
+        const typeLabel: Record<string, string> = { income: 'Thu nhập', expense: 'Chi tiêu', transfer: 'Chuyển khoản' };
+        const header = ['Ngày', 'Loại', 'Số tiền', 'Ghi chú', 'Danh mục', 'Ví', 'Ví đích', 'Người ghi'];
+        const rows = txs.map((tx: any) => {
+            const cells = [
+                new Date(tx.date).toLocaleDateString('vi-VN'),
+                typeLabel[tx.type] ?? tx.type,
+                String(tx.amount),
+                tx.note ?? '',
+                tx.categoryId?.name ?? '',
+                tx.walletId?.name ?? '',
+                tx.toWalletId?.name ?? '',
+                tx.createdBy ?? '',
+            ];
+            return cells.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',');
+        });
+        // BOM để Excel đọc đúng tiếng Việt
+        return '﻿' + [header.join(','), ...rows].join('\n');
     }
 }
 

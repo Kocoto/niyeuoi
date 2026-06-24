@@ -34,6 +34,10 @@ export interface ITransaction {
   createdAt: string;
 }
 
+export interface AiSummary {
+  summary: string | null;
+}
+
 export type WalletScope = 'shared' | Role;
 
 export interface IBudgetProgress {
@@ -97,6 +101,25 @@ export interface OcrResult {
   date: string | null;
   note: string | null;
   type: 'income' | 'expense' | null;
+  imageUrl?: string;
+}
+
+export interface TrendPoint {
+  month: number;
+  year: number;
+  label: string;
+  income: number;
+  expense: number;
+}
+
+export interface IQuickPreset {
+  _id: string;
+  label: string;
+  type: 'income' | 'expense';
+  amount: number;
+  walletId: IWallet | string;
+  categoryId?: IExpenseCategory | string;
+  createdBy: Role;
 }
 
 const expenseApi = {
@@ -144,6 +167,32 @@ const expenseApi = {
   createRecurringRule: (data: Partial<IRecurringRule>) => api.post('/expenses/recurring', data),
   updateRecurringRule: (id: string, data: Partial<IRecurringRule>) => api.put(`/expenses/recurring/${id}`, data),
   deleteRecurringRule: (id: string) => api.delete(`/expenses/recurring/${id}`),
+
+  // Trends / AI / Export
+  getTrends: (months: number, owner?: WalletScope) =>
+    api.get<{ success: boolean; data: TrendPoint[] }>('/expenses/trends', { params: { months, owner } }),
+  getAiSummary: (month: number, year: number, owner?: WalletScope) =>
+    api.get<{ success: boolean; data: AiSummary }>('/expenses/ai-summary', { params: { month, year, owner } }),
+  exportUrl: (month: number, year: number, owner?: WalletScope) => {
+    const base = (api.defaults.baseURL ?? '').replace(/\/$/, '');
+    const params = new URLSearchParams({ month: String(month), year: String(year) });
+    if (owner) params.set('owner', owner);
+    return `${base}/expenses/export?${params.toString()}`;
+  },
+
+  // Quick presets
+  getQuickPresets: () => api.get<{ success: boolean; data: IQuickPreset[] }>('/expenses/quick-presets'),
+  createQuickPreset: (data: Partial<IQuickPreset>) => api.post('/expenses/quick-presets', data),
+  deleteQuickPreset: (id: string) => api.delete(`/expenses/quick-presets/${id}`),
+
+  // Upload ảnh hoá đơn (đính kèm thủ công)
+  uploadImage: (file: File) => {
+    const form = new FormData();
+    form.append('image', file);
+    return api.post<{ success: boolean; data: { url: string } }>('/upload', form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    });
+  },
 
   // OCR
   scanReceipt: (file: File) => {

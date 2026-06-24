@@ -1,5 +1,5 @@
 import React from 'react';
-import { ArrowLeftRight, Trash2 } from 'lucide-react';
+import { ArrowLeftRight, Trash2, Image as ImageIcon } from 'lucide-react';
 import type { ITransaction, IWallet, IExpenseCategory } from '../../api/expenseApi';
 import CategoryIcon from './CategoryIcon';
 import PersonBadge from '../PersonBadge';
@@ -55,6 +55,7 @@ const TransactionItem: React.FC<TransactionItemProps> = ({ tx, onEdit, onDelete 
           <div className="mt-0.5 flex items-center gap-2">
             {walletName && <span className="text-[11px] text-soft">{walletName}</span>}
             {tx.isRecurring && <span className="rounded-full bg-sky-50 px-1.5 py-0.5 text-[10px] font-bold text-sky-500">Định kỳ</span>}
+            {tx.imageUrl && <ImageIcon size={11} className="text-soft/50" />}
           </div>
         </div>
         <div className="flex shrink-0 flex-col items-end gap-1">

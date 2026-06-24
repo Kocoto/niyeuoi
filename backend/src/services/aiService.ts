@@ -110,6 +110,61 @@ Trả về JSON hợp lệ (không markdown, không code block):
     }
 }
 
+export interface MonthlySummaryInput {
+    scopeLabel: string;
+    month: number;
+    year: number;
+    totalIncome: number;
+    totalExpense: number;
+    net: number;
+    topCategories: Array<{ name: string; total: number }>;
+    budgetStatus: Array<{ name: string; percentage: number; isOver: boolean }>;
+}
+
+function formatVNDShort(amount: number): string {
+    if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`;
+    if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`;
+    return `${amount}đ`;
+}
+
+export async function generateMonthlySummary(input: MonthlySummaryInput): Promise<string | null> {
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+        const topCats = input.topCategories.length > 0
+            ? input.topCategories.map((c) => `${c.name} (${formatVNDShort(c.total)})`).join(', ')
+            : 'chưa có';
+        const overBudgets = input.budgetStatus.filter((b) => b.isOver).map((b) => b.name);
+        const nearBudgets = input.budgetStatus.filter((b) => !b.isOver && b.percentage >= 80).map((b) => b.name);
+
+        const prompt = `Bạn là trợ lý tài chính ấm áp trong một app dành cho cặp đôi người Việt. Hãy viết một đoạn tổng kết chi tiêu tháng ${input.month}/${input.year} cho phạm vi "${input.scopeLabel}".
+
+Số liệu:
+- Tổng thu: ${formatVNDShort(input.totalIncome)}
+- Tổng chi: ${formatVNDShort(input.totalExpense)}
+- Chênh lệch: ${formatVNDShort(input.net)} (${input.net >= 0 ? 'dư' : 'âm'})
+- Chi nhiều nhất: ${topCats}
+- Ngân sách vượt: ${overBudgets.length ? overBudgets.join(', ') : 'không có'}
+- Ngân sách sắp chạm (>=80%): ${nearBudgets.length ? nearBudgets.join(', ') : 'không có'}
+
+Yêu cầu:
+- Viết 2-3 câu tiếng Việt, giọng ấm áp, nhẹ nhàng, khích lệ — KHÔNG phán xét, KHÔNG dùng chữ "nợ"
+- Nêu 1 nhận xét nổi bật (chi nhiều cho gì, hoặc dư/tiết kiệm tốt) và 1 gợi ý nhỏ nhẹ nhàng
+- Có thể thêm 1 emoji phù hợp
+- Trả về JSON hợp lệ (không markdown): {"summary":"..."}`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return text.replace(/```/g, '').trim() || null;
+        const parsed = JSON.parse(jsonMatch[0]) as { summary?: string };
+        return parsed.summary ?? null;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi sinh tổng kết tháng', err);
+        return null;
+    }
+}
+
 export interface AIReceiptData {
     amount: number | null;
     date: string | null;

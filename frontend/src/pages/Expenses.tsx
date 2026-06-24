@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, ArrowRight } from 'lucide-react';
-import expenseApi, { type IWallet, type IExpenseCategory, type SummaryData, type IBudgetProgress, type CategorySpending, type ITransaction, type WalletScope } from '../api/expenseApi';
+import { ChevronLeft, ChevronRight, Plus, ArrowRight, HeartHandshake } from 'lucide-react';
+import expenseApi, { type IWallet, type IExpenseCategory, type SummaryData, type IBudgetProgress, type CategorySpending, type ITransaction, type WalletScope, type TrendPoint } from '../api/expenseApi';
 import WalletCard from '../components/expenses/WalletCard';
 import SpendingChart from '../components/expenses/SpendingChart';
+import TrendChart from '../components/expenses/TrendChart';
+import AISummaryCard from '../components/expenses/AISummaryCard';
+import QuickAddBar from '../components/expenses/QuickAddBar';
 import BudgetProgressBar from '../components/expenses/BudgetProgressBar';
 import TransactionItem from '../components/expenses/TransactionItem';
 import TransactionForm from '../components/expenses/TransactionForm';
@@ -31,10 +34,12 @@ const Expenses: React.FC = () => {
   const [budgets, setBudgets] = useState<IBudgetProgress[]>([]);
   const [report, setReport] = useState<CategorySpending[]>([]);
   const [recentTx, setRecentTx] = useState<ITransaction[]>([]);
+  const [trends, setTrends] = useState<TrendPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [showForm, setShowForm] = useState(false);
   const [editingTx, setEditingTx] = useState<ITransaction | null>(null);
+  const [contributeMode, setContributeMode] = useState(false);
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<IBudgetProgress | null>(null);
   const [editingWallet, setEditingWallet] = useState<IWallet | null>(null);
@@ -52,16 +57,18 @@ const Expenses: React.FC = () => {
   const fetchScoped = useCallback(async () => {
     setLoading(true);
     try {
-      const [summaryRes, budgetsRes, reportRes, txRes] = await Promise.all([
+      const [summaryRes, budgetsRes, reportRes, txRes, trendsRes] = await Promise.all([
         expenseApi.getSummary(month, year, scope),
         expenseApi.getBudgets(month, year, scope),
         expenseApi.getReport(month, year, scope),
         expenseApi.getTransactions({ month, year, owner: scope, limit: 5, page: 1 }),
+        expenseApi.getTrends(6, scope),
       ]);
       setSummary(summaryRes.data.data);
       setBudgets(budgetsRes.data.data ?? []);
       setReport(reportRes.data.data ?? []);
       setRecentTx(txRes.data.data ?? []);
+      setTrends(trendsRes.data.data ?? []);
     } catch {
       toast('Chưa tải được dữ liệu.', 'error');
     } finally {
@@ -80,6 +87,12 @@ const Expenses: React.FC = () => {
   const scopeWallets = wallets.filter((w) => w.owner === scope);
   const net = (summary?.totalIncome ?? 0) - (summary?.totalExpense ?? 0);
   const defaultWalletId = scopeWallets[0]?._id;
+  const totalAssets = wallets.reduce((s, w) => s + w.balance, 0);
+  const sharedWallet = wallets.find((w) => w.owner === 'shared');
+  const myWallet = wallets.find((w) => w.owner === role);
+
+  const openContribute = () => { setEditingTx(null); setContributeMode(true); setShowForm(true); };
+  const openAdd = () => { setEditingTx(null); setContributeMode(false); setShowForm(true); };
 
   const SCOPES: { id: WalletScope; label: string }[] = [
     { id: 'shared', label: 'Quỹ chung' },
@@ -93,9 +106,26 @@ const Expenses: React.FC = () => {
           <h1 className="page-title">Chi tiêu</h1>
           <p className="page-subtitle">Quỹ chung và chi tiêu cá nhân của hai bạn</p>
         </div>
-        <button type="button" onClick={() => { setEditingTx(null); setShowForm(true); }} className="btn-add" aria-label="Thêm giao dịch">
+        <button type="button" onClick={openAdd} className="btn-add" aria-label="Thêm giao dịch">
           <Plus size={20} />
         </button>
+      </div>
+
+      {/* Tổng tài sản + Góp quỹ chung */}
+      <div className="mb-4 flex items-center justify-between rounded-[1.5rem] bg-gradient-to-br from-rose-100 via-pink-50 to-sky-50 p-5 ring-1 ring-rose-100">
+        <div>
+          <p className="text-[11px] font-semibold text-soft">Tổng tài sản hai bạn</p>
+          <p className="mt-1 text-2xl font-bold text-ink">{formatVND(totalAssets)}</p>
+        </div>
+        {sharedWallet && myWallet && (
+          <button
+            type="button"
+            onClick={openContribute}
+            className="flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-2 text-xs font-bold text-primary shadow-sm transition hover:bg-white"
+          >
+            <HeartHandshake size={14} /> Góp quỹ chung
+          </button>
+        )}
       </div>
 
       {/* Scope toggle */}
@@ -137,6 +167,9 @@ const Expenses: React.FC = () => {
           </section>
         )}
 
+        {/* Ghi nhanh */}
+        <QuickAddBar wallets={wallets} categories={categories} defaultWalletId={defaultWalletId} onAdded={refreshAll} />
+
         {/* Summary */}
         {summary && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="surface-card grid grid-cols-3 divide-x divide-black/5 px-2 py-4">
@@ -155,11 +188,22 @@ const Expenses: React.FC = () => {
           </motion.div>
         )}
 
+        {/* AI tổng kết tháng */}
+        <AISummaryCard month={month} year={year} owner={scope} />
+
         {/* Spending chart */}
         {report.length > 0 && (
           <div className="surface-card p-5">
             <p className="section-label mb-4">Chi tiêu theo danh mục</p>
             <SpendingChart data={report} totalExpense={summary?.totalExpense ?? 0} />
+          </div>
+        )}
+
+        {/* Xu hướng 6 tháng */}
+        {trends.length > 0 && (
+          <div className="surface-card p-5">
+            <p className="section-label mb-4">Xu hướng 6 tháng</p>
+            <TrendChart data={trends} />
           </div>
         )}
 
@@ -211,8 +255,10 @@ const Expenses: React.FC = () => {
           wallets={wallets}
           categories={categories}
           editingTx={editingTx}
-          defaultWalletId={defaultWalletId}
-          onClose={() => { setShowForm(false); setEditingTx(null); }}
+          defaultType={contributeMode ? 'transfer' : 'expense'}
+          defaultWalletId={contributeMode ? myWallet?._id : defaultWalletId}
+          defaultToWalletId={contributeMode ? sharedWallet?._id : undefined}
+          onClose={() => { setShowForm(false); setEditingTx(null); setContributeMode(false); }}
           onSaved={refreshAll}
         />
       )}

@@ -1,5 +1,6 @@
 import SavingsGoal, { ISavingsGoal } from '../models/SavingsGoal';
 import expenseTransactionService from './expenseTransactionService';
+import notificationService from './notificationService';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
 
@@ -61,11 +62,28 @@ class SavingsGoalService {
             createdBy,
         });
 
+        const prevPct = goal.currentAmount / goal.targetAmount;
         goal.currentAmount += amount;
+        const newPct = goal.currentAmount / goal.targetAmount;
         if (goal.currentAmount >= goal.targetAmount) {
             goal.isCompleted = true;
         }
         await goal.save();
+
+        // Thông báo khi đạt mốc 50% hoặc hoàn thành
+        if (goal.isCompleted) {
+            notificationService.sendDiscord(
+                '🎉 Mục tiêu đã đạt!',
+                `Hai bạn đã hoàn thành mục tiêu **${goal.name}** (${goal.targetAmount.toLocaleString('vi-VN')}đ). Tuyệt vời ❤️`,
+                5763719,
+            ).catch(() => {});
+        } else if (prevPct < 0.5 && newPct >= 0.5) {
+            notificationService.sendDiscord(
+                '💪 Đã đi được nửa chặng',
+                `Mục tiêu **${goal.name}** đã đạt ${Math.round(newPct * 100)}% — cố lên nhé!`,
+                15844367,
+            ).catch(() => {});
+        }
 
         logger.success('SavingsGoal', 'Đã nạp tiền', { id, newAmount: goal.currentAmount });
         return goal;

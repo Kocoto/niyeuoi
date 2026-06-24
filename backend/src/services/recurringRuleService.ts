@@ -1,6 +1,13 @@
 import RecurringRule, { IRecurringRule, RecurringFrequency } from '../models/RecurringRule';
 import expenseTransactionService from './expenseTransactionService';
+import notificationService from './notificationService';
 import logger from '../utils/logger';
+
+function fmtVND(amount: number): string {
+    if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`;
+    if (amount >= 1_000) return `${Math.round(amount / 1_000)}k`;
+    return `${amount}đ`;
+}
 
 function advanceDate(date: Date, frequency: RecurringFrequency): Date {
     const next = new Date(date);
@@ -82,6 +89,13 @@ class RecurringRuleService {
                 rule.nextRunDate = advanceDate(rule.nextRunDate, rule.frequency);
                 await rule.save();
                 logger.success('RecurringRule', `Đã xử lý quy tắc: ${rule.name}`, { nextRun: rule.nextRunDate });
+
+                const sign = rule.type === 'income' ? '+' : '−';
+                await notificationService.sendDiscord(
+                    '🔁 Thu chi định kỳ',
+                    `Đã tự động ghi **${rule.name}**: ${sign}${fmtVND(rule.amount)}. Lần kế: ${rule.nextRunDate.toLocaleDateString('vi-VN')}.`,
+                    3447003,
+                ).catch(() => {});
             } catch (err) {
                 logger.error('RecurringRule', `Lỗi khi xử lý quy tắc: ${rule.name}`, err);
             }

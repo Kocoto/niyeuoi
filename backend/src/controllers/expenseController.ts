@@ -5,13 +5,16 @@ import expenseTransactionService from '../services/expenseTransactionService';
 import expenseBudgetService from '../services/expenseBudgetService';
 import savingsGoalService from '../services/savingsGoalService';
 import recurringRuleService from '../services/recurringRuleService';
-import { extractReceiptData } from '../services/aiService';
+import quickPresetService from '../services/quickPresetService';
+import { extractReceiptData, generateMonthlySummary } from '../services/aiService';
+import cloudinary from '../config/cloudinary';
 import type { IExpenseCategory } from '../models/ExpenseCategory';
 import type { IWallet } from '../models/Wallet';
 import type { ITransaction } from '../models/Transaction';
 import type { IBudget } from '../models/Budget';
 import type { ISavingsGoal } from '../models/SavingsGoal';
 import type { IRecurringRule } from '../models/RecurringRule';
+import type { IQuickPreset } from '../models/QuickPreset';
 import { resolveCreatePayload, getRequestAuthRole } from '../utils/requestIdentity';
 
 // ─── Categories ────────────────────────────────────────────────────────────────
@@ -340,6 +343,97 @@ export const getReport = async (req: Request, res: Response) => {
     }
 };
 
+export const getTrends = async (req: Request, res: Response) => {
+    try {
+        const { months, owner } = req.query as Record<string, string>;
+        const data = await expenseTransactionService.getTrends(months ? parseInt(months) : 6, owner as any);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi lấy xu hướng' });
+    }
+};
+
+export const exportTransactions = async (req: Request, res: Response) => {
+    try {
+        const { month, year, owner } = req.query as Record<string, string>;
+        if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
+        const csv = await expenseTransactionService.exportCsv(parseInt(month), parseInt(year), owner as any);
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="chi-tieu-${month}-${year}.csv"`);
+        res.status(200).send(csv);
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi xuất dữ liệu' });
+    }
+};
+
+export const getAiSummary = async (req: Request, res: Response) => {
+    try {
+        const { month, year, owner } = req.query as Record<string, string>;
+        if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
+        const m = parseInt(month);
+        const y = parseInt(year);
+
+        const [summary, report, budgets] = await Promise.all([
+            expenseTransactionService.getSummary(m, y, owner as any),
+            expenseTransactionService.getSpendingByCategory(m, y, owner as any),
+            expenseBudgetService.getBudgetsWithProgress(m, y, owner as any),
+        ]);
+
+        if (summary.totalIncome === 0 && summary.totalExpense === 0) {
+            return res.json({ success: true, data: { summary: null } });
+        }
+
+        const text = await generateMonthlySummary({
+            scopeLabel: owner === 'shared' ? 'Quỹ chung' : owner ? 'Cá nhân' : 'Tất cả',
+            month: m,
+            year: y,
+            totalIncome: summary.totalIncome,
+            totalExpense: summary.totalExpense,
+            net: summary.totalIncome - summary.totalExpense,
+            topCategories: report.slice(0, 3).map((r: any) => ({ name: r.categoryName, total: r.total })),
+            budgetStatus: budgets.map((b: any) => ({ name: b.budget.categoryId?.name ?? 'Danh mục', percentage: b.percentage, isOver: b.isOverBudget })),
+        });
+
+        res.json({ success: true, data: { summary: text } });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi tạo tổng kết AI' });
+    }
+};
+
+// ─── Quick Presets (ghi nhanh) ──────────────────────────────────────────────────
+
+export const getQuickPresets = async (_req: Request, res: Response) => {
+    try {
+        const data = await quickPresetService.getAll();
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi lấy mẫu ghi nhanh' });
+    }
+};
+
+export const createQuickPreset = async (req: Request, res: Response) => {
+    try {
+        const payload = resolveCreatePayload<IQuickPreset>(req, req.body);
+        const data = await quickPresetService.create(payload);
+        res.status(201).json({ success: true, data });
+    } catch (err: any) {
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
+        res.status(500).json({ success: false, error: 'Lỗi khi tạo mẫu ghi nhanh' });
+    }
+};
+
+export const deleteQuickPreset = async (req: Request, res: Response) => {
+    try {
+        await quickPresetService.remove(req.params.id as string);
+        res.json({ success: true, data: {} });
+    } catch (err: any) {
+        if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy mẫu' });
+        res.status(500).json({ success: false, error: 'Lỗi khi xoá mẫu' });
+    }
+};
+
 // ─── OCR ───────────────────────────────────────────────────────────────────────
 
 export const scanReceipt = async (req: Request, res: Response) => {
@@ -347,9 +441,17 @@ export const scanReceipt = async (req: Request, res: Response) => {
         if (!req.file) return res.status(400).json({ success: false, error: 'Không có ảnh được tải lên' });
         const imageBase64 = req.file.buffer.toString('base64');
         const mimeType = req.file.mimetype;
-        const extracted = await extractReceiptData(imageBase64, mimeType);
-        if (!extracted) return res.status(422).json({ success: false, error: 'Không đọc được thông tin từ ảnh' });
-        res.json({ success: true, data: extracted });
+
+        // Đọc thông tin + lưu ảnh lên Cloudinary song song
+        const [extracted, imageUrl] = await Promise.all([
+            extractReceiptData(imageBase64, mimeType),
+            cloudinary.uploader.upload(`data:${mimeType};base64,${imageBase64}`, { folder: 'niyeuoi/receipts' })
+                .then((r) => r.secure_url)
+                .catch(() => undefined),
+        ]);
+
+        if (!extracted) return res.status(422).json({ success: false, error: 'Không đọc được thông tin từ ảnh', data: { imageUrl } });
+        res.json({ success: true, data: { ...extracted, imageUrl } });
     } catch {
         res.status(500).json({ success: false, error: 'Lỗi khi xử lý ảnh biên lai' });
     }

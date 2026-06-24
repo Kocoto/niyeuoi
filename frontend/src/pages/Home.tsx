@@ -15,6 +15,7 @@ import {
 import { motion } from 'framer-motion';
 import api from '../api/api';
 import ContextualEmptyState from '../components/ContextualEmptyState';
+import ExpenseHomeWidget from '../components/expenses/ExpenseHomeWidget';
 import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_CORNER_LABEL, ROLE_NAME, isRole, type Role } from '../constants/roles';
@@ -1612,6 +1613,8 @@ const Home: React.FC = () => {
           </div>
         </div>
       </motion.section>
+
+      <ExpenseHomeWidget />
 
       <section className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <div className="surface-card p-5 md:p-6">

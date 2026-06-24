@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Camera, Loader2, X } from 'lucide-react';
+import { Camera, Loader2, X, Paperclip, Image as ImageIcon } from 'lucide-react';
 import AmountInput from './AmountInput';
 import CategoryChip from './CategoryChip';
 import type { IWallet, IExpenseCategory, ITransaction } from '../../api/expenseApi';
@@ -15,6 +15,7 @@ interface TransactionFormProps {
   onSaved: () => void;
   defaultType?: 'income' | 'expense' | 'transfer';
   defaultWalletId?: string;
+  defaultToWalletId?: string;
   editingTx?: ITransaction | null;
 }
 
@@ -26,7 +27,7 @@ function idOf(ref: IWallet | IExpenseCategory | string | undefined): string {
   return ref;
 }
 
-const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, onClose, onSaved, defaultType = 'expense', defaultWalletId, editingTx }) => {
+const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, onClose, onSaved, defaultType = 'expense', defaultWalletId, defaultToWalletId, editingTx }) => {
   const { role } = useAuth();
   const { toast } = useUI();
   const isEditing = !!editingTx;
@@ -35,12 +36,15 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, 
   const [amount, setAmount] = useState(editingTx?.amount ?? 0);
   const [note, setNote] = useState(editingTx?.note ?? '');
   const [walletId, setWalletId] = useState(idOf(editingTx?.walletId) || defaultWalletId || wallets[0]?._id || '');
-  const [toWalletId, setToWalletId] = useState(idOf(editingTx?.toWalletId));
+  const [toWalletId, setToWalletId] = useState(idOf(editingTx?.toWalletId) || defaultToWalletId || '');
   const [categoryId, setCategoryId] = useState(idOf(editingTx?.categoryId));
   const [date, setDate] = useState((editingTx?.date ?? new Date().toISOString()).slice(0, 10));
+  const [imageUrl, setImageUrl] = useState<string | undefined>(editingTx?.imageUrl);
   const [submitting, setSubmitting] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [attaching, setAttaching] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const attachRef = useRef<HTMLInputElement>(null);
 
   const handleScanReceipt = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -53,12 +57,29 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, 
       if (d.note) setNote(d.note);
       if (d.date) setDate(d.date.slice(0, 10));
       if (d.type) setType(d.type);
+      if (d.imageUrl) setImageUrl(d.imageUrl);
       toast('Đã đọc biên lai — kiểm tra lại trước khi lưu nhé.', 'success');
     } catch {
       toast('Không đọc được ảnh, nhập tay nha.', 'error');
     } finally {
       setScanning(false);
       if (fileRef.current) fileRef.current.value = '';
+    }
+  };
+
+  const handleAttach = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttaching(true);
+    try {
+      const res = await expenseApi.uploadImage(file);
+      setImageUrl(res.data.data.url);
+      toast('Đã đính kèm ảnh.', 'success');
+    } catch {
+      toast('Chưa tải được ảnh.', 'error');
+    } finally {
+      setAttaching(false);
+      if (attachRef.current) attachRef.current.value = '';
     }
   };
 
@@ -72,7 +93,7 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, 
 
     setSubmitting(true);
     try {
-      const payload: Record<string, unknown> = { type, amount, note, walletId, date };
+      const payload: Record<string, unknown> = { type, amount, note, walletId, date, imageUrl };
       if (type !== 'transfer') payload.categoryId = categoryId || undefined;
       if (type === 'transfer') payload.toWalletId = toWalletId;
 
@@ -119,6 +140,16 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, 
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-lg font-bold text-ink">{isEditing ? 'Sửa giao dịch' : 'Ghi giao dịch'}</h2>
             <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => attachRef.current?.click()}
+                disabled={attaching}
+                className="flex h-9 w-9 items-center justify-center rounded-full bg-black/5 text-soft transition hover:bg-black/10 disabled:opacity-50"
+                title="Đính kèm ảnh hoá đơn"
+              >
+                {attaching ? <Loader2 size={16} className="animate-spin" /> : <Paperclip size={16} />}
+              </button>
+              <input ref={attachRef} type="file" accept="image/*" className="hidden" onChange={handleAttach} />
               {!isEditing && (
                 <>
                   <button
@@ -239,6 +270,17 @@ const TransactionForm: React.FC<TransactionFormProps> = ({ wallets, categories, 
                 className="form-input"
               />
             </div>
+
+            {/* Ảnh hoá đơn đính kèm */}
+            {imageUrl && (
+              <div className="flex items-center gap-3 rounded-[1.25rem] bg-[#faf5f8] p-3">
+                <img src={imageUrl} alt="Hoá đơn" className="h-14 w-14 rounded-lg object-cover" />
+                <span className="flex-1 text-xs text-soft"><ImageIcon size={12} className="mr-1 inline" />Đã đính kèm ảnh hoá đơn</span>
+                <button type="button" onClick={() => setImageUrl(undefined)} className="text-soft/50 hover:text-rose-500">
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
             <button
               type="submit"

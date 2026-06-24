@@ -8,7 +8,8 @@ import {
     getBudgets, upsertBudget, deleteBudget,
     getSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal, depositToGoal,
     getRecurringRules, createRecurringRule, updateRecurringRule, deleteRecurringRule,
-    getSummary, getReport,
+    getSummary, getReport, getTrends, exportTransactions, getAiSummary,
+    getQuickPresets, createQuickPreset, deleteQuickPreset,
     scanReceipt,
 } from '../controllers/expenseController';
 
@@ -73,9 +74,18 @@ router.route('/recurring/:id')
     .put(validateObjectId, updateRecurringRule)
     .delete(validateObjectId, deleteRecurringRule);
 
+// Quick presets (ghi nhanh)
+router.route('/quick-presets')
+    .get(getQuickPresets)
+    .post(createQuickPreset);
+router.delete('/quick-presets/:id', validateObjectId, deleteQuickPreset);
+
 // Aggregation / Reports
 router.get('/summary', getSummary);
 router.get('/report', getReport);
+router.get('/trends', getTrends);
+router.get('/export', exportTransactions);
+router.get('/ai-summary', getAiSummary);
 
 // OCR
 router.post('/ocr', memoryUpload.single('receipt'), scanReceipt);

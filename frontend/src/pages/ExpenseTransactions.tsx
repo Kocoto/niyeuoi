@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Plus, ChevronLeft, ChevronRight, Search, Download } from 'lucide-react';
 import expenseApi, { type ITransaction, type IWallet, type IExpenseCategory } from '../api/expenseApi';
 import TransactionItem from '../components/expenses/TransactionItem';
 import TransactionForm from '../components/expenses/TransactionForm';
@@ -37,6 +37,10 @@ const ExpenseTransactions: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editingTx, setEditingTx] = useState<ITransaction | null>(null);
+  const [search, setSearch] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [showFilters, setShowFilters] = useState(false);
 
   const fetchBase = useCallback(async () => {
     try {
@@ -81,7 +85,22 @@ const ExpenseTransactions: React.FC = () => {
   const prevMonth = () => { if (month === 1) { setMonth(12); setYear(y => y - 1); } else setMonth(m => m - 1); };
   const nextMonth = () => { if (month === 12) { setMonth(1); setYear(y => y + 1); } else setMonth(m => m + 1); };
 
-  const grouped = groupByDate(txs);
+  const filteredTxs = useMemo(() => {
+    const min = parseInt(minAmount.replace(/\D/g, '')) || 0;
+    const max = parseInt(maxAmount.replace(/\D/g, '')) || Infinity;
+    const q = search.trim().toLowerCase();
+    return txs.filter((tx) => {
+      if (tx.amount < min || tx.amount > max) return false;
+      if (q) {
+        const cat = tx.categoryId && typeof tx.categoryId === 'object' ? (tx.categoryId as IExpenseCategory).name : '';
+        const hay = `${tx.note} ${cat}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+  }, [txs, search, minAmount, maxAmount]);
+
+  const grouped = groupByDate(filteredTxs);
   const dateKeys = Object.keys(grouped).sort((a, b) => {
     const parse = (s: string) => {
       const [d, m, y] = s.split('/');
@@ -97,9 +116,18 @@ const ExpenseTransactions: React.FC = () => {
           <h1 className="page-title">Giao dịch</h1>
           <p className="page-subtitle">Tất cả thu chi theo thời gian</p>
         </div>
-        <button type="button" onClick={() => { setEditingTx(null); setShowForm(true); }} className="btn-add">
-          <Plus size={20} />
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href={expenseApi.exportUrl(month, year)}
+            className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-soft shadow-sm ring-1 ring-black/5 transition hover:bg-rose-50"
+            title="Xuất CSV"
+          >
+            <Download size={18} />
+          </a>
+          <button type="button" onClick={() => { setEditingTx(null); setShowForm(true); }} className="btn-add">
+            <Plus size={20} />
+          </button>
+        </div>
       </div>
 
       {/* Month selector */}
@@ -135,7 +163,35 @@ const ExpenseTransactions: React.FC = () => {
             {wallets.map((w) => <option key={w._id} value={w._id}>{w.name}</option>)}
           </select>
         )}
+        <button
+          type="button"
+          onClick={() => setShowFilters((v) => !v)}
+          className={`chip ring-1 transition ${showFilters ? 'bg-primary text-white ring-primary/40' : 'bg-white text-soft ring-black/10'}`}
+        >
+          <Search size={12} /> Tìm
+        </button>
       </div>
+
+      {/* Search & amount filter */}
+      {showFilters && (
+        <div className="mb-4 flex flex-col gap-2 rounded-[1.25rem] bg-[#faf5f8] p-3 sm:flex-row">
+          <div className="flex flex-1 items-center gap-2 rounded-full bg-white px-3 ring-1 ring-black/10">
+            <Search size={14} className="text-soft" />
+            <input
+              type="text"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Tìm theo ghi chú / danh mục"
+              className="w-full bg-transparent py-2 text-sm outline-none"
+            />
+          </div>
+          <div className="flex items-center gap-2">
+            <input type="number" value={minAmount} onChange={(e) => setMinAmount(e.target.value)} placeholder="Từ (₫)" className="w-24 rounded-full bg-white px-3 py-2 text-sm outline-none ring-1 ring-black/10" />
+            <span className="text-soft">—</span>
+            <input type="number" value={maxAmount} onChange={(e) => setMaxAmount(e.target.value)} placeholder="Đến (₫)" className="w-24 rounded-full bg-white px-3 py-2 text-sm outline-none ring-1 ring-black/10" />
+          </div>
+        </div>
+      )}
 
       {/* Transaction list */}
       {dateKeys.length === 0 && !loading ? (
