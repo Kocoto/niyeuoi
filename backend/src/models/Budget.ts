@@ -1,9 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import type { AuthRole } from '../utils/authToken';
 
+export type BudgetOwner = AuthRole | 'shared';
+
 export interface IBudget extends Document {
     categoryId: mongoose.Types.ObjectId;
-    walletId?: mongoose.Types.ObjectId;
+    owner: BudgetOwner;
     limitAmount: number;
     month: number;
     year: number;
@@ -16,10 +18,10 @@ const budgetSchema: Schema = new Schema({
         ref: 'ExpenseCategory',
         required: [true, 'Danh mục là bắt buộc'],
     },
-    walletId: {
-        type: Schema.Types.ObjectId,
-        ref: 'Wallet',
-        default: undefined,
+    owner: {
+        type: String,
+        enum: ['shared', 'boyfriend', 'girlfriend'],
+        default: 'shared',
     },
     limitAmount: {
         type: Number,
@@ -43,6 +45,6 @@ const budgetSchema: Schema = new Schema({
     },
 }, { timestamps: true });
 
-budgetSchema.index({ categoryId: 1, month: 1, year: 1, walletId: 1 }, { unique: true });
+budgetSchema.index({ categoryId: 1, month: 1, year: 1, owner: 1 }, { unique: true });
 
 export default mongoose.model<IBudget>('Budget', budgetSchema);

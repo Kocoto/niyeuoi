@@ -36,6 +36,7 @@ const ExpenseTransactions: React.FC = () => {
   const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
+  const [editingTx, setEditingTx] = useState<ITransaction | null>(null);
 
   const fetchBase = useCallback(async () => {
     try {
@@ -96,7 +97,7 @@ const ExpenseTransactions: React.FC = () => {
           <h1 className="page-title">Giao dịch</h1>
           <p className="page-subtitle">Tất cả thu chi theo thời gian</p>
         </div>
-        <button type="button" onClick={() => setShowForm(true)} className="btn-add">
+        <button type="button" onClick={() => { setEditingTx(null); setShowForm(true); }} className="btn-add">
           <Plus size={20} />
         </button>
       </div>
@@ -149,7 +150,12 @@ const ExpenseTransactions: React.FC = () => {
                 <span className="section-label">{date}</span>
               </div>
               {grouped[date].map((tx) => (
-                <TransactionItem key={tx._id} tx={tx} onDelete={() => handleDelete(tx._id)} />
+                <TransactionItem
+                  key={tx._id}
+                  tx={tx}
+                  onEdit={() => { setEditingTx(tx); setShowForm(true); }}
+                  onDelete={() => handleDelete(tx._id)}
+                />
               ))}
             </div>
           ))}
@@ -172,7 +178,8 @@ const ExpenseTransactions: React.FC = () => {
         <TransactionForm
           wallets={wallets}
           categories={categories}
-          onClose={() => setShowForm(false)}
+          editingTx={editingTx}
+          onClose={() => { setShowForm(false); setEditingTx(null); }}
           onSaved={() => fetchTxs(1)}
         />
       )}

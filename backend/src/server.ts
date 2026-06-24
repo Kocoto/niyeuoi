@@ -108,6 +108,8 @@ mongoose.connect(MONGODB_URI)
         logger.success('Server', 'Kết nối MongoDB thành công');
         // Drop stale unique index left from an older schema version
         await mongoose.connection.db!.collection('coupons').dropIndex('code_1').catch(() => {});
+        // Budget index đổi từ walletId → owner; bỏ index cũ nếu còn
+        await mongoose.connection.db!.collection('budgets').dropIndex('categoryId_1_month_1_year_1_walletId_1').catch(() => {});
         await expenseCategoryService.seedDefaults();
         await expenseWalletService.seedDefaults();
         schedulerService.start();

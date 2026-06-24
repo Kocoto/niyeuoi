@@ -1,24 +1,31 @@
-import Budget, { IBudget } from '../models/Budget';
+import mongoose from 'mongoose';
+import Budget, { IBudget, BudgetOwner } from '../models/Budget';
 import Transaction from '../models/Transaction';
+import expenseWalletService from './expenseWalletService';
 import logger from '../utils/logger';
 
 class ExpenseBudgetService {
-    async getBudgetsWithProgress(month: number, year: number) {
-        logger.info('Budget', 'Lấy ngân sách tháng', { month, year });
-        const budgets = await Budget.find({ month, year })
-            .populate('categoryId', 'name icon color')
-            .populate('walletId', 'name color');
+    async getBudgetsWithProgress(month: number, year: number, owner?: BudgetOwner) {
+        logger.info('Budget', 'Lấy ngân sách tháng', { month, year, owner });
+        const budgetQuery: Record<string, any> = { month, year };
+        if (owner) budgetQuery.owner = owner;
+        const budgets = await Budget.find(budgetQuery)
+            .populate('categoryId', 'name icon color');
 
         const start = new Date(year, month - 1, 1);
         const end = new Date(year, month, 1);
 
+        const spendMatch: Record<string, any> = {
+            type: 'expense',
+            date: { $gte: start, $lt: end },
+        };
+        if (owner) {
+            const ids = await expenseWalletService.resolveWalletIds(owner);
+            spendMatch.walletId = { $in: (ids ?? []).map((i) => new mongoose.Types.ObjectId(i)) };
+        }
+
         const spendingAgg = await Transaction.aggregate([
-            {
-                $match: {
-                    type: 'expense',
-                    date: { $gte: start, $lt: end },
-                },
-            },
+            { $match: spendMatch },
             {
                 $group: {
                     _id: '$categoryId',
@@ -54,9 +61,10 @@ class ExpenseBudgetService {
             throw new Error('VALIDATION_ERROR: Thiếu danh mục, tháng hoặc năm');
         }
 
+        const owner = data.owner ?? 'shared';
         const budget = await Budget.findOneAndUpdate(
-            { categoryId: data.categoryId, month: data.month, year: data.year, walletId: data.walletId ?? null },
-            data,
+            { categoryId: data.categoryId, month: data.month, year: data.year, owner },
+            { ...data, owner },
             { upsert: true, new: true, runValidators: true },
         );
 

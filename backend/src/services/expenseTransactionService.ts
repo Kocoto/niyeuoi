@@ -4,11 +4,14 @@ import expenseWalletService from './expenseWalletService';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
 
+type WalletOwnerScope = 'shared' | AuthRole;
+
 interface TransactionFilters {
     walletId?: string;
     categoryId?: string;
     type?: TransactionType;
     createdBy?: AuthRole;
+    owner?: WalletOwnerScope;
     month?: number;
     year?: number;
     page?: number;
@@ -24,10 +27,15 @@ function buildDateRange(month?: number, year?: number) {
 
 class ExpenseTransactionService {
     async getTransactions(filters: TransactionFilters): Promise<{ data: ITransaction[]; total: number; page: number }> {
-        const { walletId, categoryId, type, createdBy, month, year, page = 1, limit = 30 } = filters;
+        const { walletId, categoryId, type, createdBy, owner, month, year, page = 1, limit = 30 } = filters;
 
         const query: Record<string, any> = { ...buildDateRange(month, year) };
-        if (walletId) query.walletId = walletId;
+        if (walletId) {
+            query.walletId = walletId;
+        } else if (owner) {
+            const ids = await expenseWalletService.resolveWalletIds(owner);
+            query.walletId = { $in: ids ?? [] };
+        }
         if (categoryId) query.categoryId = categoryId;
         if (type) query.type = type;
         if (createdBy) query.createdBy = createdBy;
@@ -56,10 +64,6 @@ class ExpenseTransactionService {
         if (data.type === 'transfer' && !data.toWalletId) throw new Error('VALIDATION_ERROR: Ví đích là bắt buộc khi chuyển khoản');
         if (data.type === 'transfer' && String(data.walletId) === String(data.toWalletId)) {
             throw new Error('VALIDATION_ERROR: Ví nguồn và ví đích không được giống nhau');
-        }
-        if (data.isSplitExpense && data.splitMethod === 'custom') {
-            const total = (data.splitAmountBoyfriend ?? 0) + (data.splitAmountGirlfriend ?? 0);
-            if (total !== data.amount) throw new Error('VALIDATION_ERROR: Tổng phần chia phải bằng số tiền giao dịch');
         }
 
         const session = await mongoose.startSession();
@@ -95,43 +99,51 @@ class ExpenseTransactionService {
         const existing = await Transaction.findById(id);
         if (!existing) throw new Error('NOT_FOUND');
 
+        // type không cho đổi để giữ logic số dư đơn giản
+        const txType = existing.type;
+        const newAmount = data.amount ?? existing.amount;
+        const newWalletId = String(data.walletId ?? existing.walletId);
+        const newToWalletId = String(data.toWalletId ?? existing.toWalletId ?? '');
+
+        if (newAmount <= 0) throw new Error('VALIDATION_ERROR: Số tiền phải lớn hơn 0');
+        if (txType === 'transfer' && newWalletId === newToWalletId) {
+            throw new Error('VALIDATION_ERROR: Ví nguồn và ví đích không được giống nhau');
+        }
+
         const session = await mongoose.startSession();
         try {
             session.startTransaction();
 
-            // Reverse old balance effect
-            if (existing.type === 'expense') {
+            // Reverse old balance effect (giá trị cũ)
+            if (txType === 'expense') {
                 await expenseWalletService.adjustBalance(String(existing.walletId), existing.amount, session);
-            } else if (existing.type === 'income') {
+            } else if (txType === 'income') {
                 await expenseWalletService.adjustBalance(String(existing.walletId), -existing.amount, session);
-            } else if (existing.type === 'transfer') {
+            } else if (txType === 'transfer') {
                 await expenseWalletService.adjustBalance(String(existing.walletId), existing.amount, session);
                 await expenseWalletService.adjustBalance(String(existing.toWalletId), -existing.amount, session);
             }
 
-            // Apply new values (type and walletId cannot be changed to keep things sane)
-            const newAmount = data.amount ?? existing.amount;
-            const newWalletId = String(existing.walletId);
-            const newToWalletId = String(existing.toWalletId ?? '');
-
-            if (existing.type === 'expense') {
+            // Apply new balance effect (giá trị mới)
+            if (txType === 'expense') {
                 await expenseWalletService.adjustBalance(newWalletId, -newAmount, session);
-            } else if (existing.type === 'income') {
+            } else if (txType === 'income') {
                 await expenseWalletService.adjustBalance(newWalletId, newAmount, session);
-            } else if (existing.type === 'transfer' && newToWalletId) {
+            } else if (txType === 'transfer' && newToWalletId) {
                 await expenseWalletService.adjustBalance(newWalletId, -newAmount, session);
                 await expenseWalletService.adjustBalance(newToWalletId, newAmount, session);
             }
 
-            const { type: _t, walletId: _w, toWalletId: _tw, createdBy: _c, ...safeData } = data as any;
+            const { type: _t, createdBy: _c, ...safeData } = data as any;
             Object.assign(existing, safeData);
             await existing.save({ session });
 
             await session.commitTransaction();
             logger.success('Transaction', 'Đã cập nhật giao dịch', { id });
             return existing;
-        } catch (err) {
+        } catch (err: any) {
             await session.abortTransaction();
+            if (err.message?.startsWith('VALIDATION_ERROR')) throw err;
             logger.error('Transaction', 'Lỗi khi cập nhật giao dịch', err);
             throw err;
         } finally {
@@ -169,8 +181,8 @@ class ExpenseTransactionService {
         }
     }
 
-    async getSummary(month: number, year: number) {
-        logger.info('Transaction', 'Lấy tổng quan tháng', { month, year });
+    async getSummary(month: number, year: number, owner?: WalletOwnerScope) {
+        logger.info('Transaction', 'Lấy tổng quan tháng', { month, year, owner });
         const dateRange = buildDateRange(month, year);
 
         const agg = await Transaction.aggregate([
@@ -184,7 +196,8 @@ class ExpenseTransactionService {
         ]);
 
         const Wallet = (await import('../models/Wallet')).default;
-        const wallets = await Wallet.find();
+        const walletFilter = owner ? { owner } : {};
+        const wallets = await Wallet.find(walletFilter);
 
         const byWallet = wallets.map((w: any) => {
             const income = agg.find((a: any) => String(a._id.walletId) === String(w._id) && a._id.type === 'income')?.total ?? 0;
@@ -198,10 +211,16 @@ class ExpenseTransactionService {
         return { totalIncome, totalExpense, byWallet };
     }
 
-    async getSpendingByCategory(month: number, year: number, walletId?: string) {
+    async getSpendingByCategory(month: number, year: number, owner?: WalletOwnerScope, walletId?: string) {
         const dateRange = buildDateRange(month, year);
         const match: Record<string, any> = { ...dateRange, type: 'expense' };
-        if (walletId) match.walletId = new mongoose.Types.ObjectId(walletId);
+
+        if (walletId) {
+            match.walletId = new mongoose.Types.ObjectId(walletId);
+        } else if (owner) {
+            const ids = await expenseWalletService.resolveWalletIds(owner);
+            match.walletId = { $in: (ids ?? []).map((i) => new mongoose.Types.ObjectId(i)) };
+        }
 
         const result = await Transaction.aggregate([
             { $match: match },
@@ -233,27 +252,6 @@ class ExpenseTransactionService {
         ]);
 
         return result;
-    }
-
-    async getSplitSummary(month: number, year: number) {
-        const dateRange = buildDateRange(month, year);
-        const transactions = await Transaction.find({
-            ...dateRange,
-            isSplitExpense: true,
-        }).populate('walletId', 'name').populate('categoryId', 'name icon color');
-
-        let boyfriendPaid = 0;
-        let girlfriendPaid = 0;
-
-        for (const tx of transactions) {
-            if (tx.paidBy === 'boyfriend') boyfriendPaid += tx.amount;
-            else if (tx.paidBy === 'girlfriend') girlfriendPaid += tx.amount;
-        }
-
-        // Positive = boyfriend should pay more to balance; negative = girlfriend should
-        const balance = girlfriendPaid - boyfriendPaid;
-
-        return { boyfriendPaid, girlfriendPaid, balance, transactions };
     }
 }
 

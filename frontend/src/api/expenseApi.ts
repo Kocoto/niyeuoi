@@ -28,21 +28,19 @@ export interface ITransaction {
   categoryId?: IExpenseCategory | string;
   toWalletId?: IWallet | string;
   date: string;
-  isSplitExpense: boolean;
-  splitMethod?: 'half' | 'custom';
-  splitAmountBoyfriend?: number;
-  splitAmountGirlfriend?: number;
-  paidBy?: Role;
   isRecurring: boolean;
   imageUrl?: string;
   createdBy: Role;
   createdAt: string;
 }
 
+export type WalletScope = 'shared' | Role;
+
 export interface IBudgetProgress {
   budget: {
     _id: string;
     categoryId: IExpenseCategory;
+    owner: WalletScope;
     limitAmount: number;
     month: number;
     year: number;
@@ -94,13 +92,6 @@ export interface CategorySpending {
   total: number;
 }
 
-export interface SplitSummary {
-  boyfriendPaid: number;
-  girlfriendPaid: number;
-  balance: number;
-  transactions: ITransaction[];
-}
-
 export interface OcrResult {
   amount: number | null;
   date: string | null;
@@ -113,6 +104,7 @@ const expenseApi = {
   getWallets: () => api.get<{ success: boolean; data: IWallet[] }>('/expenses/wallets'),
   createWallet: (data: Partial<IWallet>) => api.post('/expenses/wallets', data),
   updateWallet: (id: string, data: Partial<IWallet>) => api.put(`/expenses/wallets/${id}`, data),
+  setWalletBalance: (id: string, balance: number) => api.put(`/expenses/wallets/${id}/balance`, { balance }),
   deleteWallet: (id: string) => api.delete(`/expenses/wallets/${id}`),
 
   // Categories
@@ -128,16 +120,14 @@ const expenseApi = {
   deleteTransaction: (id: string) => api.delete(`/expenses/transactions/${id}`),
 
   // Reports
-  getSummary: (month: number, year: number) =>
-    api.get<{ success: boolean; data: SummaryData }>('/expenses/summary', { params: { month, year } }),
-  getReport: (month: number, year: number, walletId?: string) =>
-    api.get<{ success: boolean; data: CategorySpending[] }>('/expenses/report', { params: { month, year, walletId } }),
-  getSplitSummary: (month: number, year: number) =>
-    api.get<{ success: boolean; data: SplitSummary }>('/expenses/split-summary', { params: { month, year } }),
+  getSummary: (month: number, year: number, owner?: WalletScope) =>
+    api.get<{ success: boolean; data: SummaryData }>('/expenses/summary', { params: { month, year, owner } }),
+  getReport: (month: number, year: number, owner?: WalletScope) =>
+    api.get<{ success: boolean; data: CategorySpending[] }>('/expenses/report', { params: { month, year, owner } }),
 
   // Budgets
-  getBudgets: (month: number, year: number) =>
-    api.get<{ success: boolean; data: IBudgetProgress[] }>('/expenses/budgets', { params: { month, year } }),
+  getBudgets: (month: number, year: number, owner?: WalletScope) =>
+    api.get<{ success: boolean; data: IBudgetProgress[] }>('/expenses/budgets', { params: { month, year, owner } }),
   upsertBudget: (data: Record<string, unknown>) => api.post('/expenses/budgets', data),
   deleteBudget: (id: string) => api.delete(`/expenses/budgets/${id}`),
 

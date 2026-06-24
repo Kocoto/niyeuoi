@@ -3,12 +3,12 @@ import multer from 'multer';
 import { validateObjectId } from '../middleware/validateObjectId';
 import {
     getCategories, createCategory, updateCategory, deleteCategory,
-    getWallets, createWallet, updateWallet, deleteWallet,
+    getWallets, createWallet, updateWallet, deleteWallet, setWalletBalance,
     getTransactions, createTransaction, updateTransaction, deleteTransaction,
     getBudgets, upsertBudget, deleteBudget,
     getSavingsGoals, createSavingsGoal, updateSavingsGoal, deleteSavingsGoal, depositToGoal,
     getRecurringRules, createRecurringRule, updateRecurringRule, deleteRecurringRule,
-    getSummary, getReport, getSplitSummary,
+    getSummary, getReport,
     scanReceipt,
 } from '../controllers/expenseController';
 
@@ -40,6 +40,7 @@ router.route('/wallets')
 router.route('/wallets/:id')
     .put(validateObjectId, updateWallet)
     .delete(validateObjectId, deleteWallet);
+router.put('/wallets/:id/balance', validateObjectId, setWalletBalance);
 
 // Transactions
 router.route('/transactions')
@@ -75,7 +76,6 @@ router.route('/recurring/:id')
 // Aggregation / Reports
 router.get('/summary', getSummary);
 router.get('/report', getReport);
-router.get('/split-summary', getSplitSummary);
 
 // OCR
 router.post('/ocr', memoryUpload.single('receipt'), scanReceipt);

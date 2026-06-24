@@ -105,16 +105,31 @@ export const deleteWallet = async (req: Request, res: Response) => {
     }
 };
 
+export const setWalletBalance = async (req: Request, res: Response) => {
+    try {
+        const { balance } = req.body as { balance: number };
+        if (typeof balance !== 'number' || Number.isNaN(balance)) {
+            return res.status(400).json({ success: false, error: 'Số dư không hợp lệ' });
+        }
+        const data = await expenseWalletService.setBalance(req.params.id as string, Math.round(balance));
+        res.json({ success: true, data });
+    } catch (err: any) {
+        if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy ví' });
+        res.status(500).json({ success: false, error: 'Lỗi khi đặt số dư' });
+    }
+};
+
 // ─── Transactions ──────────────────────────────────────────────────────────────
 
 export const getTransactions = async (req: Request, res: Response) => {
     try {
-        const { walletId, categoryId, type, createdBy, month, year, page, limit } = req.query as Record<string, string>;
+        const { walletId, categoryId, type, createdBy, owner, month, year, page, limit } = req.query as Record<string, string>;
         const result = await expenseTransactionService.getTransactions({
             walletId,
             categoryId,
             type: type as any,
             createdBy: createdBy as any,
+            owner: owner as any,
             month: month ? parseInt(month) : undefined,
             year: year ? parseInt(year) : undefined,
             page: page ? parseInt(page) : 1,
@@ -163,9 +178,9 @@ export const deleteTransaction = async (req: Request, res: Response) => {
 
 export const getBudgets = async (req: Request, res: Response) => {
     try {
-        const { month, year } = req.query as Record<string, string>;
+        const { month, year, owner } = req.query as Record<string, string>;
         if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
-        const data = await expenseBudgetService.getBudgetsWithProgress(parseInt(month), parseInt(year));
+        const data = await expenseBudgetService.getBudgetsWithProgress(parseInt(month), parseInt(year), owner as any);
         res.json({ success: true, data });
     } catch {
         res.status(500).json({ success: false, error: 'Lỗi khi lấy ngân sách' });
@@ -305,9 +320,9 @@ export const deleteRecurringRule = async (req: Request, res: Response) => {
 
 export const getSummary = async (req: Request, res: Response) => {
     try {
-        const { month, year } = req.query as Record<string, string>;
+        const { month, year, owner } = req.query as Record<string, string>;
         if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
-        const data = await expenseTransactionService.getSummary(parseInt(month), parseInt(year));
+        const data = await expenseTransactionService.getSummary(parseInt(month), parseInt(year), owner as any);
         res.json({ success: true, data });
     } catch {
         res.status(500).json({ success: false, error: 'Lỗi khi lấy tổng quan' });
@@ -316,23 +331,12 @@ export const getSummary = async (req: Request, res: Response) => {
 
 export const getReport = async (req: Request, res: Response) => {
     try {
-        const { month, year, walletId } = req.query as Record<string, string>;
+        const { month, year, owner, walletId } = req.query as Record<string, string>;
         if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
-        const data = await expenseTransactionService.getSpendingByCategory(parseInt(month), parseInt(year), walletId);
+        const data = await expenseTransactionService.getSpendingByCategory(parseInt(month), parseInt(year), owner as any, walletId);
         res.json({ success: true, data });
     } catch {
         res.status(500).json({ success: false, error: 'Lỗi khi lấy báo cáo' });
-    }
-};
-
-export const getSplitSummary = async (req: Request, res: Response) => {
-    try {
-        const { month, year } = req.query as Record<string, string>;
-        if (!month || !year) return res.status(400).json({ success: false, error: 'Cần tháng và năm' });
-        const data = await expenseTransactionService.getSplitSummary(parseInt(month), parseInt(year));
-        res.json({ success: true, data });
-    } catch {
-        res.status(500).json({ success: false, error: 'Lỗi khi lấy tổng quan chi tiêu hẹn hò' });
     }
 };
 

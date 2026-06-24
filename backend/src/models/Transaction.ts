@@ -2,7 +2,6 @@ import mongoose, { Document, Schema } from 'mongoose';
 import type { AuthRole } from '../utils/authToken';
 
 export type TransactionType = 'income' | 'expense' | 'transfer';
-export type SplitMethod = 'half' | 'custom';
 
 export interface ITransaction extends Document {
     type: TransactionType;
@@ -12,11 +11,6 @@ export interface ITransaction extends Document {
     categoryId?: mongoose.Types.ObjectId;
     toWalletId?: mongoose.Types.ObjectId;
     date: Date;
-    isSplitExpense: boolean;
-    splitMethod?: SplitMethod;
-    splitAmountBoyfriend?: number;
-    splitAmountGirlfriend?: number;
-    paidBy?: AuthRole;
     isRecurring: boolean;
     recurringRuleId?: mongoose.Types.ObjectId;
     imageUrl?: string;
@@ -58,28 +52,6 @@ const transactionSchema: Schema = new Schema({
         type: Date,
         required: true,
         default: Date.now,
-    },
-    isSplitExpense: {
-        type: Boolean,
-        default: false,
-    },
-    splitMethod: {
-        type: String,
-        enum: ['half', 'custom'],
-        default: undefined,
-    },
-    splitAmountBoyfriend: {
-        type: Number,
-        default: undefined,
-    },
-    splitAmountGirlfriend: {
-        type: Number,
-        default: undefined,
-    },
-    paidBy: {
-        type: String,
-        enum: ['boyfriend', 'girlfriend'],
-        default: undefined,
     },
     isRecurring: {
         type: Boolean,

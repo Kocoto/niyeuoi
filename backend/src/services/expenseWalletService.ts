@@ -75,6 +75,20 @@ class ExpenseWalletService {
             opts,
         );
     }
+
+    async setBalance(id: string, balance: number): Promise<IWallet> {
+        logger.info('Wallet', 'Đặt số dư ví', { id, balance });
+        const wallet = await Wallet.findByIdAndUpdate(id, { $set: { balance } }, { new: true });
+        if (!wallet) throw new Error('NOT_FOUND');
+        logger.success('Wallet', 'Đã đặt số dư', { id, balance });
+        return wallet;
+    }
+
+    async resolveWalletIds(owner?: 'shared' | 'boyfriend' | 'girlfriend'): Promise<string[] | undefined> {
+        if (!owner) return undefined;
+        const wallets = await Wallet.find({ owner }).select('_id');
+        return wallets.map((w) => String(w._id));
+    }
 }
 
 export default new ExpenseWalletService();
