@@ -66,7 +66,7 @@ const ExpenseTransactions: React.FC = () => {
   useEffect(() => { fetchTxs(1); }, [fetchTxs]);
 
   const handleDelete = async (id: string) => {
-    const ok = await confirm('Xóa giao dịch này?', 'Số dư ví sẽ được hoàn lại.');
+    const ok = await confirm('Xóa giao dịch này? Số dư ví sẽ được hoàn lại.');
     if (!ok) return;
     try {
       await expenseApi.deleteTransaction(id);

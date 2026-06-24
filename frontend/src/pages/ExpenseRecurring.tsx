@@ -78,7 +78,7 @@ const ExpenseRecurring: React.FC = () => {
   };
 
   const handleDelete = async (rule: IRecurringRule) => {
-    const ok = await confirm(`Xóa "${rule.name}"?`, '');
+    const ok = await confirm(`Xóa "${rule.name}"?`);
     if (!ok) return;
     try {
       await expenseApi.deleteRecurringRule(rule._id);

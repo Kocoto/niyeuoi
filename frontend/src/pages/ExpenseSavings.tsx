@@ -82,7 +82,7 @@ const ExpenseSavings: React.FC = () => {
   };
 
   const handleDelete = async (goal: ISavingsGoal) => {
-    const ok = await confirm(`Xóa mục tiêu "${goal.name}"?`, 'Hành động này không thể hoàn tác.');
+    const ok = await confirm(`Xóa mục tiêu "${goal.name}"? Hành động này không thể hoàn tác.`);
     if (!ok) return;
     try {
       await expenseApi.deleteSavingsGoal(goal._id);
