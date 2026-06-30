@@ -21,6 +21,9 @@ services:
         sync: false
       - key: DISCORD_WEBHOOK_URL
         sync: false
+      # Bí mật để phát hành bản OTA (script ota:release gửi qua header x-ota-secret).
+      - key: OTA_PUBLISH_SECRET
+        sync: false
 
   # Frontend — Static Site
   - type: web

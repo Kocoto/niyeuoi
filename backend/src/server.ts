@@ -51,6 +51,7 @@ import suggestionRoutes from './routes/suggestionRoutes';
 import relationshipStateRoutes from './routes/relationshipStateRoutes';
 import letterRoutes from './routes/letterRoutes';
 import expenseRoutes from './routes/expenseRoutes';
+import otaRoutes from './routes/otaRoutes';
 import * as schedulerService from './services/schedulerService';
 import expenseCategoryService from './services/expenseCategoryService';
 import expenseWalletService from './services/expenseWalletService';
@@ -72,6 +73,7 @@ app.use('/api/suggestions', suggestionRoutes);
 app.use('/api/relationship-state', relationshipStateRoutes);
 app.use('/api/letters', letterRoutes);
 app.use('/api/expenses', expenseRoutes);
+app.use('/api/ota', otaRoutes);
 
 // Basic Route
 app.get('/', (_req: Request, res: Response) => {

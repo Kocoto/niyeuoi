@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Niyeuoi</string>
+    <string name="title_activity_main">Niyeuoi</string>
+    <string name="package_name">com.niyeuoi.app</string>
+    <string name="custom_url_scheme">com.niyeuoi.app</string>
+</resources>

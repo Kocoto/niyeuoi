@@ -1,5 +1,7 @@
-﻿import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+﻿import { useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Navbar from './components/Navbar';
+import { initNativeApp } from './utils/nativeApp';
 import Home from './pages/Home';
 import Places from './pages/Places';
 import Timeline from './pages/Timeline';
@@ -21,6 +23,11 @@ import ServerGate from './components/ServerGate';
 import AuthGate from './components/AuthGate';
 
 function App() {
+  useEffect(() => {
+    const cleanup = initNativeApp();
+    return cleanup;
+  }, []);
+
   return (
     <UIProvider>
       <ServerGate>

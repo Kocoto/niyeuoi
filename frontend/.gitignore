@@ -22,3 +22,16 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Capacitor — native build artifacts (giữ lại source project, bỏ output build)
+android/app/build/
+android/build/
+android/.gradle/
+android/capacitor-cordova-android-plugins/
+android/local.properties
+ios/App/build/
+ios/App/Pods/
+ios/App/output/
+ios/App/App/public/
+DerivedData/
+*.xcuserstate
