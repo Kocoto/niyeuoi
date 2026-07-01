@@ -3,6 +3,7 @@ import { generateChallenge, generateCoupon } from './aiService';
 import challengeService from './challengeService';
 import couponService from './couponService';
 import recurringRuleService from './recurringRuleService';
+import expenseDebtService from './expenseDebtService';
 import Challenge from '../models/Challenge';
 import Coupon from '../models/Coupon';
 import logger from '../utils/logger';
@@ -55,7 +56,10 @@ export function start() {
     // Hàng ngày 7:00 sáng — xử lý thu chi định kỳ
     cron.schedule('0 7 * * *', () => recurringRuleService.processDueRules(), { timezone: 'Asia/Ho_Chi_Minh' });
 
-    logger.success('Scheduler', 'Đã khởi động cron jobs (thử thách: T2 hàng tuần, voucher: ngày 1 hàng tháng, thu chi định kỳ: hàng ngày 7:00)');
+    // Hàng ngày 8:30 sáng — nhắc trả nợ (3 ngày trước hạn + hôm nay)
+    cron.schedule('30 8 * * *', () => expenseDebtService.checkDueDateAlerts().catch(() => {}), { timezone: 'Asia/Ho_Chi_Minh' });
+
+    logger.success('Scheduler', 'Đã khởi động cron jobs (thử thách: T2 hàng tuần, voucher: ngày 1 hàng tháng, thu chi định kỳ: hàng ngày 7:00, nhắc nợ: hàng ngày 8:30)');
 }
 
 export { runGenerateChallenge, runGenerateCoupon };

@@ -58,9 +58,12 @@ export interface IBudgetProgress {
   isOverBudget: boolean;
 }
 
+export type SavingsGoalType = 'normal' | 'emergency';
+
 export interface ISavingsGoal {
   _id: string;
   name: string;
+  type: SavingsGoalType;
   targetAmount: number;
   currentAmount: number;
   deadline?: string;
@@ -125,6 +128,71 @@ export interface IQuickPreset {
   createdBy: Role;
 }
 
+export type PlanOwner = 'shared' | Role;
+export type DebtOwner = 'shared' | Role;
+
+export interface IBudgetPlan {
+  _id: string;
+  owner: PlanOwner;
+  monthlyIncome: number;
+  needsPct: number;
+  wantsPct: number;
+  savingsPct: number;
+}
+
+export interface BucketAllocation {
+  target: number;
+  spent: number;
+  remaining: number;
+  percentage: number;
+  pct: number;
+}
+
+export interface AllocationResult {
+  owner: PlanOwner;
+  month: number;
+  year: number;
+  income: number;
+  debtTotal: number;
+  disposable: number;
+  buckets: { needs: BucketAllocation; wants: BucketAllocation; savings: BucketAllocation };
+  daysLeft: number;
+  dailyAllowance: number;
+  hasPlan: boolean;
+}
+
+export interface IDebt {
+  _id: string;
+  name: string;
+  creditor?: string;
+  totalAmount: number;
+  remainingAmount: number;
+  monthlyPayment: number;
+  dueDayOfMonth?: number;
+  interestRate?: number;
+  owner: DebtOwner;
+  walletId?: string;
+  isActive: boolean;
+  createdBy: Role;
+  createdAt: string;
+}
+
+export interface PayoffProjectionItem {
+  debtId: string;
+  name: string;
+  remainingAmount: number;
+  monthlyPayment: number;
+  interestRate: number;
+  monthsLeft: number;
+  totalInterest: number;
+}
+
+export interface PayoffProjection {
+  items: PayoffProjectionItem[];
+  snowball: string[];
+  avalanche: string[];
+}
+
 const expenseApi = {
   // Wallets
   getWallets: () => api.get<{ success: boolean; data: IWallet[] }>('/expenses/wallets'),
@@ -156,6 +224,10 @@ const expenseApi = {
     api.get<{ success: boolean; data: IBudgetProgress[] }>('/expenses/budgets', { params: { month, year, owner } }),
   upsertBudget: (data: Record<string, unknown>) => api.post('/expenses/budgets', data),
   deleteBudget: (id: string) => api.delete(`/expenses/budgets/${id}`),
+
+  // Finance Advice (AI cố vấn 50/30/20)
+  getFinanceAdvice: (owner: PlanOwner, month: number, year: number) =>
+    api.get<{ success: boolean; data: { advice: string } }>('/expenses/advice', { params: { owner, month, year } }),
 
   // Savings Goals
   getSavingsGoals: () => api.get<{ success: boolean; data: ISavingsGoal[] }>('/expenses/savings'),
@@ -196,6 +268,28 @@ const expenseApi = {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
   },
+
+  // Budget Plan
+  getPlan: (owner: PlanOwner) =>
+    api.get<{ success: boolean; data: IBudgetPlan | null }>('/expenses/plan', { params: { owner } }),
+  upsertPlan: (data: Partial<IBudgetPlan>) => api.post('/expenses/plan', data),
+  getAllocation: (owner: PlanOwner, month: number, year: number) =>
+    api.get<{ success: boolean; data: AllocationResult }>('/expenses/allocation', { params: { owner, month, year } }),
+
+  // Debts
+  getDebts: (owner?: DebtOwner) =>
+    api.get<{ success: boolean; data: IDebt[] }>('/expenses/debts', { params: owner ? { owner } : {} }),
+  createDebt: (data: Partial<IDebt>) => api.post('/expenses/debts', data),
+  updateDebt: (id: string, data: Partial<IDebt>) => api.put(`/expenses/debts/${id}`, data),
+  deleteDebt: (id: string) => api.delete(`/expenses/debts/${id}`),
+  payDebt: (id: string, amount: number, walletId: string) =>
+    api.post(`/expenses/debts/${id}/pay`, { amount, walletId }),
+  getDebtProjection: (owner: DebtOwner) =>
+    api.get<{ success: boolean; data: PayoffProjection }>('/expenses/debts/projection', { params: { owner } }),
+
+  // Parse text thông báo ngân hàng
+  parseText: (text: string) =>
+    api.post<{ success: boolean; data: { amount: number | null; type: 'income' | 'expense' | null; merchant: string | null; bankName: string | null; date: string | null } }>('/expenses/parse-text', { text }),
 
   // OCR
   scanReceipt: (file: File) => {

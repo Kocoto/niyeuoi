@@ -2,10 +2,13 @@ import mongoose from 'mongoose';
 import Transaction, { ITransaction, TransactionType } from '../models/Transaction';
 import Wallet from '../models/Wallet';
 import Budget from '../models/Budget';
+import ExpenseCategory from '../models/ExpenseCategory';
 import expenseWalletService from './expenseWalletService';
+import budgetPlanService from './budgetPlanService';
 import notificationService from './notificationService';
 import logger from '../utils/logger';
 import type { AuthRole } from '../utils/authToken';
+import type { PlanOwner } from '../models/BudgetPlan';
 
 function fmtVND(amount: number): string {
     if (amount >= 1_000_000) return `${(amount / 1_000_000).toFixed(1)}tr`;
@@ -93,9 +96,15 @@ class ExpenseTransactionService {
             await session.commitTransaction();
             logger.success('Transaction', 'Đã tạo giao dịch', { id: transaction._id });
 
-            // Cảnh báo ngân sách (fire-and-forget, không chặn luồng chính)
-            if (data.type === 'expense' && data.categoryId) {
-                this.checkBudgetAlert(data.categoryId, data.amount, new Date(data.date ?? Date.now())).catch(() => {});
+            // Cảnh báo ngân sách + nhóm bucket (fire-and-forget)
+            if (data.type === 'expense') {
+                const txDate = new Date(data.date ?? Date.now());
+                if (data.categoryId) {
+                    this.checkBudgetAlert(data.categoryId, data.amount, txDate).catch(() => {});
+                }
+                if (data.walletId) {
+                    this.checkBucketAlert(String(data.walletId), data.categoryId, data.amount, txDate).catch(() => {});
+                }
             }
 
             return transaction;
@@ -154,6 +163,49 @@ class ExpenseTransactionService {
                     16753920,
                 );
             }
+        }
+    }
+
+    private async checkBucketAlert(walletId: string, categoryId: any, amount: number, date: Date): Promise<void> {
+        const month = date.getMonth() + 1;
+        const year = date.getFullYear();
+
+        const wallet = await Wallet.findById(walletId).lean();
+        if (!wallet) return;
+        const owner = wallet.owner as PlanOwner;
+
+        const category = categoryId ? await ExpenseCategory.findById(categoryId).lean() : null;
+        const bucket: string = (category as any)?.bucket ?? 'needs';
+
+        const allocation = await budgetPlanService.getAllocation(owner, month, year);
+        if (!allocation.hasPlan) return;
+
+        const b = allocation.buckets[bucket as keyof typeof allocation.buckets];
+        if (!b || b.target === 0) return;
+
+        const spentAfter = b.spent;
+        const spentBefore = spentAfter - amount;
+        const { target } = b;
+
+        const BUCKET_LABELS: Record<string, string> = { needs: 'Thiết yếu', wants: 'Mong muốn', savings: 'Tiết kiệm' };
+        const bucketLabel = BUCKET_LABELS[bucket] ?? bucket;
+        const scopeLabel = owner === 'shared' ? 'Quỹ chung' : owner === 'boyfriend' ? 'Của Được' : 'Của Ni';
+
+        const crossed100 = spentBefore < target && spentAfter >= target;
+        const crossed80 = spentBefore < target * 0.8 && spentAfter >= target * 0.8 && spentAfter < target;
+
+        if (crossed100) {
+            await notificationService.sendDiscord(
+                '⚠️ Vượt ngân sách nhóm',
+                `[${scopeLabel}] Nhóm **${bucketLabel}** đã chi ${fmtVND(spentAfter)} / ${fmtVND(target)} — vượt hạn mức tháng ${month}/${year}.`,
+                15158332,
+            );
+        } else if (crossed80) {
+            await notificationService.sendDiscord(
+                '🔔 Sắp chạm ngân sách nhóm',
+                `[${scopeLabel}] Nhóm **${bucketLabel}** đã dùng ${Math.round((spentAfter / target) * 100)}% ngân sách tháng (${fmtVND(spentAfter)} / ${fmtVND(target)}).`,
+                16753920,
+            );
         }
     }
 

@@ -17,6 +17,7 @@ import Expenses from './pages/Expenses';
 import ExpenseTransactions from './pages/ExpenseTransactions';
 import ExpenseSavings from './pages/ExpenseSavings';
 import ExpenseRecurring from './pages/ExpenseRecurring';
+import ExpenseDebts from './pages/ExpenseDebts';
 import { AuthProvider } from './context/AuthContext';
 import { UIProvider } from './context/UIContext';
 import ServerGate from './components/ServerGate';
@@ -53,6 +54,7 @@ function App() {
                     <Route path="/expenses/transactions" element={<ExpenseTransactions />} />
                     <Route path="/expenses/savings" element={<ExpenseSavings />} />
                     <Route path="/expenses/recurring" element={<ExpenseRecurring />} />
+                    <Route path="/expenses/debts" element={<ExpenseDebts />} />
                     <Route path="*" element={<div className="surface-card mx-auto mt-20 max-w-xl px-8 py-12 text-center text-sm font-medium text-soft">Trang này đang được chuẩn bị để vừa hơn với không gian riêng của hai bạn.</div>} />
                   </Routes>
                 </main>

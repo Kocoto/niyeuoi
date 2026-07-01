@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ChevronRight,
   Compass,
+  CreditCard,
   Grid3x3,
   Heart,
   History,
@@ -102,6 +103,7 @@ const groupedNav: NavGroup[] = [
       { to: '/expenses/transactions', label: 'Giao dịch',          description: 'Toàn bộ thu chi theo thời gian',      icon: <ArrowRightLeft size={18} /> },
       { to: '/expenses/savings',      label: 'Mục tiêu tiết kiệm', description: 'Đang để dành cho điều gì?',           icon: <PiggyBank size={18} /> },
       { to: '/expenses/recurring',    label: 'Thu chi định kỳ',    description: 'Hoá đơn và lương định kỳ tự động',    icon: <CalendarCheck size={18} /> },
+      { to: '/expenses/debts',       label: 'Quản lý nợ',         description: '50/30/20 · dự báo trả hết nợ',         icon: <CreditCard size={18} /> },
     ],
   },
   {
@@ -135,10 +137,11 @@ const CONTEXTUAL_LINKS: Partial<Record<string, string[]>> = {
   '/challenges': ['/events', '/coupons'],
   '/coupons': ['/events', '/wishlist'],
   '/map': ['/places', '/timeline'],
-  '/expenses': ['/expenses/transactions', '/expenses/savings', '/expenses/recurring'],
+  '/expenses': ['/expenses/transactions', '/expenses/savings', '/expenses/debts'],
   '/expenses/transactions': ['/expenses', '/expenses/savings'],
   '/expenses/savings': ['/expenses', '/wishlist'],
   '/expenses/recurring': ['/expenses'],
+  '/expenses/debts': ['/expenses', '/expenses/savings'],
 };
 
 const readRecentPaths = () => {

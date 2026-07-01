@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Plus, X, Zap, Loader2 } from 'lucide-react';
+import { Plus, X, Zap, Loader2, MessageSquare } from 'lucide-react';
 import expenseApi, { type IQuickPreset, type IWallet, type IExpenseCategory } from '../../api/expenseApi';
+import NotificationImportSheet from './NotificationImportSheet';
 import AmountInput from './AmountInput';
 import CategoryChip from './CategoryChip';
 import { useAuth } from '../../context/AuthContext';
@@ -27,6 +28,7 @@ const QuickAddBar: React.FC<QuickAddBarProps> = ({ wallets, categories, defaultW
   const [presets, setPresets] = useState<IQuickPreset[]>([]);
   const [firing, setFiring] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [showImport, setShowImport] = useState(false);
 
   // create form
   const [label, setLabel] = useState('');
@@ -131,7 +133,26 @@ const QuickAddBar: React.FC<QuickAddBarProps> = ({ wallets, categories, defaultW
         >
           <Plus size={12} /> Mẫu
         </button>
+        <button
+          type="button"
+          onClick={() => setShowImport(true)}
+          className="inline-flex items-center gap-1 rounded-full bg-sky-50 px-3 py-2 text-xs font-bold text-sky-600 ring-1 ring-sky-100 transition hover:bg-sky-100"
+        >
+          <MessageSquare size={12} /> Nhập TB
+        </button>
       </div>
+
+      <AnimatePresence>
+        {showImport && (
+          <NotificationImportSheet
+            wallets={wallets}
+            categories={categories}
+            defaultWalletId={defaultWalletId}
+            onClose={() => setShowImport(false)}
+            onSaved={onAdded}
+          />
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {showCreate && (

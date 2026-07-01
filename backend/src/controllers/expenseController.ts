@@ -6,7 +6,9 @@ import expenseBudgetService from '../services/expenseBudgetService';
 import savingsGoalService from '../services/savingsGoalService';
 import recurringRuleService from '../services/recurringRuleService';
 import quickPresetService from '../services/quickPresetService';
-import { extractReceiptData, generateMonthlySummary } from '../services/aiService';
+import budgetPlanService from '../services/budgetPlanService';
+import expenseDebtService from '../services/expenseDebtService';
+import { extractReceiptData, generateMonthlySummary, extractTransactionText, generateFinanceAdvice } from '../services/aiService';
 import cloudinary from '../config/cloudinary';
 import type { IExpenseCategory } from '../models/ExpenseCategory';
 import type { IWallet } from '../models/Wallet';
@@ -15,6 +17,9 @@ import type { IBudget } from '../models/Budget';
 import type { ISavingsGoal } from '../models/SavingsGoal';
 import type { IRecurringRule } from '../models/RecurringRule';
 import type { IQuickPreset } from '../models/QuickPreset';
+import type { IDebt } from '../models/Debt';
+import type { PlanOwner } from '../models/BudgetPlan';
+import type { DebtOwner } from '../models/Debt';
 import { resolveCreatePayload, getRequestAuthRole } from '../utils/requestIdentity';
 
 // ─── Categories ────────────────────────────────────────────────────────────────
@@ -454,5 +459,184 @@ export const scanReceipt = async (req: Request, res: Response) => {
         res.json({ success: true, data: { ...extracted, imageUrl } });
     } catch {
         res.status(500).json({ success: false, error: 'Lỗi khi xử lý ảnh biên lai' });
+    }
+};
+
+// ─── Parse text thông báo ngân hàng ────────────────────────────────────────────
+
+export const parseTransactionText = async (req: Request, res: Response) => {
+    try {
+        const { text } = req.body;
+        if (!text || typeof text !== 'string' || !text.trim()) {
+            return res.status(400).json({ success: false, error: 'Thiếu nội dung text' });
+        }
+        const data = await extractTransactionText(text);
+        if (!data) return res.status(422).json({ success: false, error: 'Không đọc được thông tin giao dịch từ văn bản' });
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi phân tích văn bản' });
+    }
+};
+
+// ─── Budget Plan (hồ sơ thu nhập + tỉ lệ 50/30/20) ────────────────────────────
+
+export const getPlan = async (req: Request, res: Response) => {
+    try {
+        const owner = (req.query.owner as PlanOwner) || 'shared';
+        const data = await budgetPlanService.getPlan(owner);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi lấy hồ sơ thu nhập' });
+    }
+};
+
+export const upsertPlan = async (req: Request, res: Response) => {
+    try {
+        const payload = resolveCreatePayload(req, req.body);
+        const data = await budgetPlanService.upsertPlan(payload as any);
+        res.json({ success: true, data });
+    } catch (err: any) {
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
+        res.status(500).json({ success: false, error: 'Lỗi khi lưu hồ sơ thu nhập' });
+    }
+};
+
+export const getAllocation = async (req: Request, res: Response) => {
+    try {
+        const owner = (req.query.owner as PlanOwner) || 'shared';
+        const now = new Date();
+        const month = parseInt(req.query.month as string) || (now.getMonth() + 1);
+        const year = parseInt(req.query.year as string) || now.getFullYear();
+        const data = await budgetPlanService.getAllocation(owner, month, year);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi tính phân bổ 50/30/20' });
+    }
+};
+
+// ─── Debts ─────────────────────────────────────────────────────────────────────
+
+export const getDebts = async (req: Request, res: Response) => {
+    try {
+        const owner = req.query.owner as DebtOwner | undefined;
+        const data = await expenseDebtService.getDebts(owner);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi lấy danh sách nợ' });
+    }
+};
+
+export const createDebt = async (req: Request, res: Response) => {
+    try {
+        const payload = resolveCreatePayload<IDebt>(req, req.body);
+        const data = await expenseDebtService.createDebt(payload);
+        res.status(201).json({ success: true, data });
+    } catch (err: any) {
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
+        res.status(500).json({ success: false, error: 'Lỗi khi tạo khoản nợ' });
+    }
+};
+
+export const updateDebt = async (req: Request, res: Response) => {
+    try {
+        const data = await expenseDebtService.updateDebt(req.params.id as string, req.body);
+        res.json({ success: true, data });
+    } catch (err: any) {
+        if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy khoản nợ' });
+        res.status(500).json({ success: false, error: 'Lỗi khi cập nhật khoản nợ' });
+    }
+};
+
+export const deleteDebt = async (req: Request, res: Response) => {
+    try {
+        await expenseDebtService.deleteDebt(req.params.id as string);
+        res.json({ success: true, data: {} });
+    } catch (err: any) {
+        if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy khoản nợ' });
+        res.status(500).json({ success: false, error: 'Lỗi khi xóa khoản nợ' });
+    }
+};
+
+export const payDebt = async (req: Request, res: Response) => {
+    try {
+        const debtId = req.params.id as string;
+        const { amount, walletId } = req.body;
+        if (!amount || !walletId) {
+            return res.status(400).json({ success: false, error: 'Thiếu amount hoặc walletId' });
+        }
+        const createdBy = getRequestAuthRole(req) ?? req.body.createdBy;
+        if (!createdBy) return res.status(401).json({ success: false, error: 'Không xác định được người dùng' });
+        const data = await expenseDebtService.pay(debtId, Number(amount), walletId, createdBy);
+        res.json({ success: true, data });
+    } catch (err: any) {
+        if (err.message === 'NOT_FOUND') return res.status(404).json({ success: false, error: 'Không tìm thấy khoản nợ' });
+        if (err.message?.startsWith('VALIDATION_ERROR')) {
+            return res.status(400).json({ success: false, error: err.message.replace('VALIDATION_ERROR: ', '') });
+        }
+        res.status(500).json({ success: false, error: 'Lỗi khi trả nợ' });
+    }
+};
+
+export const getDebtProjection = async (req: Request, res: Response) => {
+    try {
+        const owner = (req.query.owner as DebtOwner) || 'shared';
+        const data = await expenseDebtService.getPayoffProjection(owner);
+        res.json({ success: true, data });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi tính dự báo trả nợ' });
+    }
+};
+
+export const getFinanceAdvice = async (req: Request, res: Response) => {
+    try {
+        const owner = (req.query.owner as PlanOwner) || 'shared';
+        const now = new Date();
+        const month = parseInt(req.query.month as string) || (now.getMonth() + 1);
+        const year = parseInt(req.query.year as string) || now.getFullYear();
+
+        const [allocation, debts, savings] = await Promise.all([
+            budgetPlanService.getAllocation(owner, month, year),
+            expenseDebtService.getDebts(owner as DebtOwner),
+            savingsGoalService.getAllGoals(),
+        ]);
+
+        if (!allocation.hasPlan) {
+            return res.status(400).json({ success: false, error: 'Chưa thiết lập thu nhập để nhận lời khuyên' });
+        }
+
+        const activeDebtCount = debts.filter((d) => d.isActive).length;
+        const emergencyGoals = (savings as any[]).filter((g: any) => g.type === 'emergency' && !g.isCompleted);
+        const emergencyFundPct = emergencyGoals.length > 0
+            ? Math.round((emergencyGoals[0].currentAmount / emergencyGoals[0].targetAmount) * 100)
+            : 0;
+
+        const SCOPE_LABELS: Record<string, string> = { shared: 'Quỹ chung', boyfriend: 'Của Được', girlfriend: 'Của Ni' };
+        const advice = await generateFinanceAdvice({
+            scopeLabel: SCOPE_LABELS[owner] ?? owner,
+            month, year,
+            income: allocation.income,
+            debtTotal: allocation.debtTotal,
+            disposable: allocation.disposable,
+            needsPct: allocation.buckets.needs.pct,
+            needsSpent: allocation.buckets.needs.spent,
+            needsTarget: allocation.buckets.needs.target,
+            wantsPct: allocation.buckets.wants.pct,
+            wantsSpent: allocation.buckets.wants.spent,
+            wantsTarget: allocation.buckets.wants.target,
+            savingsPct: allocation.buckets.savings.pct,
+            savingsSpent: allocation.buckets.savings.spent,
+            savingsTarget: allocation.buckets.savings.target,
+            activeDebtCount,
+            emergencyFundPct,
+        });
+
+        if (!advice) return res.status(422).json({ success: false, error: 'AI chưa tạo được lời khuyên lúc này' });
+        res.json({ success: true, data: { advice } });
+    } catch {
+        res.status(500).json({ success: false, error: 'Lỗi khi tạo lời khuyên tài chính' });
     }
 };

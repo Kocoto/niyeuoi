@@ -11,6 +11,7 @@ const DEFAULT_CATEGORIES = [
     { name: 'Nhà cửa',    icon: 'home',          color: 'amber',  bucket: 'needs'   },
     { name: 'Tiết kiệm',  icon: 'piggy-bank',    color: 'teal',   bucket: 'savings' },
     { name: 'Khác',       icon: 'circle-ellipsis', color: 'slate', bucket: 'needs'  },
+    { name: 'Trả nợ',     icon: 'credit-card',   color: 'red',    bucket: 'needs'   },
 ] as const;
 
 class ExpenseCategoryService {

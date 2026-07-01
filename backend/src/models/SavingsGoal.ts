@@ -1,8 +1,11 @@
 import mongoose, { Document, Schema } from 'mongoose';
 import type { AuthRole } from '../utils/authToken';
 
+export type SavingsGoalType = 'normal' | 'emergency';
+
 export interface ISavingsGoal extends Document {
     name: string;
+    type: SavingsGoalType;
     targetAmount: number;
     currentAmount: number;
     deadline?: Date;
@@ -18,6 +21,11 @@ const savingsGoalSchema: Schema = new Schema({
         type: String,
         required: [true, 'Tên mục tiêu là bắt buộc'],
         trim: true,
+    },
+    type: {
+        type: String,
+        enum: ['normal', 'emergency'],
+        default: 'normal',
     },
     targetAmount: {
         type: Number,

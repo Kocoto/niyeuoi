@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { Plus, X, Loader2 } from 'lucide-react';
-import expenseApi, { type ISavingsGoal, type IWallet } from '../api/expenseApi';
+import expenseApi, { type ISavingsGoal, type IWallet, type SavingsGoalType } from '../api/expenseApi';
 import SavingsGoalCard from '../components/expenses/SavingsGoalCard';
 import AmountInput from '../components/expenses/AmountInput';
 import { useAuth } from '../context/AuthContext';
@@ -18,6 +18,7 @@ const ExpenseSavings: React.FC = () => {
 
   // Create form state
   const [name, setName] = useState('');
+  const [goalType, setGoalType] = useState<SavingsGoalType>('normal');
   const [targetAmount, setTargetAmount] = useState(0);
   const [deadline, setDeadline] = useState('');
   const [note, setNote] = useState('');
@@ -50,10 +51,10 @@ const ExpenseSavings: React.FC = () => {
     if (!targetAmount || targetAmount <= 0) return toast('Nhập số tiền mục tiêu nhé.', 'error');
     setSubmitting(true);
     try {
-      await expenseApi.createSavingsGoal({ name: name.trim(), targetAmount, deadline: deadline || undefined, note: note || undefined, createdBy: role as any });
+      await expenseApi.createSavingsGoal({ name: name.trim(), type: goalType, targetAmount, deadline: deadline || undefined, note: note || undefined, createdBy: role as any });
       toast('Đã tạo mục tiêu.', 'success');
       setShowCreate(false);
-      setName(''); setTargetAmount(0); setDeadline(''); setNote('');
+      setName(''); setGoalType('normal'); setTargetAmount(0); setDeadline(''); setNote('');
       fetchAll();
     } catch (err: any) {
       toast(err?.response?.data?.error ?? 'Chưa tạo được.', 'error');
@@ -137,6 +138,19 @@ const ExpenseSavings: React.FC = () => {
                 </button>
               </div>
               <form onSubmit={handleCreate} className="flex flex-col gap-4">
+                <div className="flex rounded-2xl bg-black/5 p-1">
+                  <button type="button" onClick={() => setGoalType('normal')}
+                    className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${goalType === 'normal' ? 'bg-white text-ink shadow-sm' : 'text-soft'}`}>
+                    🎯 Mục tiêu thường
+                  </button>
+                  <button type="button" onClick={() => setGoalType('emergency')}
+                    className={`flex-1 rounded-xl py-2 text-xs font-bold transition ${goalType === 'emergency' ? 'bg-amber-50 text-amber-700 shadow-sm ring-1 ring-amber-100' : 'text-soft'}`}>
+                    🛡️ Quỹ dự phòng
+                  </button>
+                </div>
+                {goalType === 'emergency' && (
+                  <p className="text-xs text-amber-700 bg-amber-50 rounded-xl px-3 py-2">Gợi ý: mục tiêu bằng 3–6 tháng chi phí thiết yếu của bạn.</p>
+                )}
                 <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Tên mục tiêu (VD: Đi Đà Lạt)" className="form-input" />
                 <div className="rounded-[1.25rem] bg-[#faf5f8] px-4 py-5">
                   <p className="mb-2 text-center text-[11px] text-soft">Cần bao nhiêu?</p>

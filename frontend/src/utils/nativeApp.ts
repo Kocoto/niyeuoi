@@ -1,12 +1,21 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { App } from '@capacitor/app';
 import { SplashScreen } from '@capacitor/splash-screen';
 import { StatusBar, Style } from '@capacitor/status-bar';
 import { CapacitorUpdater } from '@capgo/capacitor-updater';
 
+interface ShareHelperPlugin {
+  getPendingText(): Promise<{ text: string }>;
+}
+
+// Plugin nội bộ — được đăng ký trong MainActivity.java (không cần npm package)
+const ShareHelper = registerPlugin<ShareHelperPlugin>('ShareHelper');
+
+const SESSION_KEY = 'niyeuoi:pending-share';
+
 /**
  * Khởi tạo các hành vi native khi app chạy trong Capacitor (Android/iOS):
- * style status bar, ẩn splash, và nút Back vật lý Android.
+ * style status bar, ẩn splash, nút Back vật lý Android, và xử lý share intent.
  *
  * No-op khi chạy trên web nên gọi vô điều kiện cũng an toàn.
  *
@@ -23,15 +32,13 @@ export function initNativeApp(): () => void {
     StatusBar.setBackgroundColor({ color: '#ffffff' }).catch(() => {});
   }
 
-  // OTA (Capgo): báo bản web hiện tại đã chạy OK. BẮT BUỘC — nếu không gọi,
-  // plugin sẽ coi bản cập nhật là lỗi và tự rollback về bản trước.
+  // OTA (Capgo): báo bản web hiện tại đã chạy OK.
   CapacitorUpdater.notifyAppReady().catch(() => {});
 
   // Ẩn splash sau khi React đã mount.
   SplashScreen.hide().catch(() => {});
 
-  // Nút Back vật lý Android: lùi trong lịch sử app, chỉ thoát khi đã ở màn gốc.
-  // window.history.back() hoạt động đúng với BrowserRouter.
+  // Nút Back vật lý Android.
   const backHandle = App.addListener('backButton', ({ canGoBack }) => {
     if (canGoBack) {
       window.history.back();
@@ -40,7 +47,50 @@ export function initNativeApp(): () => void {
     }
   });
 
+  // Share intent: lấy text đang chờ từ lần mở app này (cold start)
+  if (Capacitor.getPlatform() === 'android') {
+    ShareHelper.getPendingText()
+      .then(({ text }) => {
+        if (!text) return;
+        dispatchShareText(text);
+      })
+      .catch(() => {});
+
+    // Share intent khi app đã chạy nền (hot start) — MainActivity inject event này
+    const handleLiveShare = (e: Event) => {
+      const text = (e as CustomEvent<{ text: string }>).detail?.text;
+      if (text) dispatchShareText(text);
+    };
+    window.addEventListener('niyeuoi-share', handleLiveShare);
+
+    return () => {
+      backHandle.then((h) => h.remove()).catch(() => {});
+      window.removeEventListener('niyeuoi-share', handleLiveShare);
+    };
+  }
+
   return () => {
     backHandle.then((handle) => handle.remove()).catch(() => {});
   };
+}
+
+/**
+ * Lưu shared text vào sessionStorage và điều hướng về /expenses nếu chưa ở đó.
+ * Expenses.tsx sẽ đọc sessionStorage và mở NotificationImportSheet.
+ */
+function dispatchShareText(text: string) {
+  sessionStorage.setItem(SESSION_KEY, text);
+  if (window.location.pathname === '/expenses') {
+    // Đã ở trang expenses → fire event để component hiện sheet ngay
+    window.dispatchEvent(new CustomEvent('niyeuoi-share-ready'));
+  } else {
+    window.location.href = '/expenses';
+  }
+}
+
+/** Đọc và xoá pending share text (gọi từ Expenses.tsx khi mount). */
+export function consumePendingShareText(): string | null {
+  const text = sessionStorage.getItem(SESSION_KEY);
+  if (text) sessionStorage.removeItem(SESSION_KEY);
+  return text;
 }

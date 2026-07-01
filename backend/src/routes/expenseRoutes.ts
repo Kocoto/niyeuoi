@@ -11,6 +11,10 @@ import {
     getSummary, getReport, getTrends, exportTransactions, getAiSummary,
     getQuickPresets, createQuickPreset, deleteQuickPreset,
     scanReceipt,
+    getPlan, upsertPlan, getAllocation,
+    getDebts, createDebt, updateDebt, deleteDebt, payDebt, getDebtProjection,
+    parseTransactionText,
+    getFinanceAdvice,
 } from '../controllers/expenseController';
 
 const router = express.Router();
@@ -89,5 +93,25 @@ router.get('/ai-summary', getAiSummary);
 
 // OCR
 router.post('/ocr', memoryUpload.single('receipt'), scanReceipt);
+
+// Parse text thông báo ngân hàng
+router.post('/parse-text', parseTransactionText);
+
+// Budget Plan (hồ sơ thu nhập + tỉ lệ 50/30/20)
+router.route('/plan')
+    .get(getPlan)
+    .post(upsertPlan);
+router.get('/allocation', getAllocation);
+router.get('/advice', getFinanceAdvice);
+
+// Debts — đặt /debts/projection TRƯỚC /debts/:id để route cụ thể không bị nuốt bởi wildcard
+router.get('/debts/projection', getDebtProjection);
+router.route('/debts')
+    .get(getDebts)
+    .post(createDebt);
+router.route('/debts/:id')
+    .put(validateObjectId, updateDebt)
+    .delete(validateObjectId, deleteDebt);
+router.post('/debts/:id/pay', validateObjectId, payDebt);
 
 export default router;

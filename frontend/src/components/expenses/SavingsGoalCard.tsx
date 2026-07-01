@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PlusCircle, Trash2 } from 'lucide-react';
+import { PlusCircle, Trash2, ShieldCheck } from 'lucide-react';
 import type { ISavingsGoal, IWallet } from '../../api/expenseApi';
 import { formatVND, formatVNDCompact } from '../../utils/currency';
 
@@ -26,8 +26,15 @@ const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({ goal, onDeposit, onDe
     ? (goal.walletId as IWallet).name
     : null;
 
+  const isEmergency = goal.type === 'emergency';
+
   return (
     <div className={`surface-card flex flex-col gap-4 p-5 ${goal.isCompleted ? 'opacity-70' : ''}`}>
+      {isEmergency && (
+        <div className="flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-1 text-[11px] font-bold text-amber-700 ring-1 ring-amber-100 w-fit">
+          <ShieldCheck size={12} /> Quỹ dự phòng khẩn cấp
+        </div>
+      )}
       <div className="flex items-start gap-4">
         {/* Progress ring */}
         <div className="relative shrink-0">
@@ -38,7 +45,7 @@ const SavingsGoalCard: React.FC<SavingsGoalCardProps> = ({ goal, onDeposit, onDe
               cy={SIZE / 2}
               r={R}
               fill="none"
-              stroke={goal.isCompleted ? '#22c55e' : '#e86ba8'}
+              stroke={goal.isCompleted ? '#22c55e' : isEmergency ? '#f59e0b' : '#e86ba8'}
               strokeWidth={STROKE}
               strokeLinecap="round"
               strokeDasharray={`${dash} ${CIRC - dash}`}

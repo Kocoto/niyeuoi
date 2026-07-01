@@ -211,6 +211,95 @@ Quy tắc:
     }
 }
 
+export interface AITransactionText {
+    amount: number | null;
+    type: 'income' | 'expense' | null;
+    merchant: string | null;
+    bankName: string | null;
+    date: string | null;
+}
+
+export interface FinanceAdviceInput {
+    scopeLabel: string;
+    month: number;
+    year: number;
+    income: number;
+    debtTotal: number;
+    disposable: number;
+    needsPct: number; needsSpent: number; needsTarget: number;
+    wantsPct: number; wantsSpent: number; wantsTarget: number;
+    savingsPct: number; savingsSpent: number; savingsTarget: number;
+    activeDebtCount: number;
+    emergencyFundPct: number; // % quỹ dự phòng so với mục tiêu
+}
+
+export async function generateFinanceAdvice(input: FinanceAdviceInput): Promise<string | null> {
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+        const prompt = `Bạn là cố vấn tài chính ấm áp trong một app dành cho cặp đôi người Việt. Hãy đưa ra lời khuyên tài chính ngắn gọn cho tháng ${input.month}/${input.year} — phạm vi "${input.scopeLabel}".
+
+Số liệu 50/30/20:
+- Thu nhập: ${formatVNDShort(input.income)}${input.debtTotal > 0 ? `, trừ nợ ${formatVNDShort(input.debtTotal)}, còn chia ${formatVNDShort(input.disposable)}` : ''}
+- Thiết yếu (${input.needsPct}%): mục tiêu ${formatVNDShort(input.needsTarget)}, đã chi ${formatVNDShort(input.needsSpent)}
+- Mong muốn (${input.wantsPct}%): mục tiêu ${formatVNDShort(input.wantsTarget)}, đã chi ${formatVNDShort(input.wantsSpent)}
+- Tiết kiệm (${input.savingsPct}%): mục tiêu ${formatVNDShort(input.savingsTarget)}, đã tiết kiệm ${formatVNDShort(input.savingsSpent)}
+${input.activeDebtCount > 0 ? `- Đang có ${input.activeDebtCount} khoản nợ cần trả hàng tháng` : '- Không có khoản nợ đang hoạt động'}
+${input.emergencyFundPct < 100 ? `- Quỹ dự phòng: ${input.emergencyFundPct}% so với mục tiêu` : '- Quỹ dự phòng đã đủ mục tiêu 🎉'}
+
+Yêu cầu:
+- Viết 3–4 câu tiếng Việt, giọng ấm áp, thân thiện, tích cực — không phán xét gay gắt
+- Nhận xét 1–2 điểm nổi bật (chi quá nhiều/ít ở nhóm nào, nợ, tiết kiệm)
+- Gợi ý 1 hành động cụ thể nhỏ cho nửa tháng còn lại hoặc tháng sau
+- Có thể dùng 1–2 emoji phù hợp
+- Trả về JSON hợp lệ (không markdown): {"advice":"..."}`;
+
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) return text.replace(/```/g, '').trim() || null;
+        const parsed = JSON.parse(jsonMatch[0]) as { advice?: string };
+        return parsed.advice ?? null;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi sinh lời khuyên tài chính', err);
+        return null;
+    }
+}
+
+/** Đọc text thông báo ngân hàng / ví điện tử VN → trích xuất thông tin giao dịch. */
+export async function extractTransactionText(rawText: string): Promise<AITransactionText | null> {
+    if (!rawText?.trim()) return null;
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+        const prompt = `Đây là nội dung văn bản thông báo giao dịch từ ngân hàng hoặc ví điện tử Việt Nam (Techcombank, VPBank, Vietcombank, MB Bank, BIDV, ACB, TPBank, MoMo, ZaloPay, VNPay...).
+
+Nội dung: """${rawText.slice(0, 1500)}"""
+
+Hãy trích xuất thông tin và trả về JSON hợp lệ (không markdown, không code block):
+{"amount":số_tiền_VND_hoặc_null,"type":"income_hoặc_expense_hoặc_null","merchant":"tên_người_nhận_hoặc_cửa_hàng_hoặc_null","bankName":"tên_ngân_hàng_hoặc_ví_hoặc_null","date":"ISO_8601_hoặc_null"}
+
+Quy tắc:
+- amount: chỉ số nguyên dương VND, bỏ dấu chấm/phẩy, null nếu không đọc được
+- type: "income" nếu tiền VÀO tài khoản, "expense" nếu tiền RA / thanh toán, null nếu không rõ
+- merchant: người nhận/gửi, tên cửa hàng, mô tả ngắn — null nếu không có
+- bankName: tên ngân hàng/ví điện tử phát hành thông báo — null nếu không rõ
+- date: ISO 8601 (YYYY-MM-DDTHH:mm:ss) nếu đọc được, null nếu không`;
+
+        logger.info('AI', 'Đang phân tích text thông báo ngân hàng...');
+        const result = await model.generateContent(prompt);
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Không tìm thấy JSON trong response');
+
+        const parsed = JSON.parse(jsonMatch[0]) as AITransactionText;
+        logger.success('AI', 'Đã phân tích text thông báo', { amount: parsed.amount, type: parsed.type });
+        return parsed;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi phân tích text thông báo', err);
+        return null;
+    }
+}
+
 export async function generateCoupon(existingTitles: string[]): Promise<AICoupon | null> {
     try {
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });

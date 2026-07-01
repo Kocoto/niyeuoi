@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, ArrowRight, HeartHandshake } from 'lucide-react';
 import expenseApi, { type IWallet, type IExpenseCategory, type SummaryData, type IBudgetProgress, type CategorySpending, type ITransaction, type WalletScope, type TrendPoint } from '../api/expenseApi';
 import WalletCard from '../components/expenses/WalletCard';
+import AllocationPanel from '../components/expenses/AllocationPanel';
 import SpendingChart from '../components/expenses/SpendingChart';
 import TrendChart from '../components/expenses/TrendChart';
 import AISummaryCard from '../components/expenses/AISummaryCard';
@@ -13,6 +14,8 @@ import TransactionItem from '../components/expenses/TransactionItem';
 import TransactionForm from '../components/expenses/TransactionForm';
 import BudgetForm from '../components/expenses/BudgetForm';
 import WalletEditSheet from '../components/expenses/WalletEditSheet';
+import NotificationImportSheet from '../components/expenses/NotificationImportSheet';
+import { consumePendingShareText } from '../utils/nativeApp';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { formatVND } from '../utils/currency';
@@ -43,6 +46,20 @@ const Expenses: React.FC = () => {
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<IBudgetProgress | null>(null);
   const [editingWallet, setEditingWallet] = useState<IWallet | null>(null);
+  const [shareText, setShareText] = useState<string | null>(null);
+
+  // Android share: kiểm tra pending text khi mount + lắng nghe runtime share
+  useEffect(() => {
+    const pending = consumePendingShareText();
+    if (pending) setShareText(pending);
+
+    const onShareReady = () => {
+      const text = consumePendingShareText();
+      if (text) setShareText(text);
+    };
+    window.addEventListener('niyeuoi-share-ready', onShareReady);
+    return () => window.removeEventListener('niyeuoi-share-ready', onShareReady);
+  }, []);
 
   const fetchBase = useCallback(async () => {
     try {
@@ -140,6 +157,11 @@ const Expenses: React.FC = () => {
             {s.label}
           </button>
         ))}
+      </div>
+
+      {/* Allocation 50/30/20 */}
+      <div className="mb-4">
+        <AllocationPanel owner={scope as 'shared' | Role} month={month} year={year} />
       </div>
 
       {/* Month selector */}
@@ -282,6 +304,20 @@ const Expenses: React.FC = () => {
           onSaved={refreshAll}
         />
       )}
+
+      {/* Android share → mở sheet nhập từ thông báo với text đã share */}
+      <AnimatePresence>
+        {shareText !== null && (
+          <NotificationImportSheet
+            wallets={wallets}
+            categories={categories}
+            defaultWalletId={defaultWalletId}
+            initialText={shareText}
+            onClose={() => setShareText(null)}
+            onSaved={refreshAll}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };
