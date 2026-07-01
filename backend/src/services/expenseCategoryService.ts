@@ -2,21 +2,23 @@ import ExpenseCategory, { IExpenseCategory } from '../models/ExpenseCategory';
 import logger from '../utils/logger';
 
 const DEFAULT_CATEGORIES = [
-    { name: 'Ăn uống',    icon: 'utensils',      color: 'orange' },
-    { name: 'Giải trí',   icon: 'gamepad-2',     color: 'purple' },
-    { name: 'Đi hẹn hò',  icon: 'heart',         color: 'rose'   },
-    { name: 'Mua sắm',    icon: 'shopping-bag',  color: 'pink'   },
-    { name: 'Đi lại',     icon: 'car',           color: 'blue'   },
-    { name: 'Y tế',       icon: 'stethoscope',   color: 'green'  },
-    { name: 'Nhà cửa',    icon: 'home',          color: 'amber'  },
-    { name: 'Tiết kiệm',  icon: 'piggy-bank',    color: 'teal'   },
-    { name: 'Khác',       icon: 'circle-ellipsis', color: 'slate' },
-];
+    { name: 'Ăn uống',    icon: 'utensils',      color: 'orange', bucket: 'needs'   },
+    { name: 'Giải trí',   icon: 'gamepad-2',     color: 'purple', bucket: 'wants'   },
+    { name: 'Đi hẹn hò',  icon: 'heart',         color: 'rose',   bucket: 'wants'   },
+    { name: 'Mua sắm',    icon: 'shopping-bag',  color: 'pink',   bucket: 'wants'   },
+    { name: 'Đi lại',     icon: 'car',           color: 'blue',   bucket: 'needs'   },
+    { name: 'Y tế',       icon: 'stethoscope',   color: 'green',  bucket: 'needs'   },
+    { name: 'Nhà cửa',    icon: 'home',          color: 'amber',  bucket: 'needs'   },
+    { name: 'Tiết kiệm',  icon: 'piggy-bank',    color: 'teal',   bucket: 'savings' },
+    { name: 'Khác',       icon: 'circle-ellipsis', color: 'slate', bucket: 'needs'  },
+] as const;
 
 class ExpenseCategoryService {
     async seedDefaults(): Promise<void> {
         const count = await ExpenseCategory.countDocuments({ isDefault: true });
-        if (count >= DEFAULT_CATEGORIES.length) return;
+        // Migration: DB đã seed trước khi có field bucket → vẫn cần chạy lại để gán bucket.
+        const missingBucket = await ExpenseCategory.countDocuments({ isDefault: true, bucket: { $exists: false } });
+        if (count >= DEFAULT_CATEGORIES.length && missingBucket === 0) return;
 
         logger.info('ExpenseCategory', 'Seeding danh mục mặc định...');
         for (const cat of DEFAULT_CATEGORIES) {

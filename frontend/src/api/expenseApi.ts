@@ -11,11 +11,14 @@ export interface IWallet {
   isDefault: boolean;
 }
 
+export type CategoryBucket = 'needs' | 'wants' | 'savings';
+
 export interface IExpenseCategory {
   _id: string;
   name: string;
   icon: string;
   color: string;
+  bucket: CategoryBucket;
   isDefault: boolean;
 }
 

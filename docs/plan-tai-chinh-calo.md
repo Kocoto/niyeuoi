@@ -114,7 +114,7 @@ Theo quy ước CLAUDE.md: route→controller→service→model riêng + trang +
 ## Checklist tiến độ (tick sau mỗi mục)
 
 - [x] **Bước 0** — Tạo `docs/plan-tai-chinh-calo.md` + memory `plan-tai-chinh-calo.md` + dòng ở `MEMORY.md` *(2026-07-01)*
-- [ ] **A1** — `bucket` cho ExpenseCategory + seed 9 danh mục + UI đổi bucket
+- [x] **A1** — `bucket` cho ExpenseCategory + seed 9 danh mục (+ migration DB đã seed) *(2026-07-01)* — UI đổi bucket hoãn: chưa có màn quản lý danh mục, defaults bị khoá; custom category default 'needs'
 - [ ] **A2** — `BudgetPlan` model + `budgetPlanService.getAllocation` (+ daysLeft/dailyAllowance)
 - [ ] **A3** — `Debt` model + `expenseDebtService` (CRUD + pay atomic) + cron nhắc hạn
 - [ ] **A4** — Endpoint plan/allocation/debts/projection/advice
@@ -132,6 +132,7 @@ A (50/30/20 + Nợ) → B1+B2 (parse AI + ô dán, deploy/OTA ngay) → C (Calo)
 
 ## Nhật ký (log các mốc)
 - **2026-07-01:** Chốt plan + tạo file tiến độ này + memory. Chưa bắt đầu code (A1 là mục kế tiếp).
+- **2026-07-01:** Xong **A1**. Backend: `ExpenseCategory` +field `bucket` (needs/wants/savings, default needs) + `CategoryBucket` type; seed 9 danh mục kèm bucket (Ăn uống/Đi lại/Y tế/Nhà cửa/Khác→needs, Giải trí/Đi hẹn hò/Mua sắm→wants, Tiết kiệm→savings) + migration chạy lại khi DB cũ thiếu bucket. Frontend: `IExpenseCategory` +`bucket` + `CategoryBucket`. Build backend (tsc) + frontend đều sạch. **Mục kế tiếp: A2.**
 
 ## Kiểm thử (end‑to‑end)
 1. **Backend:** `cd backend && npm run dev`; test bằng REST/curl các endpoint mới (`/expenses/plan`, `/allocation`, `/debts`, `/debts/:id/pay`, `/parse-text`, `/calories/*`). Kiểm tra `remainingAmount` giảm đúng sau `pay`, số dư ví atomic, `allocation` = (lương − tổng nợ) chia 50/30/20.
