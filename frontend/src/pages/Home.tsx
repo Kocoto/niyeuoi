@@ -19,255 +19,31 @@ import ExpenseHomeWidget from '../components/expenses/ExpenseHomeWidget';
 import PersonBadge from '../components/PersonBadge';
 import { useAuth } from '../context/AuthContext';
 import { ROLE_CORNER_LABEL, ROLE_NAME, isRole, type Role } from '../constants/roles';
+import type {
+  Memory,
+  Mood,
+  DeepTalkQuestion,
+  EventItem,
+  Challenge,
+  Coupon,
+  Reward,
+  MemoryResurfacingItem,
+  SmartSuggestionSourceType,
+  SmartSuggestion,
+  RelationshipStateSourceType,
+  RelationshipStateSignalType,
+  RelationshipStateSignal,
+  RelationshipState,
+  DashboardState,
+  RoleSummary,
+  SharedPendingItem,
+  FeedItem,
+  RewardHandoffView,
+  MemoryResurfacingView,
+  NextStepView,
+  Daypart,
+} from '../components/home/types';
 
-type Memory = {
-  _id: string;
-  title: string;
-  date: string;
-  content: string;
-  media?: string[];
-  mood?: string;
-  createdAt?: string;
-  createdBy?: Role;
-};
-
-type Mood = {
-  mood: string;
-  note?: string;
-  createdAt?: string;
-  createdBy?: Role;
-};
-
-type DeepTalkQuestion = {
-  _id: string;
-  content: string;
-  createdAt?: string;
-  answers: Record<Role, { text?: string; isInPerson?: boolean; answeredAt?: string }>;
-};
-
-type EventItem = {
-  _id: string;
-  title: string;
-  date: string;
-  description: string;
-  createdAt?: string;
-  createdBy?: Role;
-  eventType?: 'birthday' | 'anniversary' | 'date_plan' | 'special_plan';
-  forWhom?: Role | 'both';
-};
-
-type Challenge = {
-  _id: string;
-  title: string;
-  description: string;
-  isCompleted: boolean;
-  createdAt?: string;
-  createdBy?: Role;
-  forWhom?: Role | 'both';
-};
-
-type Coupon = {
-  _id: string;
-  title: string;
-  description: string;
-  isUsed: boolean;
-  createdAt?: string;
-  updatedAt?: string;
-  createdBy?: Role;
-};
-
-type Reward = {
-  _id: string;
-  triggerType: 'challenge_completed' | 'deeptalk_paired' | 'mood_weekly_sync' | 'event_completed';
-  rewardKind: 'coupon' | 'prompt' | 'challenge' | 'date_suggestion' | 'memory_highlight';
-  status: 'pending' | 'revealed' | 'consumed' | 'dismissed' | 'expired';
-  title: string;
-  description?: string;
-  sourceType: 'challenge' | 'deep_talk_question' | 'mood' | 'event' | 'coupon' | 'memory';
-  sourceId: string;
-  sourceLabel?: string;
-  surfaceHint?: 'home' | 'challenge' | 'deeptalk' | 'mood' | 'event';
-  forWhom?: Role | 'both';
-  createdAt?: string;
-  openedAt?: string;
-};
-
-type MemoryResurfacingReason = 'anniversary_day' | 'pinned_highlight';
-
-type MemoryResurfacingItem = {
-  memory: Memory;
-  reason: MemoryResurfacingReason;
-  label: string;
-  detail: string;
-  yearsAgo?: number;
-};
-
-type SmartSuggestionSourceType = 'event' | 'deep_talk_question' | 'coupon' | 'mood' | 'place' | 'wishlist';
-type SmartSuggestionTarget = Role | 'both';
-
-type SmartSuggestion = {
-  id: string;
-  type: 'event_prepare' | 'deeptalk_waiting' | 'coupon_waiting' | 'mood_soft_support' | 'place_next_time' | 'wishlist_bridge';
-  title: string;
-  detail: string;
-  reason: string;
-  priority: number;
-  targetRole?: SmartSuggestionTarget;
-  source: {
-    type: SmartSuggestionSourceType;
-    id: string;
-    label: string;
-    createdBy?: Role;
-  };
-  cta: {
-    label: string;
-    to: string;
-  };
-  surfaceHints: Array<'home' | 'places' | 'wishlist' | 'deeptalk' | 'coupons' | 'events'>;
-  createdAt?: string;
-  expiresAt?: string;
-};
-
-type RelationshipStateTarget = Role | 'both';
-type RelationshipStateSourceType = 'mood' | 'deep_talk_question' | 'event' | 'coupon' | 'reward' | 'system';
-type RelationshipStateSignalType = 'mood_missing' | 'deeptalk_waiting' | 'event_upcoming' | 'coupon_waiting' | 'reward_open';
-
-type RelationshipStateSignal = {
-  id: string;
-  type: RelationshipStateSignalType;
-  title: string;
-  detail: string;
-  target: RelationshipStateTarget;
-  urgency: 'soft' | 'soon' | 'today';
-  source: {
-    type: RelationshipStateSourceType;
-    id?: string;
-    label?: string;
-    createdBy?: Role | 'system';
-  };
-  cta?: {
-    label: string;
-    to: string;
-  };
-  createdAt?: string;
-  dueAt?: string;
-};
-
-type RelationshipStateTodayItem = {
-  type: 'mood_checkin' | 'deeptalk_answered';
-  label: string;
-  at?: string;
-  source: {
-    type: 'mood' | 'deep_talk_question';
-    id: string;
-    label: string;
-  };
-};
-
-type RelationshipPersonState = {
-  role: Role;
-  label: string;
-  today: {
-    hasMoodCheckIn: boolean;
-    mood?: {
-      id: string;
-      value: string;
-      at?: string;
-    };
-    actions: RelationshipStateTodayItem[];
-    lastActiveAt?: string;
-  };
-  signals: RelationshipStateSignal[];
-  summary: string;
-};
-
-type RelationshipState = {
-  date: string;
-  generatedAt: string;
-  viewerRole?: Role;
-  people: Record<Role, RelationshipPersonState>;
-  shared: {
-    target: 'both';
-    signals: RelationshipStateSignal[];
-    nextStep?: RelationshipStateSignal;
-    summary: string;
-  };
-  nextStep?: RelationshipStateSignal;
-};
-
-type DashboardState = {
-  memories: Memory[];
-  resurfacingMemories: MemoryResurfacingItem[];
-  suggestions: SmartSuggestion[];
-  relationshipState: RelationshipState | null;
-  moods: Mood[];
-  questions: DeepTalkQuestion[];
-  events: EventItem[];
-  challenges: Challenge[];
-  coupons: Coupon[];
-  rewards: Reward[];
-};
-
-type RoleSummary = {
-  role: Role;
-  title: string;
-  checkedInToday: boolean;
-  moodValue: string;
-  moodMeta: string;
-  recentLabel: string;
-  recentMeta: string;
-  waitingLabel: string;
-  actionTo: string;
-  actionLabel: string;
-};
-
-type SharedPendingItem = {
-  key: string;
-  title: string;
-  detail: string;
-  to: string;
-};
-
-type FeedItem = {
-  key: string;
-  role: Role | null;
-  title: string;
-  detail: string;
-  meta: string;
-  to: string;
-  timestamp?: string;
-};
-
-type RewardHandoffView = {
-  reward: Reward;
-  to: string;
-  button: string;
-  icon: React.ReactNode;
-  meta: string;
-};
-
-type MemoryResurfacingView = {
-  item: MemoryResurfacingItem;
-  owner: Role | null;
-  badge: string;
-  title: string;
-  detail: string;
-  meta: string;
-};
-
-type NextStepView = {
-  to: string;
-  title: string;
-  detail: string;
-  button: string;
-  icon: React.ReactNode;
-};
-
-type Daypart = {
-  label: string;
-  note: string;
-  icon: React.ReactNode;
-};
 
 const ROLE_ORDER: Role[] = ['girlfriend', 'boyfriend'];
 const START_DATE = new Date(2026, 1, 7, 20, 46, 0);
