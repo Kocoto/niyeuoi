@@ -50,3 +50,14 @@ App kỷ niệm + chi tiêu cho một cặp đôi (2 người dùng: `boyfriend`
 - Bản mobile phải trỏ `VITE_API_URL` về backend Render (không dùng localhost) — đã set ở `frontend/.env.production`.
 - App native tắt service worker (xem `src/main.tsx`).
 - Màn hình trắng khi chạy native → gần như chắc do `react`/`react-dom` lệch version. Đồng bộ về cùng version.
+
+## Bảo trì file này (dành cho Claude)
+Giữ CLAUDE.md **cao tầng** — mô tả cấu trúc/quy ước/lệnh ổn định, KHÔNG liệt kê từng tính năng/route/component.
+
+**Cập nhật file này ngay trong cùng lượt làm việc khi (và CHỈ khi) có thay đổi cấu trúc:**
+- Thêm/xoá/đổi tên **thư mục top-level** (vd `frontend/src/<mới>/`, `backend/src/<mới>/`).
+- Thêm một **subsystem/tính năng lớn mới** cần một mục riêng để định hướng (vd mảng auth, realtime, thanh toán).
+- Thêm/đổi **lệnh** chạy/build/deploy, hoặc **quy ước "để code ở đâu"**.
+- Đổi tech stack, biến môi trường bắt buộc, hoặc luồng triển khai.
+
+**KHÔNG cập nhật khi** chỉ thêm một trang/route/component/endpoint theo đúng pattern đã mô tả — quy ước sẵn có đã bao trùm. Nếu thấy phải sửa file này mỗi tính năng, nghĩa là nó đang quá chi tiết → viết cao tầng lại.
