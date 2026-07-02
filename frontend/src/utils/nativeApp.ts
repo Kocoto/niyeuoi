@@ -8,8 +8,15 @@ interface ShareHelperPlugin {
   getPendingText(): Promise<{ text: string }>;
 }
 
+interface NotifHelperPlugin {
+  isEnabled(): Promise<{ enabled: boolean }>;
+  openSettings(): Promise<void>;
+  getPending(): Promise<{ text: string }>;
+}
+
 // Plugin nội bộ — được đăng ký trong MainActivity.java (không cần npm package)
 const ShareHelper = registerPlugin<ShareHelperPlugin>('ShareHelper');
+const NotifHelper = registerPlugin<NotifHelperPlugin>('NotifHelper');
 
 const SESSION_KEY = 'niyeuoi:pending-share';
 
@@ -56,7 +63,16 @@ export function initNativeApp(): () => void {
       })
       .catch(() => {});
 
-    // Share intent khi app đã chạy nền (hot start) — MainActivity inject event này
+    // Tự đọc thông báo: drain thông báo giao dịch service bắt được (cold start + mỗi lần resume)
+    const drainNotif = () => {
+      NotifHelper.getPending()
+        .then(({ text }) => { if (text) dispatchShareText(text); })
+        .catch(() => {});
+    };
+    drainNotif();
+    const resumeHandle = App.addListener('resume', drainNotif);
+
+    // Share/notif khi app đã chạy nền (hot start) — MainActivity inject event này
     const handleLiveShare = (e: Event) => {
       const text = (e as CustomEvent<{ text: string }>).detail?.text;
       if (text) dispatchShareText(text);
@@ -65,6 +81,7 @@ export function initNativeApp(): () => void {
 
     return () => {
       backHandle.then((h) => h.remove()).catch(() => {});
+      resumeHandle.then((h) => h.remove()).catch(() => {});
       window.removeEventListener('niyeuoi-share', handleLiveShare);
     };
   }
@@ -75,17 +92,35 @@ export function initNativeApp(): () => void {
 }
 
 /**
- * Lưu shared text vào sessionStorage và điều hướng về /expenses nếu chưa ở đó.
- * Expenses.tsx sẽ đọc sessionStorage và mở NotificationImportSheet.
+ * Lưu shared text vào sessionStorage rồi phát event `niyeuoi-share-ready`.
+ * Việc điều hướng sang /expenses do ShareNavigator (trong Router) lo bằng
+ * client-side navigation của react-router — KHÔNG dùng `window.location.href`
+ * vì trong Capacitor điều hướng cứng tới route SPA thường 404.
  */
 function dispatchShareText(text: string) {
   sessionStorage.setItem(SESSION_KEY, text);
-  if (window.location.pathname === '/expenses') {
-    // Đã ở trang expenses → fire event để component hiện sheet ngay
-    window.dispatchEvent(new CustomEvent('niyeuoi-share-ready'));
-  } else {
-    window.location.href = '/expenses';
+  window.dispatchEvent(new CustomEvent('niyeuoi-share-ready'));
+}
+
+/** Có shared text đang chờ hay không (peek, không xoá). */
+export function hasPendingShareText(): boolean {
+  return sessionStorage.getItem(SESSION_KEY) !== null;
+}
+
+/** App đã được cấp quyền tự đọc thông báo (Notification access) chưa. */
+export async function isNotifCaptureEnabled(): Promise<boolean> {
+  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return false;
+  try {
+    const { enabled } = await NotifHelper.isEnabled();
+    return enabled;
+  } catch {
+    return false;
   }
+}
+
+/** Mở màn cấp quyền Notification access của hệ thống. */
+export async function openNotifSettings(): Promise<void> {
+  try { await NotifHelper.openSettings(); } catch { /* ignore */ }
 }
 
 /** Đọc và xoá pending share text (gọi từ Expenses.tsx khi mount). */

@@ -1,7 +1,7 @@
 ﻿import { useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import Navbar from './components/Navbar';
-import { initNativeApp } from './utils/nativeApp';
+import { initNativeApp, hasPendingShareText } from './utils/nativeApp';
 import Home from './pages/Home';
 import Places from './pages/Places';
 import Timeline from './pages/Timeline';
@@ -23,6 +23,30 @@ import { UIProvider } from './context/UIContext';
 import ServerGate from './components/ServerGate';
 import AuthGate from './components/AuthGate';
 
+/**
+ * Điều hướng sang /expenses khi có nội dung được share vào app (Android share).
+ * Đặt trong <Router> để dùng client-side navigation (BrowserRouter không cho
+ * điều hướng cứng tới /expenses trong Capacitor). Expenses.tsx sẽ tự đọc
+ * sessionStorage và mở NotificationImportSheet.
+ */
+function ShareNavigator() {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  useEffect(() => {
+    const goExpenses = () => {
+      if (location.pathname !== '/expenses') navigate('/expenses');
+      // Nếu đã ở /expenses: listener trong Expenses tự xử lý event.
+    };
+    // Cold start: đã có pending text trước khi Router mount → đi luôn.
+    if (hasPendingShareText()) goExpenses();
+    window.addEventListener('niyeuoi-share-ready', goExpenses);
+    return () => window.removeEventListener('niyeuoi-share-ready', goExpenses);
+  }, [navigate, location.pathname]);
+
+  return null;
+}
+
 function App() {
   useEffect(() => {
     const cleanup = initNativeApp();
@@ -35,6 +59,7 @@ function App() {
         <AuthProvider>
           <AuthGate>
             <Router>
+              <ShareNavigator />
               <div className="app-shell">
                 <Navbar />
                 <main className="app-main">

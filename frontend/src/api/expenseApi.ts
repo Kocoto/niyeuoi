@@ -204,6 +204,7 @@ const expenseApi = {
   // Categories
   getCategories: () => api.get<{ success: boolean; data: IExpenseCategory[] }>('/expenses/categories'),
   createCategory: (data: Partial<IExpenseCategory>) => api.post('/expenses/categories', data),
+  updateCategory: (id: string, data: Partial<IExpenseCategory>) => api.put(`/expenses/categories/${id}`, data),
   deleteCategory: (id: string) => api.delete(`/expenses/categories/${id}`),
 
   // Transactions

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronLeft, ChevronRight, Plus, ArrowRight, HeartHandshake } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Plus, ArrowRight, HeartHandshake, Tags } from 'lucide-react';
 import expenseApi, { type IWallet, type IExpenseCategory, type SummaryData, type IBudgetProgress, type CategorySpending, type ITransaction, type WalletScope, type TrendPoint } from '../api/expenseApi';
 import WalletCard from '../components/expenses/WalletCard';
 import AllocationPanel from '../components/expenses/AllocationPanel';
@@ -14,6 +14,8 @@ import TransactionItem from '../components/expenses/TransactionItem';
 import TransactionForm from '../components/expenses/TransactionForm';
 import BudgetForm from '../components/expenses/BudgetForm';
 import WalletEditSheet from '../components/expenses/WalletEditSheet';
+import CategoryManagerSheet from '../components/expenses/CategoryManagerSheet';
+import NotifCaptureBanner from '../components/expenses/NotifCaptureBanner';
 import NotificationImportSheet from '../components/expenses/NotificationImportSheet';
 import { consumePendingShareText } from '../utils/nativeApp';
 import { useAuth } from '../context/AuthContext';
@@ -46,16 +48,24 @@ const Expenses: React.FC = () => {
   const [showBudgetForm, setShowBudgetForm] = useState(false);
   const [editingBudget, setEditingBudget] = useState<IBudgetProgress | null>(null);
   const [editingWallet, setEditingWallet] = useState<IWallet | null>(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [shareText, setShareText] = useState<string | null>(null);
+  // Nonce tăng mỗi lần có text share/notif mới → remount sheet để auto-parse lại,
+  // kể cả khi sheet đang mở (auto-parse là mount-only).
+  const [shareNonce, setShareNonce] = useState(0);
 
-  // Android share: kiểm tra pending text khi mount + lắng nghe runtime share
+  // Android share / tự đọc notif: kiểm tra pending khi mount + lắng nghe runtime
   useEffect(() => {
+    const applyShare = (text: string) => {
+      setShareText(text);
+      setShareNonce((n) => n + 1);
+    };
     const pending = consumePendingShareText();
-    if (pending) setShareText(pending);
+    if (pending) applyShare(pending);
 
     const onShareReady = () => {
       const text = consumePendingShareText();
-      if (text) setShareText(text);
+      if (text) applyShare(text);
     };
     window.addEventListener('niyeuoi-share-ready', onShareReady);
     return () => window.removeEventListener('niyeuoi-share-ready', onShareReady);
@@ -192,6 +202,16 @@ const Expenses: React.FC = () => {
         {/* Ghi nhanh */}
         <QuickAddBar wallets={wallets} categories={categories} defaultWalletId={defaultWalletId} onAdded={refreshAll} />
 
+        <button
+          type="button"
+          onClick={() => setShowCategoryManager(true)}
+          className="flex items-center gap-1.5 self-start text-[11px] font-bold text-primary"
+        >
+          <Tags size={13} /> Quản lý danh mục
+        </button>
+
+        <NotifCaptureBanner />
+
         {/* Summary */}
         {summary && (
           <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="surface-card grid grid-cols-3 divide-x divide-black/5 px-2 py-4">
@@ -305,10 +325,21 @@ const Expenses: React.FC = () => {
         />
       )}
 
+      <AnimatePresence>
+        {showCategoryManager && (
+          <CategoryManagerSheet
+            categories={categories}
+            onClose={() => setShowCategoryManager(false)}
+            onSaved={fetchBase}
+          />
+        )}
+      </AnimatePresence>
+
       {/* Android share → mở sheet nhập từ thông báo với text đã share */}
       <AnimatePresence>
         {shareText !== null && (
           <NotificationImportSheet
+            key={shareNonce}
             wallets={wallets}
             categories={categories}
             defaultWalletId={defaultWalletId}
