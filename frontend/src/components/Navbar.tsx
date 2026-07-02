@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ChevronRight,
   Compass,
+  AlarmClock,
   CreditCard,
   Flame,
   Grid3x3,
@@ -113,6 +114,7 @@ const groupedNav: NavGroup[] = [
     hint: 'Theo dõi calo và dinh dưỡng mỗi ngày của hai bạn.',
     items: [
       { to: '/calories', label: 'Calo', description: 'Ghi bữa ăn · AI ước tính calo', icon: <Flame size={18} /> },
+      { to: '/reminders', label: 'Nhắc nhở', description: 'Đi học, ăn uống · AI đọc lịch', icon: <AlarmClock size={18} /> },
     ],
   },
   {
@@ -151,7 +153,8 @@ const CONTEXTUAL_LINKS: Partial<Record<string, string[]>> = {
   '/expenses/savings': ['/expenses', '/wishlist'],
   '/expenses/recurring': ['/expenses'],
   '/expenses/debts': ['/expenses', '/expenses/savings'],
-  '/calories': ['/', '/expenses'],
+  '/calories': ['/', '/reminders'],
+  '/reminders': ['/calories', '/'],
 };
 
 const readRecentPaths = () => {

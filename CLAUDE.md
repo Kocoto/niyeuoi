@@ -10,8 +10,8 @@ App kỷ niệm + chi tiêu cho một cặp đôi (2 người dùng: `boyfriend`
 ## Bản đồ thư mục
 
 ### frontend/src/
-- `pages/` — 1 file / 1 route (Home, Places, Timeline, Wishlist, LoveMap, Coupons, Events, MoodLofi, Challenges, DeepTalk, Letters, Expenses*, Calories). Route khai báo trong `App.tsx`.
-- `components/` — component dùng chung + **thư mục con theo tính năng** (`expenses/`, `calories/`, `home/`, `coupons/`, `places/`). Gate: `ServerGate` (chờ backend), `AuthGate` (PIN). `Navbar`.
+- `pages/` — 1 file / 1 route (Home, Places, Timeline, Wishlist, LoveMap, Coupons, Events, MoodLofi, Challenges, DeepTalk, Letters, Expenses*, Calories, Reminders). Route khai báo trong `App.tsx`.
+- `components/` — component dùng chung + **thư mục con theo tính năng** (`expenses/`, `calories/`, `reminders/`, `home/`, `coupons/`, `places/`). Gate: `ServerGate` (chờ backend), `AuthGate` (PIN). `Navbar`.
 - `api/` — client axios. `api.ts` = instance chung (baseURL `VITE_API_URL`, token Bearer từ localStorage). Mọi call backend đi qua đây.
 - `context/` — `AuthContext` (role, PIN, đổi người), `UIContext`.
 - `hooks/` — `useLocationTracker`.
@@ -49,6 +49,7 @@ App kỷ niệm + chi tiêu cho một cặp đôi (2 người dùng: `boyfriend`
 ## Lưu ý quan trọng
 - Bản mobile phải trỏ `VITE_API_URL` về backend Render (không dùng localhost) — đã set ở `frontend/.env.production`.
 - App native tắt service worker (xem `src/main.tsx`).
+- **Nhắc nhở (Reminders):** cron mỗi phút (`schedulerService`) bắn ra Web Push + Discord + Telegram. Env: backend `VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY`/`VAPID_SUBJECT` (+ tuỳ chọn `TELEGRAM_BOT_TOKEN`/`TELEGRAM_CHAT_BOYFRIEND`/`TELEGRAM_CHAT_GIRLFRIEND`); frontend `VITE_VAPID_PUBLIC_KEY` (+ `VITE_PHONE_*` cho nút Gọi ở ca quan trọng). Thiếu env thì kênh tương ứng tự bỏ qua.
 - Màn hình trắng khi chạy native → gần như chắc do `react`/`react-dom` lệch version. Đồng bộ về cùng version.
 
 ## Bảo trì file này (dành cho Claude)

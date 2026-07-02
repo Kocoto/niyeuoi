@@ -1,7 +1,13 @@
 ﻿import { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
+import { App as CapApp } from '@capacitor/app';
 import Navbar from './components/Navbar';
 import { initNativeApp, hasPendingShareText } from './utils/nativeApp';
+import { syncLocalReminders } from './utils/localReminders';
+import reminderApi from './api/reminderApi';
+import { useAuth } from './context/AuthContext';
+import type { Role } from './constants/roles';
 import Home from './pages/Home';
 import Places from './pages/Places';
 import Timeline from './pages/Timeline';
@@ -19,6 +25,7 @@ import ExpenseSavings from './pages/ExpenseSavings';
 import ExpenseRecurring from './pages/ExpenseRecurring';
 import ExpenseDebts from './pages/ExpenseDebts';
 import Calories from './pages/Calories';
+import Reminders from './pages/Reminders';
 import { AuthProvider } from './context/AuthContext';
 import { UIProvider } from './context/UIContext';
 import ServerGate from './components/ServerGate';
@@ -48,6 +55,28 @@ function ShareNavigator() {
   return null;
 }
 
+/**
+ * Đồng bộ nhắc nhở → local notification trên máy native (lúc mở app + mỗi lần resume).
+ * No-op trên web. Nhờ vậy lịch báo thức được đặt kể cả khi không mở trang Nhắc nhở.
+ */
+function ReminderSync() {
+  const { role } = useAuth();
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    let cancelled = false;
+    const run = async () => {
+      try {
+        const res = await reminderApi.getReminders();
+        if (!cancelled) await syncLocalReminders(res.data.data ?? [], role as Role);
+      } catch { /* ignore */ }
+    };
+    run();
+    const handle = CapApp.addListener('resume', run);
+    return () => { cancelled = true; handle.then((h) => h.remove()).catch(() => {}); };
+  }, [role]);
+  return null;
+}
+
 function App() {
   useEffect(() => {
     const cleanup = initNativeApp();
@@ -61,6 +90,7 @@ function App() {
           <AuthGate>
             <Router>
               <ShareNavigator />
+              <ReminderSync />
               <div className="app-shell">
                 <Navbar />
                 <main className="app-main">
@@ -82,6 +112,7 @@ function App() {
                     <Route path="/expenses/recurring" element={<ExpenseRecurring />} />
                     <Route path="/expenses/debts" element={<ExpenseDebts />} />
                     <Route path="/calories" element={<Calories />} />
+                    <Route path="/reminders" element={<Reminders />} />
                     <Route path="*" element={<div className="surface-card mx-auto mt-20 max-w-xl px-8 py-12 text-center text-sm font-medium text-soft">Trang này đang được chuẩn bị để vừa hơn với không gian riêng của hai bạn.</div>} />
                   </Routes>
                 </main>

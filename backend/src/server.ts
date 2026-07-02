@@ -52,6 +52,7 @@ import relationshipStateRoutes from './routes/relationshipStateRoutes';
 import letterRoutes from './routes/letterRoutes';
 import expenseRoutes from './routes/expenseRoutes';
 import calorieRoutes from './routes/calorieRoutes';
+import reminderRoutes from './routes/reminderRoutes';
 import otaRoutes from './routes/otaRoutes';
 import * as schedulerService from './services/schedulerService';
 import expenseCategoryService from './services/expenseCategoryService';
@@ -75,6 +76,7 @@ app.use('/api/relationship-state', relationshipStateRoutes);
 app.use('/api/letters', letterRoutes);
 app.use('/api/expenses', expenseRoutes);
 app.use('/api/calories', calorieRoutes);
+app.use('/api/reminders', reminderRoutes);
 app.use('/api/ota', otaRoutes);
 
 // Basic Route

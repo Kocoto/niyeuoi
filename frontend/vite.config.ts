@@ -40,6 +40,8 @@ export default defineConfig({
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff2}'],
+        // Nạp handler push/notificationclick cho Web Push (nhắc nhở)
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             urlPattern: /^\/api\//,

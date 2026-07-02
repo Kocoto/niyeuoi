@@ -358,6 +358,59 @@ Quy tắc:
     }
 }
 
+export interface AIScheduleReminder {
+    title: string;
+    emoji?: string;
+    time: string;              // 'HH:mm'
+    daysOfWeek?: number[];     // 0=CN … 6=T7
+    date?: string;             // 'YYYY-MM-DD' (ca một lần)
+    critical?: boolean;
+}
+
+/** Đọc ảnh thời khoá biểu / lịch làm việc → danh sách nhắc nhở đề xuất (chưa lưu). */
+export async function extractSchedule(imageBase64: string, mimeType: string): Promise<AIScheduleReminder[] | null> {
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+        const prompt = `Đây là ảnh THỜI KHOÁ BIỂU đi học hoặc LỊCH LÀM VIỆC (ca) của người Việt.
+
+Hãy tạo danh sách NHẮC NHỞ hợp lý và trả về JSON hợp lệ (không markdown, không code block):
+{"reminders":[{"title":"...","emoji":"...","time":"HH:mm","daysOfWeek":[1,2,3,4,5],"date":null,"critical":false}]}
+
+Quy tắc:
+- Với thời khoá biểu lặp hàng tuần: dùng "daysOfWeek" (0=Chủ nhật,1=Thứ 2,...,6=Thứ 7), "date"=null. Gộp mỗi thứ thành 1 nhắc "Đi học" theo GIỜ TIẾT ĐẦU của thứ đó (không cần mỗi môn 1 nhắc).
+- Với lịch làm việc theo ngày cụ thể (ca ngày X): dùng "date":"YYYY-MM-DD", "daysOfWeek"=[].
+- time: 'HH:mm' 24h. Nếu là buổi cần dậy sớm (đi học/ca sáng) đặt "critical":true.
+- emoji phù hợp (🎒 đi học, 💼 đi làm...). title ngắn gọn tiếng Việt.
+- Chỉ trả reminders đọc được; nếu không rõ để mảng rỗng.`;
+
+        logger.info('AI', 'Đang đọc lịch từ ảnh bằng Gemini...');
+        const result = await model.generateContent({
+            contents: [{ role: 'user', parts: [{ text: prompt }, { inlineData: { mimeType, data: imageBase64 } }] }],
+        });
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Không tìm thấy JSON trong response');
+
+        const parsed = JSON.parse(jsonMatch[0]) as { reminders?: AIScheduleReminder[] };
+        const list = (parsed.reminders ?? [])
+            .filter((r) => r.title && /^\d{1,2}:\d{2}$/.test(r.time || ''))
+            .map((r) => ({
+                title: String(r.title).trim(),
+                emoji: r.emoji || undefined,
+                time: r.time.length === 4 ? `0${r.time}` : r.time,
+                daysOfWeek: Array.isArray(r.daysOfWeek) ? r.daysOfWeek.filter((d) => d >= 0 && d <= 6) : [],
+                date: r.date && /^\d{4}-\d{2}-\d{2}$/.test(r.date) ? r.date : undefined,
+                critical: !!r.critical,
+            }));
+        logger.success('AI', `Đã đọc ${list.length} nhắc từ lịch`);
+        return list;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi đọc lịch từ ảnh', err);
+        return null;
+    }
+}
+
 export async function generateCoupon(existingTitles: string[]): Promise<AICoupon | null> {
     try {
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
