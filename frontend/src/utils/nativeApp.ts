@@ -138,6 +138,19 @@ export function dequeueShareText(): string | null {
   return first;
 }
 
+/** Phiên bản đang chạy: bản web/OTA hiện tại (Capgo) + bản app native (Play Store/APK). */
+export async function getAppVersion(): Promise<{ web: string; native: string; isBuiltin: boolean }> {
+  if (!Capacitor.isNativePlatform()) {
+    return { web: 'web (dev)', native: '', isBuiltin: false };
+  }
+  try {
+    const { bundle, native } = await CapacitorUpdater.current();
+    return { web: bundle.version, native, isBuiltin: bundle.id === 'builtin' };
+  } catch {
+    return { web: '?', native: '', isBuiltin: false };
+  }
+}
+
 /** App đã được cấp quyền tự đọc thông báo (Notification access) chưa. */
 export async function isNotifCaptureEnabled(): Promise<boolean> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return false;

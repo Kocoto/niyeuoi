@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import {
   CalendarDays,
@@ -30,6 +30,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { useAuth } from '../context/AuthContext';
 import { useLocationTracker } from '../hooks/useLocationTracker';
 import { ROLE_CORNER_LABEL, ROLE_NAME } from '../constants/roles';
+import { getAppVersion } from '../utils/nativeApp';
 import PersonBadge from './PersonBadge';
 
 type NavItem = {
@@ -280,6 +281,31 @@ const NavGroupSection: React.FC<{
   </section>
 );
 
+const AppVersionFooter: React.FC = () => {
+  const [version, setVersion] = useState<{ web: string; native: string; isBuiltin: boolean } | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    getAppVersion().then((v) => {
+      if (!cancelled) setVersion(v);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  if (!version) return null;
+
+  const webLabel = version.isBuiltin ? `${version.web} (gốc)` : version.web;
+
+  return (
+    <p className="pt-2 text-center text-[11px] font-semibold text-soft/70">
+      Phiên bản {webLabel}
+      {version.native ? ` · app ${version.native}` : ''}
+    </p>
+  );
+};
+
 const MoreMenuContent: React.FC<{
   pathname: string;
   currentLabel: string;
@@ -327,6 +353,8 @@ const MoreMenuContent: React.FC<{
         emphasize={group.title === recentGroupTitle}
       />
     ))}
+
+    <AppVersionFooter />
   </div>
 );
 
