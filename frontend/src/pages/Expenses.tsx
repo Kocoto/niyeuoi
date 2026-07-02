@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Plus, ArrowRight, HeartHandshake, Tags } from 'lucide-react';
@@ -17,7 +17,7 @@ import WalletEditSheet from '../components/expenses/WalletEditSheet';
 import CategoryManagerSheet from '../components/expenses/CategoryManagerSheet';
 import NotifCaptureBanner from '../components/expenses/NotifCaptureBanner';
 import NotificationImportSheet from '../components/expenses/NotificationImportSheet';
-import { consumePendingShareText } from '../utils/nativeApp';
+import { dequeueShareText } from '../utils/nativeApp';
 import { useAuth } from '../context/AuthContext';
 import { useUI } from '../context/UIContext';
 import { formatVND } from '../utils/currency';
@@ -50,26 +50,33 @@ const Expenses: React.FC = () => {
   const [editingWallet, setEditingWallet] = useState<IWallet | null>(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [shareText, setShareText] = useState<string | null>(null);
-  // Nonce tăng mỗi lần có text share/notif mới → remount sheet để auto-parse lại,
-  // kể cả khi sheet đang mở (auto-parse là mount-only).
+  // Nonce tăng mỗi lần hiện 1 giao dịch mới → remount sheet để auto-parse lại.
   const [shareNonce, setShareNonce] = useState(0);
+  const showingShareRef = useRef(false);
 
-  // Android share / tự đọc notif: kiểm tra pending khi mount + lắng nghe runtime
-  useEffect(() => {
-    const applyShare = (text: string) => {
-      setShareText(text);
-      setShareNonce((n) => n + 1);
-    };
-    const pending = consumePendingShareText();
-    if (pending) applyShare(pending);
-
-    const onShareReady = () => {
-      const text = consumePendingShareText();
-      if (text) applyShare(text);
-    };
-    window.addEventListener('niyeuoi-share-ready', onShareReady);
-    return () => window.removeEventListener('niyeuoi-share-ready', onShareReady);
+  // Android share / tự đọc notif: xử lý HÀNG ĐỢI lần lượt — mỗi lần 1 giao dịch,
+  // đóng/lưu xong mới hiện cái tiếp theo (không đè mất khi nhiều thông báo dồn dập).
+  const showNextShare = useCallback(() => {
+    if (showingShareRef.current) return;
+    const next = dequeueShareText();
+    if (next === null) return;
+    showingShareRef.current = true;
+    setShareText(next);
+    setShareNonce((n) => n + 1);
   }, []);
+
+  const closeShare = useCallback(() => {
+    showingShareRef.current = false;
+    setShareText(null);
+    // Hiện giao dịch kế trong hàng đợi (nếu còn).
+    setTimeout(showNextShare, 0);
+  }, [showNextShare]);
+
+  useEffect(() => {
+    showNextShare(); // cold start / hàng đợi đã có sẵn
+    window.addEventListener('niyeuoi-share-ready', showNextShare);
+    return () => window.removeEventListener('niyeuoi-share-ready', showNextShare);
+  }, [showNextShare]);
 
   const fetchBase = useCallback(async () => {
     try {
@@ -344,7 +351,7 @@ const Expenses: React.FC = () => {
             categories={categories}
             defaultWalletId={defaultWalletId}
             initialText={shareText}
-            onClose={() => setShareText(null)}
+            onClose={closeShare}
             onSaved={refreshAll}
           />
         )}

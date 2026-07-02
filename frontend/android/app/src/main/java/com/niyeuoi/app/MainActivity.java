@@ -52,20 +52,16 @@ public class MainActivity extends BridgeActivity {
         injectText(text);                // hot start: inject ngay nếu WebView sẵn sàng
     }
 
-    /** Nhận thông báo giao dịch do NotificationCaptureService bắt được khi app đang mở. */
+    /**
+     * Khi app đang mở và service bắt được giao dịch mới → đánh thức WebView để
+     * drain hàng đợi ngay (không truyền text; JS gọi NotifHelper.getPending()).
+     */
     private void registerNotifReceiver() {
         notifReceiver = new BroadcastReceiver() {
             @Override
             public void onReceive(Context ctx, Intent intent) {
-                String text = intent.getStringExtra("text");
-                if (text == null || text.isEmpty()) return;
-                if (bridge != null && bridge.getWebView() != null) {
-                    injectText(text);
-                    // Đã xử lý live → xoá pending để không mở lại khi resume.
-                    getSharedPreferences(NotificationCaptureService.PREFS, MODE_PRIVATE)
-                            .edit().remove(NotificationCaptureService.KEY_PENDING).apply();
-                }
-                // Nếu WebView chưa sẵn sàng: giữ nguyên pending, JS sẽ drain lúc resume.
+                injectEvent("niyeuoi-notif");
+                // Nếu WebView chưa sẵn sàng: bỏ qua; JS sẽ drain lúc cold-start/resume.
             }
         };
         IntentFilter filter = new IntentFilter(NotificationCaptureService.ACTION_CAPTURED);
@@ -81,6 +77,15 @@ public class MainActivity extends BridgeActivity {
         if (bridge == null || bridge.getWebView() == null) return;
         String json = org.json.JSONObject.quote(text);
         String script = "window.dispatchEvent(new CustomEvent('niyeuoi-share',{detail:{text:" + json + "}}));";
+        bridge.getWebView().post(() ->
+                bridge.getWebView().evaluateJavascript(script, null)
+        );
+    }
+
+    /** Bắn một CustomEvent (không kèm dữ liệu) vào WebView. */
+    private void injectEvent(String eventName) {
+        if (bridge == null || bridge.getWebView() == null) return;
+        String script = "window.dispatchEvent(new CustomEvent('" + eventName + "'));";
         bridge.getWebView().post(() ->
                 bridge.getWebView().evaluateJavascript(script, null)
         );

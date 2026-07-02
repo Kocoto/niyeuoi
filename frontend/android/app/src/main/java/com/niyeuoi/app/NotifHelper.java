@@ -12,13 +12,15 @@ import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.annotation.CapacitorPlugin;
 
+import org.json.JSONArray;
+
 import java.util.Set;
 
 /**
  * Cầu nối cho tính năng tự đọc thông báo:
  * - isEnabled(): app đã được cấp Notification access chưa.
  * - openSettings(): mở màn cấp quyền của hệ thống.
- * - getPending(): lấy + xoá thông báo giao dịch mới nhất mà service bắt được.
+ * - getPending(): lấy + xoá TOÀN BỘ hàng đợi thông báo giao dịch service bắt được.
  */
 @CapacitorPlugin(name = "NotifHelper")
 public class NotifHelper extends Plugin {
@@ -41,14 +43,16 @@ public class NotifHelper extends Plugin {
 
     @PluginMethod
     public void getPending(PluginCall call) {
-        String text = getContext()
-                .getSharedPreferences(NotificationCaptureService.PREFS, Context.MODE_PRIVATE)
-                .getString(NotificationCaptureService.KEY_PENDING, null);
-        getContext()
-                .getSharedPreferences(NotificationCaptureService.PREFS, Context.MODE_PRIVATE)
-                .edit().remove(NotificationCaptureService.KEY_PENDING).apply();
+        android.content.SharedPreferences sp = getContext()
+                .getSharedPreferences(NotificationCaptureService.PREFS, Context.MODE_PRIVATE);
+        String qStr = sp.getString(NotificationCaptureService.KEY_QUEUE, "[]");
+        sp.edit().remove(NotificationCaptureService.KEY_QUEUE).apply();
         JSObject ret = new JSObject();
-        ret.put("text", text != null ? text : "");
+        try {
+            ret.put("items", new JSONArray(qStr));
+        } catch (Exception e) {
+            ret.put("items", new JSONArray());
+        }
         call.resolve(ret);
     }
 }

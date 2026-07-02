@@ -11,7 +11,7 @@ interface ShareHelperPlugin {
 interface NotifHelperPlugin {
   isEnabled(): Promise<{ enabled: boolean }>;
   openSettings(): Promise<void>;
-  getPending(): Promise<{ text: string }>;
+  getPending(): Promise<{ items: string[] }>;
 }
 
 // Plugin nội bộ — được đăng ký trong MainActivity.java (không cần npm package)
@@ -59,30 +59,35 @@ export function initNativeApp(): () => void {
     ShareHelper.getPendingText()
       .then(({ text }) => {
         if (!text) return;
-        dispatchShareText(text);
+        enqueueShareText(text);
       })
       .catch(() => {});
 
-    // Tự đọc thông báo: drain thông báo giao dịch service bắt được (cold start + mỗi lần resume)
+    // Tự đọc thông báo: drain HÀNG ĐỢI service bắt được (cold start + mỗi lần resume + khi được đánh thức)
     const drainNotif = () => {
       NotifHelper.getPending()
-        .then(({ text }) => { if (text) dispatchShareText(text); })
+        .then(({ items }) => { (items ?? []).forEach((t) => { if (t) enqueueShareText(t); }); })
         .catch(() => {});
     };
     drainNotif();
     const resumeHandle = App.addListener('resume', drainNotif);
 
-    // Share/notif khi app đã chạy nền (hot start) — MainActivity inject event này
+    // Share khi app đã chạy nền (hot start) — MainActivity inject event kèm text
     const handleLiveShare = (e: Event) => {
       const text = (e as CustomEvent<{ text: string }>).detail?.text;
-      if (text) dispatchShareText(text);
+      if (text) enqueueShareText(text);
     };
     window.addEventListener('niyeuoi-share', handleLiveShare);
+
+    // Notif mới lúc app đang mở — MainActivity đánh thức, drain hàng đợi
+    const handleNotifWake = () => drainNotif();
+    window.addEventListener('niyeuoi-notif', handleNotifWake);
 
     return () => {
       backHandle.then((h) => h.remove()).catch(() => {});
       resumeHandle.then((h) => h.remove()).catch(() => {});
       window.removeEventListener('niyeuoi-share', handleLiveShare);
+      window.removeEventListener('niyeuoi-notif', handleNotifWake);
     };
   }
 
@@ -91,20 +96,46 @@ export function initNativeApp(): () => void {
   };
 }
 
+function readQueue(): string[] {
+  try {
+    const raw = sessionStorage.getItem(SESSION_KEY);
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr : [];
+  } catch {
+    return [];
+  }
+}
+
+function writeQueue(q: string[]) {
+  sessionStorage.setItem(SESSION_KEY, JSON.stringify(q));
+}
+
 /**
- * Lưu shared text vào sessionStorage rồi phát event `niyeuoi-share-ready`.
- * Việc điều hướng sang /expenses do ShareNavigator (trong Router) lo bằng
- * client-side navigation của react-router — KHÔNG dùng `window.location.href`
- * vì trong Capacitor điều hướng cứng tới route SPA thường 404.
+ * Nối text (share hoặc notif) vào HÀNG ĐỢI rồi phát event `niyeuoi-share-ready`.
+ * Xếp hàng để nhiều giao dịch dồn dập không đè mất nhau (Q1). Việc điều hướng
+ * sang /expenses do ShareNavigator (trong Router) lo bằng client-side navigation
+ * — KHÔNG dùng `window.location.href` vì trong Capacitor điều hướng cứng tới
+ * route SPA thường 404.
  */
-function dispatchShareText(text: string) {
-  sessionStorage.setItem(SESSION_KEY, text);
+function enqueueShareText(text: string) {
+  const q = readQueue();
+  q.push(text);
+  writeQueue(q);
   window.dispatchEvent(new CustomEvent('niyeuoi-share-ready'));
 }
 
-/** Có shared text đang chờ hay không (peek, không xoá). */
+/** Còn phần tử nào trong hàng đợi không (peek, không xoá). */
 export function hasPendingShareText(): boolean {
-  return sessionStorage.getItem(SESSION_KEY) !== null;
+  return readQueue().length > 0;
+}
+
+/** Lấy + xoá phần tử ĐẦU hàng đợi (Expenses xử lý lần lượt từng cái). */
+export function dequeueShareText(): string | null {
+  const q = readQueue();
+  if (q.length === 0) return null;
+  const first = q.shift() as string;
+  writeQueue(q);
+  return first;
 }
 
 /** App đã được cấp quyền tự đọc thông báo (Notification access) chưa. */
@@ -123,9 +154,3 @@ export async function openNotifSettings(): Promise<void> {
   try { await NotifHelper.openSettings(); } catch { /* ignore */ }
 }
 
-/** Đọc và xoá pending share text (gọi từ Expenses.tsx khi mount). */
-export function consumePendingShareText(): string | null {
-  const text = sessionStorage.getItem(SESSION_KEY);
-  if (text) sessionStorage.removeItem(SESSION_KEY);
-  return text;
-}

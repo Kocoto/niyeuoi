@@ -6,6 +6,7 @@ import {
   ChevronRight,
   Compass,
   CreditCard,
+  Flame,
   Grid3x3,
   Heart,
   History,
@@ -107,6 +108,14 @@ const groupedNav: NavGroup[] = [
     ],
   },
   {
+    key: 'health',
+    title: 'Sức khoẻ',
+    hint: 'Theo dõi calo và dinh dưỡng mỗi ngày của hai bạn.',
+    items: [
+      { to: '/calories', label: 'Calo', description: 'Ghi bữa ăn · AI ước tính calo', icon: <Flame size={18} /> },
+    ],
+  },
+  {
     key: 'utility',
     title: 'Tiện ích',
     hint: 'Mở khi thật sự cần, để app shell vẫn giữ nhịp nhẹ và rõ.',
@@ -142,6 +151,7 @@ const CONTEXTUAL_LINKS: Partial<Record<string, string[]>> = {
   '/expenses/savings': ['/expenses', '/wishlist'],
   '/expenses/recurring': ['/expenses'],
   '/expenses/debts': ['/expenses', '/expenses/savings'],
+  '/calories': ['/', '/expenses'],
 };
 
 const readRecentPaths = () => {

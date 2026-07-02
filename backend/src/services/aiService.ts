@@ -300,6 +300,64 @@ Quy tắc:
     }
 }
 
+export interface AICalorieEstimate {
+    name: string;
+    calories: number;
+    protein: number;
+    carbs: number;
+    fat: number;
+}
+
+export interface CalorieEstimateInput {
+    description?: string;
+    imageBase64?: string;
+    mimeType?: string;
+}
+
+/** Ước tính calo + macro từ mô tả món ăn hoặc ảnh (tái dùng Gemini vision như OCR). */
+export async function estimateCalories(input: CalorieEstimateInput): Promise<AICalorieEstimate | null> {
+    const { description, imageBase64, mimeType } = input;
+    if (!description?.trim() && !imageBase64) return null;
+    try {
+        const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });
+
+        const prompt = `Bạn là chuyên gia dinh dưỡng. ${imageBase64
+            ? 'Đây là ảnh một món ăn / bữa ăn.'
+            : `Món ăn được mô tả: """${(description || '').slice(0, 500)}"""`}
+
+Hãy ước tính khẩu phần điển hình của người Việt và trả về JSON hợp lệ (không markdown, không code block):
+{"name":"tên_món_ngắn_gọn_tiếng_Việt","calories":số_kcal,"protein":gram,"carbs":gram,"fat":gram}
+
+Quy tắc:
+- calories: số nguyên kcal (ước tính khẩu phần 1 người)
+- protein/carbs/fat: gram (số nguyên, ước tính; 0 nếu không đáng kể)
+- name: tên món ngắn gọn dễ hiểu
+- Nếu không nhận ra món ăn, vẫn ước tính hợp lý nhất có thể`;
+
+        logger.info('AI', 'Đang ước tính calo bằng Gemini...', { hasImage: !!imageBase64 });
+        const parts: any[] = [{ text: prompt }];
+        if (imageBase64 && mimeType) parts.push({ inlineData: { mimeType, data: imageBase64 } });
+        const result = await model.generateContent({ contents: [{ role: 'user', parts }] });
+        const text = result.response.text().trim();
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (!jsonMatch) throw new Error('Không tìm thấy JSON trong response');
+
+        const raw = JSON.parse(jsonMatch[0]) as Partial<AICalorieEstimate>;
+        const estimate: AICalorieEstimate = {
+            name: raw.name?.trim() || 'Món ăn',
+            calories: Math.max(0, Math.round(Number(raw.calories) || 0)),
+            protein: Math.max(0, Math.round(Number(raw.protein) || 0)),
+            carbs: Math.max(0, Math.round(Number(raw.carbs) || 0)),
+            fat: Math.max(0, Math.round(Number(raw.fat) || 0)),
+        };
+        logger.success('AI', 'Đã ước tính calo', { name: estimate.name, calories: estimate.calories });
+        return estimate;
+    } catch (err) {
+        logger.warn('AI', 'Lỗi khi ước tính calo', err);
+        return null;
+    }
+}
+
 export async function generateCoupon(existingTitles: string[]): Promise<AICoupon | null> {
     try {
         const model = genAI.getGenerativeModel({ model: GEMINI_MODEL });

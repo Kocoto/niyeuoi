@@ -10,8 +10,8 @@ App kỷ niệm + chi tiêu cho một cặp đôi (2 người dùng: `boyfriend`
 ## Bản đồ thư mục
 
 ### frontend/src/
-- `pages/` — 1 file / 1 route (Home, Places, Timeline, Wishlist, LoveMap, Coupons, Events, MoodLofi, Challenges, DeepTalk, Letters, Expenses*). Route khai báo trong `App.tsx`.
-- `components/` — component dùng chung + **thư mục con theo tính năng** (`expenses/`, `home/`, `coupons/`, `places/`). Gate: `ServerGate` (chờ backend), `AuthGate` (PIN). `Navbar`.
+- `pages/` — 1 file / 1 route (Home, Places, Timeline, Wishlist, LoveMap, Coupons, Events, MoodLofi, Challenges, DeepTalk, Letters, Expenses*, Calories). Route khai báo trong `App.tsx`.
+- `components/` — component dùng chung + **thư mục con theo tính năng** (`expenses/`, `calories/`, `home/`, `coupons/`, `places/`). Gate: `ServerGate` (chờ backend), `AuthGate` (PIN). `Navbar`.
 - `api/` — client axios. `api.ts` = instance chung (baseURL `VITE_API_URL`, token Bearer từ localStorage). Mọi call backend đi qua đây.
 - `context/` — `AuthContext` (role, PIN, đổi người), `UIContext`.
 - `hooks/` — `useLocationTracker`.
